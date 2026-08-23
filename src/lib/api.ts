@@ -2,6 +2,9 @@ import { invoke } from "@tauri-apps/api/core";
 import type {
   Account,
   AppInfo,
+  Instance,
+  InstanceDetail,
+  InstanceInput,
   VersionFilter,
   VersionInfo,
 } from "./types";
@@ -38,6 +41,33 @@ export function cancelMicrosoftLogin(): Promise<void> {
 
 export function logoutAccount(id: string): Promise<void> {
   return invoke("logout_account", { id });
+}
+
+// ---------- 实例 ----------
+
+export function createInstance(input: InstanceInput): Promise<InstanceDetail> {
+  return invoke<InstanceDetail>("create_instance", { input });
+}
+
+export function listInstances(): Promise<Instance[]> {
+  return invoke<Instance[]>("list_instances");
+}
+
+export function getInstance(id: string): Promise<InstanceDetail | null> {
+  return invoke<InstanceDetail | null>("get_instance", { id });
+}
+
+export function updateInstance(id: string, input: InstanceInput): Promise<InstanceDetail> {
+  return invoke<InstanceDetail>("update_instance", { id, input });
+}
+
+export function deleteInstance(id: string): Promise<void> {
+  return invoke("delete_instance", { id });
+}
+
+/** 按实例启动(自动补齐资源),日志/退出通过 game-log / game-exit 事件上报 */
+export function launchInstance(id: string): Promise<void> {
+  return invoke("launch_instance", { instanceId: id });
 }
 
 export function listVersions(

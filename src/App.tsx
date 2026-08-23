@@ -4,6 +4,7 @@ import Sidebar from "./components/Sidebar";
 import LoginModal from "./components/LoginModal";
 import Home from "./pages/Home";
 import Downloads from "./pages/Downloads";
+import Instances from "./pages/Instances";
 import JavaPage from "./pages/JavaPage";
 import Placeholder from "./components/Placeholder";
 import { useAppStore } from "./stores/app";
@@ -43,6 +44,7 @@ export default function App() {
             className="flex h-full flex-1"
           >
             {page === "home" && <Home />}
+            {page === "instances" && <Instances />}
             {page === "downloads" && <Downloads />}
             {page === "java" && <JavaPage />}
             {page in pages && <Placeholder title={pages[page as keyof typeof pages]} />}

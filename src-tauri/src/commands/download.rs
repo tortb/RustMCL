@@ -79,7 +79,7 @@ pub fn download_version(
     Ok(())
 }
 
-async fn run_download(
+pub(crate) async fn run_download(
     client: reqwest::Client,
     data_dir: &Path,
     mc_version: &str,

@@ -1,5 +1,6 @@
 pub mod account;
 pub mod download;
+pub mod instance;
 pub mod launch;
 pub mod version;
 

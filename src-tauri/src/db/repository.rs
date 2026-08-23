@@ -80,6 +80,21 @@ impl Repository {
         Ok(inst)
     }
 
+    pub fn update_instance(conn: &Connection, inst: &Instance) -> Result<(), RunaError> {
+        conn.execute(
+            "UPDATE instances SET name = ?1, mc_version = ?2, loader = ?3, loader_version = ?4
+             WHERE id = ?5",
+            params![
+                inst.name,
+                inst.mc_version,
+                inst.loader,
+                inst.loader_version,
+                inst.id,
+            ],
+        )?;
+        Ok(())
+    }
+
     pub fn delete_instance(conn: &Connection, id: &str) -> Result<(), RunaError> {
         conn.execute("DELETE FROM instances WHERE id = ?1", [id])?;
         Ok(())

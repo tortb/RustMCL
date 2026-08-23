@@ -111,3 +111,38 @@ export interface MsLoginFinished {
   ok: boolean;
   error: string;
 }
+
+// ---------- 实例 ----------
+
+export interface InstanceConfig {
+  meta: {
+    name: string;
+    mc_version: string;
+    loader: Loader;
+    loader_version: string;
+  };
+  jvm: {
+    min_memory: number;
+    max_memory: number;
+    extra_args: string[];
+  };
+  game: {
+    resolution: { width: number; height: number };
+    fullscreen: boolean;
+  };
+}
+
+/** 创建/更新实例的入参(未传字段用后端默认值) */
+export interface InstanceInput {
+  name: string;
+  mc_version?: string;
+  loader?: Loader;
+  loader_version?: string;
+  min_memory?: number;
+  max_memory?: number;
+  width?: number;
+  height?: number;
+}
+
+/** 实例详情:DB 记录 + TOML 配置 */
+export type InstanceDetail = Instance & { config: InstanceConfig };

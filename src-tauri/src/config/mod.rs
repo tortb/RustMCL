@@ -1,4 +1,5 @@
 pub mod app_config;
+pub mod instance_config;
 
 use std::path::PathBuf;
 
