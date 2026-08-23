@@ -50,3 +50,23 @@ export interface AssetCache {
   path: string;
   size: number;
 }
+
+// ---------- 版本清单 ----------
+
+export type VersionType = "release" | "snapshot" | "old_beta" | "old_alpha";
+export type VersionFilter = "all" | "release" | "snapshot";
+
+export interface VersionInfo {
+  id: string;
+  version_type: VersionType;
+  url: string;
+  time: string;
+  release_time: string;
+  sha1: string;
+  compliance_level: number | null;
+}
+
+export interface VersionManifest {
+  latest: { release: string; snapshot: string };
+  versions: VersionInfo[];
+}

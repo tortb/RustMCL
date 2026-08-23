@@ -1,11 +1,25 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Sidebar from "./components/Sidebar";
 import Home from "./pages/Home";
+import Downloads from "./pages/Downloads";
+import JavaPage from "./pages/JavaPage";
+import Placeholder from "./components/Placeholder";
 import { useAppStore } from "./stores/app";
+
+export type PageKey = "home" | "instances" | "downloads" | "mods" | "java" | "settings";
+
+const pages: Record<Exclude<PageKey, "home">, string> = {
+  instances: "实例管理",
+  downloads: "下载管理",
+  mods: "Mod 管理",
+  java: "Java 管理",
+  settings: "设置",
+};
 
 export default function App() {
   const init = useAppStore((s) => s.init);
+  const [page, setPage] = useState<PageKey>("home");
 
   useEffect(() => {
     init();
@@ -13,18 +27,21 @@ export default function App() {
 
   return (
     <div className="flex h-full">
-      <Sidebar />
-      <main className="flex-1 overflow-y-auto">
+      <Sidebar active={page} onSelect={setPage} />
+      <main className="flex flex-1 flex-col overflow-hidden">
         <AnimatePresence mode="wait">
           <motion.div
-            key="home"
+            key={page}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
-            className="h-full"
+            transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
+            className="flex h-full flex-1"
           >
-            <Home />
+            {page === "home" && <Home />}
+            {page === "downloads" && <Downloads />}
+            {page === "java" && <JavaPage />}
+            {page in pages && <Placeholder title={pages[page as keyof typeof pages]} />}
           </motion.div>
         </AnimatePresence>
       </main>
