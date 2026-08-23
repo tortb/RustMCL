@@ -1,3 +1,4 @@
+pub mod account;
 pub mod download;
 pub mod launch;
 pub mod version;

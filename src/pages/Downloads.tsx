@@ -144,9 +144,9 @@ export default function Downloads() {
         >
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-[15px] font-semibold text-ink">离线启动</h2>
+              <h2 className="text-[15px] font-semibold text-ink">启动游戏</h2>
               <p className="mt-0.5 text-[12.5px] text-ink-3">
-                用户名 Steve · 需要先下载资源
+                未登录时以离线账号 Steve 启动 · 需要先下载资源
               </p>
             </div>
             <motion.button

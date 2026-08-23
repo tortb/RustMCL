@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Sidebar from "./components/Sidebar";
+import LoginModal from "./components/LoginModal";
 import Home from "./pages/Home";
 import Downloads from "./pages/Downloads";
 import JavaPage from "./pages/JavaPage";
 import Placeholder from "./components/Placeholder";
 import { useAppStore } from "./stores/app";
+import { useAccountStore } from "./stores/account";
 
 export type PageKey = "home" | "instances" | "downloads" | "mods" | "java" | "settings";
 
@@ -19,11 +21,13 @@ const pages: Record<Exclude<PageKey, "home">, string> = {
 
 export default function App() {
   const init = useAppStore((s) => s.init);
+  const loadAccounts = useAccountStore((s) => s.loadAccounts);
   const [page, setPage] = useState<PageKey>("home");
 
   useEffect(() => {
     init();
-  }, [init]);
+    loadAccounts();
+  }, [init, loadAccounts]);
 
   return (
     <div className="flex h-full">
@@ -45,6 +49,8 @@ export default function App() {
           </motion.div>
         </AnimatePresence>
       </main>
+      {/* 登录弹窗常驻,保证事件监听不因弹窗显隐而丢失 */}
+      <LoginModal />
     </div>
   );
 }

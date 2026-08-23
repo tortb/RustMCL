@@ -124,6 +124,36 @@ impl Repository {
         Ok(out)
     }
 
+    /// 登录成功后写入或更新账号,同时置为当前账号
+    pub fn upsert_account(conn: &Connection, acc: &Account) -> Result<(), RunaError> {
+        conn.execute(
+            "INSERT INTO accounts (id, username, uuid, account_type, is_active, refreshed_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+             ON CONFLICT(id) DO UPDATE SET
+               username = excluded.username,
+               uuid = excluded.uuid,
+               account_type = excluded.account_type,
+               is_active = excluded.is_active,
+               refreshed_at = excluded.refreshed_at",
+            params![
+                acc.id,
+                acc.username,
+                acc.uuid,
+                acc.account_type,
+                acc.is_active as i64,
+                acc.refreshed_at,
+            ],
+        )?;
+        conn.execute("UPDATE accounts SET is_active = 0 WHERE id != ?1", [&acc.id])?;
+        Ok(())
+    }
+
+    /// 将指定账号置为非当前(退出登录)
+    pub fn deactivate_account(conn: &Connection, id: &str) -> Result<(), RunaError> {
+        conn.execute("UPDATE accounts SET is_active = 0 WHERE id = ?1", [id])?;
+        Ok(())
+    }
+
     pub fn get_active_account(conn: &Connection) -> Result<Option<Account>, RunaError> {
         let acc = conn
             .query_row(

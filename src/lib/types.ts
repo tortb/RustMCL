@@ -92,3 +92,22 @@ export interface GameLog {
 export interface GameExit {
   code: number;
 }
+
+// ---------- 微软登录 ----------
+
+export interface MsDeviceInfo {
+  user_code: string;
+  verification_uri: string;
+  expires_in: number;
+  message: string | null;
+}
+
+export interface MsLoginStatus {
+  stage: string;
+  message: string;
+}
+
+export interface MsLoginFinished {
+  ok: boolean;
+  error: string;
+}

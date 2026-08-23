@@ -87,7 +87,8 @@ export const useDownloadsStore = create<DownloadsStore>((set, get) => ({
     set({ logs: [], runState: "running", exitCode: null });
     get().appendLog(`[Runa] 正在启动 ${id} ...`);
     try {
-      await launchVersion(id, "Steve");
+      // 不传用户名:Rust 侧优先使用已登录的微软账号,否则离线 Steve
+      await launchVersion(id);
     } catch (e) {
       get().appendLog(`[Runa] 启动失败: ${e}`);
       get().setRunState("exited", -1);

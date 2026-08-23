@@ -6,6 +6,7 @@ use std::path::Path;
 use tauri::{AppHandle, Emitter, State};
 
 use crate::config::app_config::AppConfig;
+use crate::core::account::microsoft_auth::resolve_active_account;
 use crate::core::downloader::library::{client_download_item, library_items, native_items};
 use crate::core::launcher::args_builder::{build_launch_command, LaunchOptions, LaunchPaths};
 use crate::core::launcher::process::launch_process;
@@ -40,7 +41,7 @@ pub fn launch_version(
     let data_dir = state.data_dir.clone();
     let config_path = state.config_path.clone();
     let retry_times = state.retry_times;
-    let username = username.unwrap_or_else(|| "Steve".into());
+    let username = username.unwrap_or_default();
 
     tauri::async_runtime::spawn(async move {
         let result =
@@ -113,11 +114,29 @@ async fn run_launch(
     // 3. 解压 natives
     extract_natives(&native_plan(&version, &ctx, &layout.libraries_dir), &natives_dir)?;
 
-    // 4. 拼装启动参数
+    // 4. 拼装启动参数:已登录微软账号则静默续期使用,否则离线账号
     let cfg = AppConfig::load_or_create(config_path)?;
     let java_path = cfg.java_path();
+    let (username, uuid, access_token) = if username.is_empty() {
+        match resolve_active_account(&client).await? {
+            Some((name, uid, tok)) => (name, uid, tok),
+            None => (
+                "Steve".into(),
+                uuid::Uuid::new_v4().to_string(),
+                "0".into(),
+            ),
+        }
+    } else {
+        (
+            username.to_string(),
+            uuid::Uuid::new_v4().to_string(),
+            "0".into(),
+        )
+    };
     let opts = LaunchOptions {
-        username: username.to_string(),
+        username,
+        uuid,
+        access_token,
         ..Default::default()
     };
     let paths = LaunchPaths {

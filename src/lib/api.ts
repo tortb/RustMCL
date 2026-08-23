@@ -1,5 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { Account, AppInfo, VersionFilter, VersionInfo } from "./types";
+import type {
+  Account,
+  AppInfo,
+  VersionFilter,
+  VersionInfo,
+} from "./types";
 
 /**
  * Tauri command 统一封装。
@@ -16,6 +21,23 @@ export function dbHealth(): Promise<string[]> {
 
 export function listAccounts(): Promise<Account[]> {
   return invoke<Account[]>("list_accounts");
+}
+
+export function getActiveAccount(): Promise<Account | null> {
+  return invoke<Account | null>("get_active_account");
+}
+
+/** 启动微软 Device Code 登录流程,结果通过事件 ms-login-* 上报 */
+export function startMicrosoftLogin(): Promise<void> {
+  return invoke("start_microsoft_login");
+}
+
+export function cancelMicrosoftLogin(): Promise<void> {
+  return invoke("cancel_microsoft_login");
+}
+
+export function logoutAccount(id: string): Promise<void> {
+  return invoke("logout_account", { id });
 }
 
 export function listVersions(

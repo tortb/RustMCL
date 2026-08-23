@@ -23,7 +23,8 @@ dirs = "6.0.0"
 uuid = { version = "1.25.0", features = ["v4"] }
 tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros", "process", "fs", "io-util", "sync"] }
 rusqlite = { version = "0.40.2", features = ["bundled"] }
-reqwest = { version = "0.13.4", default-features = false, features = ["json", "stream", "native-tls"] }
+reqwest = { version = "0.13.4", default-features = false, features = ["json", "form", "stream", "native-tls"] }
 futures-util = "0.3"
 sha1 = "0.10"
 zip = { version = "2", default-features = false, features = ["deflate"] }
+keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }
