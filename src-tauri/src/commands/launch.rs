@@ -13,9 +13,8 @@ use crate::core::downloader::library::{client_download_item, library_items, nati
 use crate::core::launcher::args_builder::{build_launch_command, LaunchOptions, LaunchPaths};
 use crate::core::launcher::process::launch_process;
 use crate::core::launcher::{extract_natives, native_plan};
-use crate::core::version::manifest;
+use crate::core::loader;
 use crate::core::version::rules::{FeaturesCtx, RuleContext};
-use crate::core::version::version_json::fetch_version_json;
 use crate::db::repository::Repository;
 use crate::error::RunaError;
 use crate::AppState;
@@ -50,8 +49,18 @@ pub fn launch_version(
     };
 
     tauri::async_runtime::spawn(async move {
-        let result =
-            run_launch(client, &data_dir, &config_path, &mc_version, opts, retry_times, app.clone()).await;
+        let result = run_launch(
+            client,
+            &data_dir,
+            &config_path,
+            &mc_version,
+            None,
+            None,
+            opts,
+            retry_times,
+            app.clone(),
+        )
+        .await;
         emit_launch_result(&app, result);
     });
     Ok(())
@@ -86,6 +95,8 @@ pub fn launch_instance(
         .join(&instance_id)
         .join("instance.toml");
     let icfg = InstanceConfig::load(&cfg_path).map_err(|e| e.to_string())?;
+    let loader_name = icfg.meta.loader.clone();
+    let loader_version = icfg.meta.loader_version.clone();
     let opts = LaunchOptions {
         username: String::new(),
         min_memory: icfg.jvm.min_memory,
@@ -107,6 +118,8 @@ pub fn launch_instance(
             client.clone(),
             &data_dir,
             &mc_version,
+            Some(&loader_name),
+            Some(&loader_version),
             retry_times,
             max_concurrent,
             app.clone(),
@@ -123,8 +136,18 @@ pub fn launch_instance(
             return;
         }
         // 2. 启动
-        let result =
-            run_launch(client, &data_dir, &config_path, &mc_version, opts, retry_times, app.clone()).await;
+        let result = run_launch(
+            client,
+            &data_dir,
+            &config_path,
+            &mc_version,
+            Some(&loader_name),
+            Some(&loader_version),
+            opts,
+            retry_times,
+            app.clone(),
+        )
+        .await;
         emit_launch_result(&app, result);
     });
     Ok(())
@@ -152,23 +175,22 @@ async fn run_launch(
     data_dir: &Path,
     config_path: &Path,
     mc_version: &str,
+    loader: Option<&str>,
+    loader_version: Option<&str>,
     opts: LaunchOptions,
     retry_times: u32,
     app: AppHandle,
 ) -> Result<i32, RunaError> {
-    // 1. version.json(优先本地缓存)
-    let manifest_cache = data_dir.join("cache").join("version_manifest_v2.json");
-    let manifest = manifest::get_manifest(&client, &manifest_cache, false, retry_times).await?;
-    let info = manifest
-        .versions
-        .iter()
-        .find(|v| v.id == mc_version)
-        .ok_or_else(|| RunaError::other(format!("版本清单中不存在 {mc_version}")))?;
-    let vj_cache = data_dir
-        .join("cache")
-        .join("versions")
-        .join(format!("{mc_version}.json"));
-    let version = fetch_version_json(&client, &info.url, &vj_cache, retry_times).await?;
+    // 1. version.json(vanilla 或 loader 合并结果,均带本地缓存)
+    let version = loader::resolve_version(
+        &client,
+        data_dir,
+        mc_version,
+        loader.unwrap_or("vanilla"),
+        loader_version.unwrap_or(""),
+        retry_times,
+    )
+    .await?;
 
     let ctx = RuleContext::current(FeaturesCtx::default());
     let layout = DirLayout::new(data_dir);

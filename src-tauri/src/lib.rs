@@ -90,6 +90,8 @@ pub fn run() {
             commands::instance::get_instance,
             commands::instance::update_instance,
             commands::instance::delete_instance,
+            commands::loader::install_loader,
+            commands::loader::get_latest_loader_version,
         ]);
 
     if let Err(e) = builder.run(tauri::generate_context!()) {

@@ -1,6 +1,6 @@
 //! Mojang version.json 中的 rules(OS/arch/features 条件)解析与判断
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 /// 条件上下文:当前系统信息 + 特性开关
 #[derive(Debug, Clone)]
@@ -40,14 +40,14 @@ impl RuleContext {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum RuleAction {
     Allow,
     Disallow,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Rule {
     pub action: RuleAction,
     #[serde(default)]
@@ -56,7 +56,7 @@ pub struct Rule {
     pub features: Option<FeaturesRule>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OsRule {
     #[serde(default)]
     pub name: Option<String>,
@@ -67,7 +67,7 @@ pub struct OsRule {
 }
 
 /// 目前 Mojang 只用这两个 feature,其余字段缺失时该规则视为不匹配
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct FeaturesRule {
     #[serde(default)]
     pub is_demo_user: Option<bool>,

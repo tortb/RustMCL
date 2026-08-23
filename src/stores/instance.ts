@@ -3,12 +3,19 @@ import {
   createInstance,
   deleteInstance,
   getInstance,
+  getLatestLoaderVersion,
+  installLoader,
   launchInstance,
   listInstances,
   listVersions,
   updateInstance,
 } from "../lib/api";
-import type { InstanceDetail, InstanceInput, VersionInfo } from "../lib/types";
+import type {
+  DownloadProgress,
+  InstanceDetail,
+  InstanceInput,
+  VersionInfo,
+} from "../lib/types";
 
 interface InstanceStore {
   instances: InstanceDetail[];
@@ -24,6 +31,11 @@ interface InstanceStore {
   runningId: string | null;
   logs: string[];
 
+  // 加载器安装状态
+  installingId: string | null;
+  installProgress: DownloadProgress | null;
+  installError: string;
+
   loadInstances: () => Promise<void>;
   loadVersions: () => Promise<void>;
   openCreate: () => void;
@@ -34,6 +46,9 @@ interface InstanceStore {
   launch: (id: string) => Promise<void>;
   appendLog: (line: string) => void;
   setRunning: (id: string | null) => void;
+  setInstalling: (id: string | null) => void;
+  setInstallProgress: (p: DownloadProgress | null) => void;
+  setInstallError: (e: string) => void;
 }
 
 export const useInstanceStore = create<InstanceStore>((set, get) => ({
@@ -47,6 +62,10 @@ export const useInstanceStore = create<InstanceStore>((set, get) => ({
 
   runningId: null,
   logs: [],
+
+  installingId: null,
+  installProgress: null,
+  installError: "",
 
   loadInstances: async () => {
     set({ loading: true });
@@ -76,13 +95,35 @@ export const useInstanceStore = create<InstanceStore>((set, get) => ({
 
   save: async (input) => {
     const editing = get().editing;
+    let detail: InstanceDetail;
     if (editing) {
-      await updateInstance(editing.id, input);
+      detail = await updateInstance(editing.id, input);
     } else {
-      await createInstance(input);
+      // 创建:loader 非 vanilla 且未指定版本时自动解析最新加载器版本
+      const isModded = input.loader !== undefined && input.loader !== "vanilla";
+      const loaderVersion =
+        isModded && !input.loader_version && input.mc_version
+          ? await getLatestLoaderVersion(input.mc_version, input.loader!)
+          : (input.loader_version ?? "");
+      detail = await createInstance({
+        ...input,
+        loader_version: loaderVersion || undefined,
+      });
     }
     await get().loadInstances();
     set({ modalOpen: false, editing: null });
+
+    // 非原版实例:后台安装加载器并展示进度
+    const meta = detail.config.meta;
+    if (meta.loader !== "vanilla") {
+      set({ installingId: detail.id, installProgress: null, installError: "" });
+      try {
+        await installLoader(meta.mc_version, meta.loader, meta.loader_version || "");
+      } catch (e) {
+        set({ installError: String(e) });
+        set({ installingId: null, installProgress: null });
+      }
+    }
   },
 
   remove: async (id) => {
@@ -104,4 +145,7 @@ export const useInstanceStore = create<InstanceStore>((set, get) => ({
 
   appendLog: (line) => set((s) => ({ logs: [...s.logs.slice(-499), line] })),
   setRunning: (id) => set({ runningId: id }),
+  setInstalling: (id) => set({ installingId: id }),
+  setInstallProgress: (p) => set({ installProgress: p }),
+  setInstallError: (e) => set({ installError: e }),
 }));

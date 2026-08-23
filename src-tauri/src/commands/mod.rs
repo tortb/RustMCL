@@ -2,6 +2,7 @@ pub mod account;
 pub mod download;
 pub mod instance;
 pub mod launch;
+pub mod loader;
 pub mod version;
 
 use serde::Serialize;

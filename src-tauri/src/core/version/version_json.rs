@@ -7,13 +7,13 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::error::RunaError;
 
 use super::rules::Rule;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VersionJson {
     pub id: String,
@@ -51,7 +51,7 @@ impl VersionJson {
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Arguments {
     #[serde(default)]
     pub game: Vec<Arg>,
@@ -59,7 +59,7 @@ pub struct Arguments {
     pub jvm: Vec<Arg>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum Arg {
     Plain(String),
@@ -78,7 +78,7 @@ impl Arg {
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum OneOrMore {
     One(String),
@@ -94,14 +94,14 @@ impl OneOrMore {
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Downloads {
     pub client: Download,
     #[serde(default)]
     pub server: Option<Download>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Download {
     #[serde(default)]
     pub path: Option<String>,
@@ -110,14 +110,14 @@ pub struct Download {
     pub url: String,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JavaVersion {
     pub component: String,
     pub major_version: i32,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AssetIndex {
     pub id: String,
@@ -128,7 +128,7 @@ pub struct AssetIndex {
     pub url: String,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Library {
     pub name: String,
     #[serde(default)]
@@ -142,13 +142,13 @@ pub struct Library {
     pub downloads: Option<LibraryDownloads>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Extract {
     #[serde(default)]
     pub exclude: Vec<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LibraryDownloads {
     #[serde(default)]
     pub artifact: Option<Download>,
@@ -156,13 +156,13 @@ pub struct LibraryDownloads {
     pub classifiers: Option<HashMap<String, Download>>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Logging {
     #[serde(default)]
     pub client: Option<LoggingClient>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LoggingClient {
     pub argument: String,
     pub file: Download,

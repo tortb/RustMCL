@@ -13,7 +13,15 @@ import {
   Box,
 } from "lucide-react";
 import { useInstanceStore } from "../stores/instance";
-import type { GameExit, GameLog, InstanceDetail, InstanceInput, Loader } from "../lib/types";
+import type {
+  DownloadProgress,
+  GameExit,
+  GameLog,
+  InstanceDetail,
+  InstanceInput,
+  Loader,
+  LoaderInstallFinished,
+} from "../lib/types";
 
 const ease = [0.32, 0.72, 0, 1] as const;
 
@@ -43,6 +51,17 @@ export default function Instances() {
       listen<GameExit>("game-exit", (e) => {
         s.appendLog(`[Runa] 游戏进程退出,退出码 ${e.payload.code}`);
         s.setRunning(null);
+      }),
+      // 加载器安装进度/结束(仅在有安装任务时响应)
+      listen<DownloadProgress>("download-progress", (e) => {
+        const st = useInstanceStore.getState();
+        if (st.installingId) st.setInstallProgress(e.payload);
+      }),
+      listen<LoaderInstallFinished>("loader-install-finished", (e) => {
+        const st = useInstanceStore.getState();
+        if (!e.payload.ok) st.setInstallError(e.payload.error);
+        st.setInstalling(null);
+        st.setInstallProgress(null);
       }),
     ]).then((un) => {
       if (mounted) unlisteners = un;
@@ -171,6 +190,36 @@ export default function Instances() {
                       </motion.button>
                     </div>
                   </div>
+
+                  {/* 加载器安装进度 */}
+                  {s.installingId === inst.id && (
+                    <div className="border-t border-divider px-5 py-3">
+                      <div className="flex items-center justify-between text-[12px]">
+                        <span className="flex items-center gap-1.5 text-ink-2">
+                          <Loader2 size={12} className="animate-spin text-accent" />
+                          正在安装 {loaderLabels[(inst.config.meta.loader ?? "vanilla") as Loader]}...
+                        </span>
+                        {s.installProgress && (
+                          <span className="text-ink-3">
+                            {s.installProgress.current}/{s.installProgress.total}
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-black/[0.06]">
+                        <div
+                          className="h-full rounded-full bg-accent transition-all duration-300"
+                          style={{
+                            width: s.installProgress
+                              ? `${Math.min(100, (s.installProgress.current / Math.max(1, s.installProgress.total)) * 100)}%`
+                              : "8%",
+                          }}
+                        />
+                      </div>
+                      {s.installError && (
+                        <p className="mt-2 text-[12px] text-red-500">安装失败:{s.installError}</p>
+                      )}
+                    </div>
+                  )}
 
                   {/* 展开详情(layout animation) */}
                   <AnimatePresence initial={false}>
@@ -396,6 +445,11 @@ function InstanceModal() {
                     </option>
                   ))}
                 </select>
+                {loader !== "vanilla" && (
+                  <p className="mt-1.5 text-[11.5px] text-ink-3">
+                    将自动安装最新版 {loaderLabels[loader]} 并下载对应资源
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">

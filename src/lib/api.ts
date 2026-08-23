@@ -70,6 +70,23 @@ export function launchInstance(id: string): Promise<void> {
   return invoke("launch_instance", { instanceId: id });
 }
 
+/** 查询指定 MC 版本可用的最新加载器版本(fabric/quilt) */
+export function getLatestLoaderVersion(
+  mcVersion: string,
+  loader: string,
+): Promise<string> {
+  return invoke<string>("get_latest_loader_version", { mcVersion, loader });
+}
+
+/** 后台安装加载器,进度通过 download-progress 事件,结束通过 loader-install-finished */
+export function installLoader(
+  mcVersion: string,
+  loader: string,
+  loaderVersion: string,
+): Promise<void> {
+  return invoke("install_loader", { mcVersion, loader, loaderVersion });
+}
+
 export function listVersions(
   filter: VersionFilter = "all",
   forceRefresh = false,

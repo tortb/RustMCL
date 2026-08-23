@@ -8,9 +8,9 @@ use tauri::{AppHandle, Emitter, State};
 use crate::core::downloader::asset::{asset_index_item, asset_items, load_asset_index};
 use crate::core::downloader::library::{client_download_item, library_items, native_items};
 use crate::core::downloader::download_many;
-use crate::core::version::manifest;
+use crate::core::loader;
 use crate::core::version::rules::{FeaturesCtx, RuleContext};
-use crate::core::version::version_json::fetch_version_json;
+use crate::core::version::version_json::VersionJson;
 use crate::error::RunaError;
 use crate::AppState;
 
@@ -60,8 +60,17 @@ pub fn download_version(
     let max_concurrent = (state.max_concurrent.max(1)) as usize;
 
     tauri::async_runtime::spawn(async move {
-        let result =
-            run_download(client, &data_dir, &mc_version, retry_times, max_concurrent, app.clone()).await;
+        let result = run_download(
+            client,
+            &data_dir,
+            &mc_version,
+            None,
+            None,
+            retry_times,
+            max_concurrent,
+            app.clone(),
+        )
+        .await;
         let _ = app.emit(
             "download-finished",
             match result {
@@ -79,30 +88,38 @@ pub fn download_version(
     Ok(())
 }
 
+/// 下载指定版本资源;loader 非 vanilla 时先解析并合并加载器 profile
 pub(crate) async fn run_download(
     client: reqwest::Client,
     data_dir: &Path,
     mc_version: &str,
+    loader: Option<&str>,
+    loader_version: Option<&str>,
     retry_times: u32,
     max_concurrent: usize,
     app: AppHandle,
 ) -> Result<(), RunaError> {
-    // 1. 从清单定位版本
-    let manifest_cache = data_dir.join("cache").join("version_manifest_v2.json");
-    let manifest = manifest::get_manifest(&client, &manifest_cache, false, retry_times).await?;
-    let info = manifest
-        .versions
-        .iter()
-        .find(|v| v.id == mc_version)
-        .ok_or_else(|| RunaError::other(format!("版本清单中不存在 {mc_version}")))?;
+    let version = loader::resolve_version(
+        &client,
+        data_dir,
+        mc_version,
+        loader.unwrap_or("vanilla"),
+        loader_version.unwrap_or(""),
+        retry_times,
+    )
+    .await?;
+    run_download_for_version(&client, data_dir, &version, retry_times, max_concurrent, app).await
+}
 
-    // 2. version.json(带缓存)
-    let vj_cache = data_dir
-        .join("cache")
-        .join("versions")
-        .join(format!("{mc_version}.json"));
-    let version = fetch_version_json(&client, &info.url, &vj_cache, retry_times).await?;
-
+/// 按已解析的 version 下载 client.jar + libraries + natives + assets(幂等)
+pub(crate) async fn run_download_for_version(
+    client: &reqwest::Client,
+    data_dir: &Path,
+    version: &VersionJson,
+    retry_times: u32,
+    max_concurrent: usize,
+    app: AppHandle,
+) -> Result<(), RunaError> {
     let ctx = RuleContext::current(FeaturesCtx::default());
     let layout = DirLayout::new(data_dir);
     let version_dir = layout.versions_dir.join(&version.id);

@@ -3,4 +3,5 @@
 pub mod account;
 pub mod downloader;
 pub mod launcher;
+pub mod loader;
 pub mod version;

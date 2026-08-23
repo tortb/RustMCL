@@ -85,6 +85,11 @@ export interface DownloadFinished {
   error: string;
 }
 
+export interface LoaderInstallFinished {
+  ok: boolean;
+  error: string;
+}
+
 export interface GameLog {
   line: string;
 }

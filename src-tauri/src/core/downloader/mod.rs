@@ -49,11 +49,12 @@ pub async fn download_one(
     item: &DownloadItem,
     retry_times: u32,
 ) -> Result<(), RunaError> {
+    // 已存在:有 sha1 则校验,无 sha1(maven 库)只做存在性判断
     if item.dest.exists() {
-        if let Ok(hash) = sha1_of(&item.dest) {
-            if hash == item.sha1 {
-                return Ok(());
-            }
+        if item.sha1.is_empty()
+            || sha1_of(&item.dest).map(|h| h == item.sha1).unwrap_or(false)
+        {
+            return Ok(());
         }
     }
     if let Some(parent) = item.dest.parent() {
@@ -63,19 +64,26 @@ pub async fn download_one(
     let mut last_err = None;
     for attempt in 0..=retry_times {
         match fetch_to_file(client, &item.url, &tmp).await {
-            Ok(()) => match sha1_of(&tmp) {
-                Ok(hash) if hash == item.sha1 => {
+            Ok(()) => {
+                // 无 sha1 的 maven 库直接采用,有 sha1 则校验
+                if item.sha1.is_empty() {
                     tokio::fs::rename(&tmp, &item.dest).await?;
                     return Ok(());
                 }
-                Ok(_) => {
-                    last_err = Some(RunaError::other(format!(
-                        "SHA1 校验失败: {}",
-                        item.dest.display()
-                    )));
+                match sha1_of(&tmp) {
+                    Ok(hash) if hash == item.sha1 => {
+                        tokio::fs::rename(&tmp, &item.dest).await?;
+                        return Ok(());
+                    }
+                    Ok(_) => {
+                        last_err = Some(RunaError::other(format!(
+                            "SHA1 校验失败: {}",
+                            item.dest.display()
+                        )));
+                    }
+                    Err(e) => last_err = Some(e),
                 }
-                Err(e) => last_err = Some(e),
-            },
+            }
             Err(e) => last_err = Some(e),
         }
         if attempt < retry_times {
