@@ -78,6 +78,8 @@ pub fn run() {
             commands::db_health,
             commands::list_accounts,
             commands::version::list_versions,
+            commands::download::download_version,
+            commands::launch::launch_version,
         ]);
 
     if let Err(e) = builder.run(tauri::generate_context!()) {

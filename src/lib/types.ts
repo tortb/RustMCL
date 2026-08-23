@@ -70,3 +70,25 @@ export interface VersionManifest {
   latest: { release: string; snapshot: string };
   versions: VersionInfo[];
 }
+
+// ---------- 下载 / 启动 ----------
+
+export interface DownloadProgress {
+  phase: "core" | "assets";
+  current: number;
+  total: number;
+  file: string;
+}
+
+export interface DownloadFinished {
+  ok: boolean;
+  error: string;
+}
+
+export interface GameLog {
+  line: string;
+}
+
+export interface GameExit {
+  code: number;
+}

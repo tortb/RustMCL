@@ -24,3 +24,13 @@ export function listVersions(
 ): Promise<VersionInfo[]> {
   return invoke<VersionInfo[]>("list_versions", { filter, forceRefresh });
 }
+
+/** 后台下载指定版本资源(client + libraries + natives + assets) */
+export function downloadVersion(mcVersion: string): Promise<void> {
+  return invoke("download_version", { mcVersion });
+}
+
+/** 启动指定版本(离线账号),日志/退出通过事件上报 */
+export function launchVersion(mcVersion: string, username?: string): Promise<void> {
+  return invoke("launch_version", { mcVersion, username });
+}

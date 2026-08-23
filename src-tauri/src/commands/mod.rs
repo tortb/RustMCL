@@ -1,3 +1,5 @@
+pub mod download;
+pub mod launch;
 pub mod version;
 
 use serde::Serialize;

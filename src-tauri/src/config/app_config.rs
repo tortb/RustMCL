@@ -76,6 +76,16 @@ impl Default for DownloadConfig {
 }
 
 impl AppConfig {
+    /// 解析最终使用的 java 可执行文件路径:
+    /// auto_detect 或未配置路径时返回 "java"(依赖 PATH),否则用配置的绝对路径
+    pub fn java_path(&self) -> String {
+        if self.java.auto_detect || self.java.default_java_path.trim().is_empty() {
+            "java".to_string()
+        } else {
+            self.java.default_java_path.trim().to_string()
+        }
+    }
+
     /// 加载配置;文件不存在时生成默认配置并落盘
     /// 反序列化采用 #[serde(default)],字段缺失不崩溃
     pub fn load_or_create(path: &Path) -> Result<Self, RunaError> {

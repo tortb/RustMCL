@@ -17,6 +17,8 @@ pub enum RunaError {
     TomlSer(#[from] toml::ser::Error),
     #[error("JSON 错误: {0}")]
     Json(#[from] serde_json::Error),
+    #[error("压缩包错误: {0}")]
+    Zip(#[from] zip::result::ZipError),
     #[error("{0}")]
     Other(String),
 }
