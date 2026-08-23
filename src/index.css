@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+/*
+ * Runa design tokens —— Apple 风格
+ * 浅色为基准,深色通过 .dark 语义映射
+ */
+:root {
+  --runa-bg: #f5f5f7;
+  --runa-card: #ffffff;
+  --runa-frosted: rgba(255, 255, 255, 0.72);
+  --runa-text: #1d1d1f;
+  --runa-text-2: #86868b;
+  --runa-text-3: #6e6e73;
+  --runa-divider: rgba(0, 0, 0, 0.08);
+  --runa-accent: #0a84ff;
+}
+
+.dark {
+  --runa-bg: #161617;
+  --runa-card: #1c1c1e;
+  --runa-frosted: rgba(28, 28, 30, 0.72);
+  --runa-text: #f5f5f7;
+  --runa-text-2: #98989d;
+  --runa-text-3: #6e6e73;
+  --runa-divider: rgba(255, 255, 255, 0.1);
+  --runa-accent: #0a84ff;
+}
+
+@theme inline {
+  --color-bg: var(--runa-bg);
+  --color-card: var(--runa-card);
+  --color-frosted: var(--runa-frosted);
+  --color-ink: var(--runa-text);
+  --color-ink-2: var(--runa-text-2);
+  --color-ink-3: var(--runa-text-3);
+  --color-accent: var(--runa-accent);
+  --color-divider: var(--runa-divider);
+}
+
+@theme {
+  --radius-card: 18px;
+  --radius-btn: 11px;
+  --radius-input: 9px;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --ease-apple: cubic-bezier(0.32, 0.72, 0, 1);
+  --font-sans: -apple-system, "SF Pro Display", "PingFang SC", "Segoe UI",
+    "Microsoft YaHei", sans-serif;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background-color: var(--runa-bg);
+  color: var(--runa-text);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  user-select: none;
+}
