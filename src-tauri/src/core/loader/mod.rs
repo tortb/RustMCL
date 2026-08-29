@@ -32,11 +32,12 @@ const QUILT: LoaderMeta = LoaderMeta {
 pub fn merged_version_id(mc_version: &str, loader: &str, loader_version: &str) -> String {
     match loader {
         "fabric" | "quilt" => format!("{loader}-loader-{loader_version}-{mc_version}"),
+        "forge" => format!("forge-{mc_version}-{loader_version}"),
         _ => mc_version.to_string(),
     }
 }
 
-/// 解析最终 version.json:vanilla 直接返回原版;fabric/quilt 返回合并结果(带缓存)
+/// 解析最终 version.json:vanilla 直接返回原版;fabric/quilt/forge 返回合并结果(带缓存)
 pub async fn resolve_version(
     client: &reqwest::Client,
     data_dir: &Path,
@@ -48,6 +49,17 @@ pub async fn resolve_version(
     let meta = match loader {
         "fabric" => FABRIC,
         "quilt" => QUILT,
+        // Forge:由 mods/forge 解析并合并(下载 installer + 与原版合并,带缓存)
+        "forge" => {
+            return crate::core::mods::forge::resolve_forge_version(
+                client,
+                data_dir,
+                mc_version,
+                loader_version,
+                retry_times,
+            )
+            .await
+        }
         // vanilla:直接读原版 version.json
         "" | "vanilla" => return fetch_vanilla(client, data_dir, mc_version, retry_times).await,
         other => {
@@ -86,7 +98,7 @@ fn load_cached(path: &Path) -> Option<VersionJson> {
 }
 
 /// 原版 version.json(复用清单 + 版本缓存)
-async fn fetch_vanilla(
+pub(crate) async fn fetch_vanilla(
     client: &reqwest::Client,
     data_dir: &Path,
     mc_version: &str,

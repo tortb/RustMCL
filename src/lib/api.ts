@@ -129,6 +129,11 @@ export function listForgeVersions(mcVersion: string): Promise<ForgeVersionInfo[]
   return invoke<ForgeVersionInfo[]>("list_forge_versions", { mcVersion });
 }
 
+/** 后台安装 Forge(下载 installer + 依赖 + 运行处理器),进度/结束事件与 install_loader 一致 */
+export function installForge(mcVersion: string, forgeVersion: string): Promise<void> {
+  return invoke("install_forge", { mcVersion, forgeVersion });
+}
+
 export function listVersions(
   filter: VersionFilter = "all",
   forceRefresh = false,

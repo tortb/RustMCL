@@ -4,6 +4,7 @@ import {
   deleteInstance,
   getInstance,
   getLatestLoaderVersion,
+  installForge,
   installLoader,
   launchInstance,
   listForgeVersions,
@@ -137,12 +138,20 @@ export const useInstanceStore = create<InstanceStore>((set, get) => ({
     await get().loadInstances();
     set({ modalOpen: false, editing: null });
 
-    // 非原版实例:后台安装加载器并展示进度(仅 Fabric/Quilt;Forge 处理器流程待 T5.6 接线)
+    // 非原版实例:后台安装加载器并展示进度(Fabric/Quilt 走 meta,Forge 走 installer+处理器)
     const meta = detail.config.meta;
     if (meta.loader === "fabric" || meta.loader === "quilt") {
       set({ installingId: detail.id, installProgress: null, installError: "" });
       try {
         await installLoader(meta.mc_version, meta.loader, meta.loader_version || "");
+      } catch (e) {
+        set({ installError: String(e) });
+        set({ installingId: null, installProgress: null });
+      }
+    } else if (meta.loader === "forge") {
+      set({ installingId: detail.id, installProgress: null, installError: "" });
+      try {
+        await installForge(meta.mc_version, meta.loader_version || "");
       } catch (e) {
         set({ installError: String(e) });
         set({ installingId: null, installProgress: null });

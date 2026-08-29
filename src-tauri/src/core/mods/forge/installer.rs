@@ -21,7 +21,8 @@ pub fn installer_url(mc_version: &str, forge_version: &str) -> String {
     format!("{MAVEN_BASE}/{dir}/forge-{dir}-installer.jar")
 }
 
-/// 下载 installer jar 到 dest_dir/(命名为 forge-installer.jar),返回本地路径
+/// 下载 installer jar 到 dest_dir/(命名为 forge-installer.jar),返回本地路径。
+/// 若已存在则直接复用(下载采用原子改名,不会残留半成品)。
 pub async fn download_installer(
     client: &reqwest::Client,
     mc_version: &str,
@@ -31,9 +32,35 @@ pub async fn download_installer(
 ) -> Result<std::path::PathBuf, RmclError> {
     std::fs::create_dir_all(dest_dir)?;
     let dest = dest_dir.join("forge-installer.jar");
+    if dest.exists() {
+        return Ok(dest);
+    }
     let url = installer_url(mc_version, forge_version);
     download_to(client, &url, &dest, retry_times).await?;
     Ok(dest)
+}
+
+/// 把 installer jar 的全部内容解压到 dest_dir(供 processors 使用 META-INF/versions/**/processor.jar 与 data/**)。
+/// 已对逐个条目做 zip-slip 防护:异常路径(绝对、含 `..`)会被跳过。
+pub fn extract_installer_files(jar_path: &Path, dest_dir: &Path) -> Result<(), RmclError> {
+    let file = std::fs::File::open(jar_path)?;
+    let mut archive = zip::ZipArchive::new(file)?;
+    std::fs::create_dir_all(dest_dir)?;
+    for i in 0..archive.len() {
+        let mut entry = archive.by_index(i)?;
+        let Some(rel) = entry.enclosed_name() else { continue };
+        let out = dest_dir.join(rel);
+        if entry.is_dir() {
+            std::fs::create_dir_all(&out)?;
+            continue;
+        }
+        if let Some(parent) = out.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        let mut out_file = std::fs::File::create(&out)?;
+        std::io::copy(&mut entry, &mut out_file)?;
+    }
+    Ok(())
 }
 
 /// 解压 installer jar,读取 install_profile.json 与尽可能匹配的 version json

@@ -1,5 +1,6 @@
 //! Mod 集成:数据来源(Modrinth)与安装逻辑
 
+pub mod forge;
 pub mod modrinth;
 
 use std::path::Path;

@@ -10,11 +10,14 @@ pub mod processor;
 pub mod profile_merge;
 pub mod version_list;
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
+use crate::core::version::version_json::VersionJson;
 use crate::error::RmclError;
+
+use self::installer::InstallerContents;
 
 /// Forge 推荐的版本清单(Mojang 版本 → Forge 版本号)
 pub const PROMOTIONS_URL: &str =
@@ -22,6 +25,80 @@ pub const PROMOTIONS_URL: &str =
 
 /// Forge maven 仓库基址
 pub const MAVEN_BASE: &str = "https://maven.minecraftforge.net/net/minecraftforge/forge";
+
+/// 合并后版本的 id(同时用作缓存文件名)
+pub fn forge_merged_id(mc_version: &str, forge_version: &str) -> String {
+    format!("forge-{mc_version}-{forge_version}")
+}
+
+/// installer 解压/工作目录
+pub fn forge_work_dir(data_dir: &Path, mc_version: &str, forge_version: &str) -> PathBuf {
+    data_dir
+        .join("forge_work")
+        .join(format!("{mc_version}-{forge_version}"))
+}
+
+/// 解析并(如有需要)生成 Forge 合并后的 version.json(带缓存)。
+/// 若 cache/versions/<merged_id>.json 已存在则直接返回;否则下载 installer、与原版合并后写缓存。
+/// 首次会下载 installer jar 到 forge_work 目录(供处理器阶段复用)。
+pub async fn resolve_forge_version(
+    client: &reqwest::Client,
+    data_dir: &Path,
+    mc_version: &str,
+    forge_version: &str,
+    retry_times: u32,
+) -> Result<VersionJson, RmclError> {
+    let forge_version = forge_version.trim();
+    if forge_version.is_empty() {
+        return Err(RmclError::other("未指定 Forge 版本"));
+    }
+    let merged_id = forge_merged_id(mc_version, forge_version);
+    let merged_cache = data_dir
+        .join("cache")
+        .join("versions")
+        .join(format!("{merged_id}.json"));
+    if let Some(v) = load_cached(&merged_cache) {
+        return Ok(v);
+    }
+
+    let work = forge_work_dir(data_dir, mc_version, forge_version);
+    let jar = installer::download_installer(client, mc_version, forge_version, &work, retry_times).await?;
+    let contents = installer::extract_installer(&jar, mc_version, forge_version)?;
+    let forge_json = contents
+        .version_json
+        .as_ref()
+        .or(contents.install_profile.as_ref())
+        .ok_or_else(|| RmclError::other("Forge installer 缺少 version.json / install_profile.json"))?;
+    let vanilla = crate::core::loader::fetch_vanilla(client, data_dir, mc_version, retry_times).await?;
+    let merged = profile_merge::merge_forge(&vanilla, forge_json)?;
+
+    if let Some(parent) = merged_cache.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::write(&merged_cache, serde_json::to_string(&merged)?)?;
+    Ok(merged)
+}
+
+/// 运行 Forge 新版所需的 processors(仅 ≥1.13;旧版走 legacy)
+pub fn run_installer_processors(
+    contents: &InstallerContents,
+    data_dir: &Path,
+    mc_version: &str,
+    forge_version: &str,
+    java_path: &str,
+) -> Result<(), RmclError> {
+    if is_legacy(mc_version) {
+        return Ok(());
+    }
+    let work = forge_work_dir(data_dir, mc_version, forge_version);
+    let libraries_dir = data_dir.join("libraries");
+    processor::run_processors(contents, &work, &libraries_dir, java_path)
+}
+
+fn load_cached(path: &Path) -> Option<VersionJson> {
+    let content = std::fs::read_to_string(path).ok()?;
+    serde_json::from_str(&content).ok()
+}
 
 /// 判断某个 MC 版本走新版(processor)还是旧版(universal jar)路径
 pub fn is_legacy(mc_version: &str) -> bool {
@@ -50,16 +127,7 @@ fn parse_version(v: &str) -> (u32, u32, u32) {
     )
 }
 
-/// 统一请求并解析成 JSON 值
-pub(crate) async fn fetch_json(
-    client: &reqwest::Client,
-    url: &str,
-    retry_times: u32,
-) -> Result<serde_json::Value, RmclError> {
-    let body = fetch_body(client, url, retry_times).await?;
-    Ok(serde_json::from_str(&body)?)
-}
-
+/// 统一请求并返回文本
 pub(crate) async fn fetch_body(
     client: &reqwest::Client,
     url: &str,

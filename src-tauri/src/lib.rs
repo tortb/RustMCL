@@ -105,6 +105,7 @@ pub fn run() {
             commands::config::update_app_config,
             commands::config::detect_java,
             commands::forge::list_forge_versions,
+            commands::forge::install_forge,
         ]);
 
     if let Err(e) = builder.run(tauri::generate_context!()) {
