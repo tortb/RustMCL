@@ -1,7 +1,38 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Save, Loader2, Coffee, Download, FolderOpen } from "lucide-react";
+import { open } from "@tauri-apps/plugin-dialog";
+import {
+  Save,
+  Loader2,
+  Coffee,
+  Download,
+  FolderOpen,
+  Zap,
+  KeyRound,
+  RefreshCw,
+  ArrowUpCircle,
+  UserRound,
+  Upload,
+  Trash2,
+} from "lucide-react";
+import {
+  checkForUpdate,
+  getOfflineSkin,
+  getSkinImage,
+  importSkin,
+  installUpdate,
+  listMirrors,
+  listSkins,
+  removeSkin,
+  setMirror,
+  setOfflineSkin,
+  testAllMirrorSpeed,
+  uploadSkin,
+} from "../lib/api";
+import type { MirrorSpec, SkinEntry, SpeedResult, UpdateInfo } from "../lib/types";
 import { useSettingsStore } from "../stores/settings";
+import { useAccountStore } from "../stores/account";
+import SkinPreview from "../components/SkinPreview";
 
 const ease = [0.32, 0.72, 0, 1] as const;
 
@@ -19,8 +50,56 @@ export default function Settings() {
   const [theme, setTheme] = useState("dark");
   const [language, setLanguage] = useState("zh-CN");
 
+  // 下载源
+  const [mirrors, setMirrors] = useState<MirrorSpec[]>([]);
+  const [selectedMirror, setSelectedMirror] = useState("official");
+  const [customBase, setCustomBase] = useState("");
+  const [speeds, setSpeeds] = useState<SpeedResult[]>([]);
+  const [testing, setTesting] = useState(false);
+  const [cfKey, setCfKey] = useState("");
+
+  // 自更新
+  const [checking, setChecking] = useState(false);
+  const [installing, setInstalling] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+  const [updateError, setUpdateError] = useState("");
+  const [updateMsg, setUpdateMsg] = useState("");
+
+  // 皮肤
+  const [skins, setSkins] = useState<SkinEntry[]>([]);
+  const [selectedSkin, setSelectedSkin] = useState<SkinEntry | null>(null);
+  const [skinModel, setSkinModel] = useState<"classic" | "slim">("classic");
+  const [skinPreview, setSkinPreview] = useState<string | null>(null);
+  const [skinImporting, setSkinImporting] = useState(false);
+  const [skinUploading, setSkinUploading] = useState(false);
+  const [skinMsg, setSkinMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const activeAccount = useAccountStore((s) => s.active);
+  const canUpload = activeAccount?.account_type === "microsoft";
+  const isOffline = activeAccount?.account_type === "offline";
+
+  // 离线账号皮肤关联
+  const [offlineSkinId, setOfflineSkinId] = useState<string | null>(null);
+  const [offlineSkinMsg, setOfflineSkinMsg] = useState("");
+
+  useEffect(() => {
+    if (isOffline && activeAccount) {
+      getOfflineSkin(activeAccount.id)
+        .then(setOfflineSkinId)
+        .catch(() => setOfflineSkinId(null));
+    } else {
+      setOfflineSkinId(null);
+    }
+  }, [activeAccount, isOffline]);
+
   useEffect(() => {
     s.load();
+    listMirrors()
+      .then(setMirrors)
+      .catch(() => setMirrors([]));
+    listSkins()
+      .then(setSkins)
+      .catch(() => setSkins([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -32,16 +111,161 @@ export default function Settings() {
       setJavaPath(s.config.java.default_java_path);
       setTheme(s.config.general.theme);
       setLanguage(s.config.general.language);
+      setSelectedMirror(s.config.download.mirror);
+      setCustomBase(s.config.download.mirror_custom_base ?? "");
+      setCfKey(s.config.curseforge_api_key ?? "");
     }
   }, [s.config]);
 
+  const handleSpeedTest = async () => {
+    setTesting(true);
+    try {
+      const results = await testAllMirrorSpeed();
+      setSpeeds(results);
+    } catch (e) {
+      setSpeeds([]);
+      console.error(e);
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const handleCheckUpdate = async () => {
+    setChecking(true);
+    setUpdateError("");
+    setUpdateInfo(null);
+    try {
+      const info = await checkForUpdate();
+      setUpdateInfo(info);
+    } catch (e) {
+      setUpdateError(String(e));
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  const handleInstallUpdate = async () => {
+    setInstalling(true);
+    setUpdateError("");
+    try {
+      const msg = await installUpdate();
+      setUpdateMsg(msg);
+    } catch (e) {
+      setUpdateError(String(e));
+    } finally {
+      setInstalling(false);
+    }
+  };
+
+  const reloadSkins = async () => {
+    const list = await listSkins();
+    setSkins(list);
+    return list;
+  };
+
+  const handleImportSkin = async () => {
+    const selected = await open({
+      multiple: false,
+      filters: [{ name: "皮肤", extensions: ["png"] }],
+    });
+    if (!selected || Array.isArray(selected)) return;
+    setSkinImporting(true);
+    setSkinMsg(null);
+    try {
+      const entry = await importSkin(selected, "", skinModel);
+      await reloadSkins();
+      setSelectedSkin(entry);
+      const url = await getSkinImage(entry.id);
+      setSkinPreview(url);
+      setSkinMsg({ ok: true, text: "已导入皮肤库" });
+    } catch (e) {
+      setSkinMsg({ ok: false, text: String(e) });
+    } finally {
+      setSkinImporting(false);
+    }
+  };
+
+  const handleSelectSkin = async (entry: SkinEntry) => {
+    setSelectedSkin(entry);
+    setSkinModel(entry.model);
+    setSkinMsg(null);
+    try {
+      const url = await getSkinImage(entry.id);
+      setSkinPreview(url);
+    } catch (e) {
+      setSkinPreview(null);
+      setSkinMsg({ ok: false, text: String(e) });
+    }
+  };
+
+  const handleUploadSkin = async () => {
+    if (!selectedSkin) return;
+    setSkinUploading(true);
+    setSkinMsg(null);
+    try {
+      await uploadSkin(selectedSkin.id);
+      setSkinMsg({ ok: true, text: `已将「${selectedSkin.name}」上传到微软账号` });
+    } catch (e) {
+      setSkinMsg({ ok: false, text: String(e) });
+    } finally {
+      setSkinUploading(false);
+    }
+  };
+
+  const handleRemoveSkin = async (entry: SkinEntry) => {
+    setSkinMsg(null);
+    try {
+      await removeSkin(entry.id);
+      await reloadSkins();
+      if (selectedSkin?.id === entry.id) {
+        setSelectedSkin(null);
+        setSkinPreview(null);
+      }
+      setSkinMsg({ ok: true, text: "已删除" });
+    } catch (e) {
+      setSkinMsg({ ok: false, text: String(e) });
+    }
+  };
+
+  const handleSetOfflineSkin = async () => {
+    if (!selectedSkin || !activeAccount) return;
+    setOfflineSkinMsg("");
+    try {
+      await setOfflineSkin(activeAccount.id, selectedSkin.id);
+      setOfflineSkinId(selectedSkin.id);
+      setOfflineSkinMsg("已设为该离线账号的皮肤");
+    } catch (e) {
+      setOfflineSkinMsg(String(e));
+    }
+  };
+
+  const handleClearOfflineSkin = async () => {
+    if (!activeAccount) return;
+    setOfflineSkinMsg("");
+    try {
+      await setOfflineSkin(activeAccount.id, null);
+      setOfflineSkinId(null);
+      setOfflineSkinMsg("已清除离线皮肤关联");
+    } catch (e) {
+      setOfflineSkinMsg(String(e));
+    }
+  };
+
   const handleSave = async () => {
     if (!s.config) return;
+    await setMirror(selectedMirror, customBase.trim() || null).catch(() => undefined);
     await s.save({
       ...s.config,
       general: { ...s.config.general, theme, language },
       java: { auto_detect: autoDetect, default_java_path: javaPath },
-      download: { ...s.config.download, max_concurrent: maxConcurrent, retry_times: retryTimes },
+      download: {
+        ...s.config.download,
+        max_concurrent: maxConcurrent,
+        retry_times: retryTimes,
+        mirror: selectedMirror,
+        mirror_custom_base: customBase.trim() || null,
+      },
+      curseforge_api_key: cfKey.trim() || null,
     });
   };
 
@@ -83,6 +307,277 @@ export default function Settings() {
                     className="mt-1.5 w-full rounded-[10px] border border-divider bg-white px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
                   />
                 </Field>
+              </div>
+            </Section>
+
+            {/* 下载源 */}
+            <Section icon={<Zap size={16} />} title="下载源">
+              <Field label="镜像源">
+                <select
+                  value={selectedMirror}
+                  onChange={(e) => setSelectedMirror(e.target.value)}
+                  className="mt-1.5 w-full rounded-[10px] border border-divider bg-white px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
+                >
+                  {mirrors.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+                  {mirrors.every((m) => m.id !== "custom") && (
+                    <option value="custom">自定义</option>
+                  )}
+                </select>
+              </Field>
+
+              {selectedMirror === "custom" && (
+                <Field label="自定义镜像基址">
+                  <input
+                    value={customBase}
+                    onChange={(e) => setCustomBase(e.target.value)}
+                    placeholder="https://example.com"
+                    className="mt-1.5 w-full rounded-[10px] border border-divider bg-white px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
+                  />
+                </Field>
+              )}
+
+              <div className="flex items-center justify-between gap-3">
+                <button
+                  onClick={handleSpeedTest}
+                  disabled={testing}
+                  className="flex items-center gap-1.5 rounded-[10px] border border-divider px-3.5 py-2 text-[12.5px] font-medium text-ink-2 transition-colors hover:bg-black/[0.03] disabled:opacity-50"
+                >
+                  {testing ? <Loader2 size={13} className="animate-spin" /> : <Zap size={13} />}
+                  测速全部节点
+                </button>
+                <span className="text-[12px] text-ink-3">切换后保存生效</span>
+              </div>
+
+              {speeds.length > 0 && (
+                <ul className="flex flex-col gap-2">
+                  {speeds.map((r) => (
+                    <li
+                      key={r.id}
+                      className={`flex items-center gap-3 rounded-[10px] border px-3.5 py-2.5 text-[12.5px] ${
+                        r.ok ? "border-divider" : "border-red-200 bg-red-50"
+                      }`}
+                    >
+                      <span className="w-16 shrink-0 font-medium text-ink">{r.name || r.id}</span>
+                      {r.ok ? (
+                        <>
+                          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-black/[0.06]">
+                            <div
+                              className="h-full rounded-full bg-accent transition-all"
+                              style={{ width: `${Math.min(100, r.throughput / 100)}%` }}
+                            />
+                          </div>
+                          <span className="w-24 shrink-0 text-right text-ink-2">
+                            {r.latency_ms >= 1000
+                              ? `${(r.latency_ms / 1000).toFixed(1)}s`
+                              : `${r.latency_ms}ms`}
+                            · {r.throughput.toFixed(0)} KB/s
+                          </span>
+                        </>
+                      ) : (
+                        <span className="flex-1 truncate text-red-500">{r.error}</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Section>
+
+            {/* 网络 */}
+            <Section icon={<KeyRound size={16} />} title="网络">
+              <Field label="CurseForge API Key">
+                <input
+                  value={cfKey}
+                  onChange={(e) => setCfKey(e.target.value)}
+                  placeholder="可选,用于 CurseForge 源搜索/安装"
+                  className="mt-1.5 w-full rounded-[10px] border border-divider bg-white px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
+                />
+              </Field>
+              <p className="text-[11.5px] text-ink-3">
+                前往 curseforge.com 申请个人 API Key;配置后请在 Mod 页切换到 CurseForge 源。
+              </p>
+            </Section>
+
+            {/* 检查更新 */}
+            <Section icon={<RefreshCw size={16} />} title="检查更新">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-col gap-1 text-[12.5px] text-ink-2">
+                  <span>检查是否有新版本可用</span>
+                  {updateInfo && (
+                    <span className="font-medium text-ink">
+                      当前 v{updateInfo.current} · 最新 v{updateInfo.latest}
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={handleCheckUpdate}
+                  disabled={checking}
+                  className="flex shrink-0 items-center gap-1.5 rounded-[10px] border border-divider px-3.5 py-2 text-[12.5px] font-medium text-ink-2 transition-colors hover:bg-black/[0.03] disabled:opacity-50"
+                >
+                  {checking ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+                  检查
+                </button>
+              </div>
+
+              {updateInfo && updateInfo.has_update && (
+                <div className="rounded-[10px] border border-accent/40 bg-accent/[0.06] p-3.5 text-[12.5px]">
+                  <div className="mb-1 flex items-center gap-1.5 font-semibold text-accent">
+                    <ArrowUpCircle size={14} />
+                    发现新版本
+                  </div>
+                  {updateInfo.notes ? (
+                    <p className="break-words text-ink-2">{updateInfo.notes}</p>
+                  ) : (
+                    <p className="text-ink-3">前往发布页获取新版本。</p>
+                  )}
+                  <button
+                    onClick={handleInstallUpdate}
+                    disabled={installing}
+                    className="mt-3 flex items-center gap-1.5 rounded-[10px] bg-accent px-3.5 py-2 text-[12.5px] font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
+                  >
+                    {installing ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+                    {installing ? "正在更新..." : "下载并更新"}
+                  </button>
+                </div>
+              )}
+
+              {updateInfo && !updateInfo.has_update && (
+                <div className="rounded-[10px] border border-divider bg-black/[0.02] p-3.5 text-[12.5px] text-ink-2">
+                  当前已是最新版本。
+                </div>
+              )}
+
+              {updateMsg && (
+                <p className="rounded-[10px] bg-green-50 px-3.5 py-2.5 text-[12.5px] text-green-600">
+                  {updateMsg}
+                </p>
+              )}
+
+              {updateError && (
+                <p className="rounded-[10px] bg-red-50 px-3.5 py-2.5 text-[12.5px] text-red-600">
+                  {updateError}
+                </p>
+              )}
+            </Section>
+
+            {/* 皮肤 */}
+            <Section icon={<UserRound size={16} />} title="皮肤">
+              <div className="flex flex-col gap-4 sm:flex-row">
+                {/* 3D 预览 */}
+                <div className="flex w-full shrink-0 items-center justify-center rounded-[12px] bg-black/[0.03] p-3 sm:w-[240px]">
+                  <SkinPreview skin={skinPreview} model={skinModel} width={210} height={300} />
+                </div>
+
+                {/* 皮肤库 */}
+                <div className="flex min-w-0 flex-1 flex-col gap-3">
+                  <div className="flex items-center gap-2">
+                    <label className="text-[12.5px] font-medium text-ink-2">模型</label>
+                    <select
+                      value={skinModel}
+                      onChange={(e) => setSkinModel(e.target.value as "classic" | "slim")}
+                      className="rounded-[10px] border border-divider bg-white px-3 py-2 text-[12.5px] text-ink outline-none transition-colors focus:border-accent"
+                    >
+                      <option value="classic">经典(粗臂)</option>
+                      <option value="slim">细臂</option>
+                    </select>
+                    <button
+                      onClick={handleImportSkin}
+                      disabled={skinImporting}
+                      className="ml-auto flex items-center gap-1.5 rounded-[10px] border border-divider px-3.5 py-2 text-[12.5px] font-medium text-ink-2 transition-colors hover:bg-black/[0.03] disabled:opacity-50"
+                    >
+                      {skinImporting ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+                      导入 PNG
+                    </button>
+                  </div>
+
+                  {canUpload ? (
+                    <button
+                      onClick={handleUploadSkin}
+                      disabled={!selectedSkin || skinUploading}
+                      className="flex items-center justify-center gap-1.5 rounded-[10px] bg-accent px-3.5 py-2 text-[12.5px] font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
+                    >
+                      {skinUploading ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
+                      上传到当前微软账号
+                    </button>
+                  ) : isOffline ? (
+                    <div className="flex flex-col gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          onClick={handleSetOfflineSkin}
+                          disabled={!selectedSkin}
+                          className="flex items-center justify-center gap-1.5 rounded-[10px] bg-accent px-3.5 py-2 text-[12.5px] font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
+                        >
+                          <UserRound size={13} />
+                          {offlineSkinId ? "更新离线皮肤" : "设为此账号的离线皮肤"}
+                        </button>
+                        {offlineSkinId && (
+                          <button
+                            onClick={handleClearOfflineSkin}
+                            className="flex items-center gap-1.5 rounded-[10px] border border-divider px-3.5 py-2 text-[12.5px] font-medium text-ink-2 transition-colors hover:bg-black/[0.03]"
+                          >
+                            清除关联
+                          </button>
+                        )}
+                      </div>
+                      {offlineSkinMsg && (
+                        <p className="text-[11.5px] text-ink-2">{offlineSkinMsg}</p>
+                      )}
+                      <p className="rounded-[10px] bg-black/[0.02] px-3.5 py-2.5 text-[12px] text-ink-3">
+                        离线账号无 Mojang 账号系统支撑,游戏内的皮肤实际渲染因版本而异(需额外方案)。此处将所选本地皮肤与该账号关联,便于本地管理与预览。
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="rounded-[10px] bg-black/[0.02] px-3.5 py-2.5 text-[12px] text-ink-3">
+                      上传皮肤需先登录微软账号;离线账号可先导入本地皮肤库。
+                    </p>
+                  )}
+
+                  <ul className="flex flex-wrap gap-2">
+                    {skins.map((sk) => (
+                      <li key={sk.id}>
+                        <div
+                          onClick={() => handleSelectSkin(sk)}
+                          className={`flex cursor-pointer items-center gap-2 rounded-[10px] border px-3 py-2 text-[12.5px] transition-colors ${
+                            selectedSkin?.id === sk.id
+                              ? "border-accent bg-accent/[0.06] text-ink"
+                              : "border-divider bg-white text-ink-2 hover:bg-black/[0.02]"
+                          }`}
+                        >
+                          <span className="max-w-[120px] truncate">{sk.name}</span>
+                          <span className="rounded bg-black/[0.05] px-1.5 py-0.5 text-[10.5px] text-ink-3">
+                            {sk.width}x{sk.height}
+                          </span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveSkin(sk);
+                            }}
+                            className="ml-1 text-ink-3 transition-colors hover:text-red-500"
+                            aria-label="删除"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                    {skins.length === 0 && (
+                      <li className="text-[12px] text-ink-3">暂无皮肤,点击「导入 PNG」添加</li>
+                    )}
+                  </ul>
+
+                  {skinMsg && (
+                    <p
+                      className={`rounded-[10px] px-3.5 py-2.5 text-[12px] ${
+                        skinMsg.ok ? "bg-black/[0.02] text-ink-2" : "bg-red-50 text-red-600"
+                      }`}
+                    >
+                      {skinMsg.text}
+                    </p>
+                  )}
+                </div>
               </div>
             </Section>
 
