@@ -5,6 +5,7 @@ import {
   logoutAccount,
   startMicrosoftLogin,
   cancelMicrosoftLogin,
+  createOfflineAccount,
 } from "../lib/api";
 import type { Account, MsDeviceInfo, MsLoginFinished, MsLoginStatus } from "../lib/types";
 
@@ -33,6 +34,8 @@ interface AccountStore {
   closeLogin: () => void;
   startLogin: () => Promise<void>;
   cancelLogin: () => Promise<void>;
+  /** 创建离线账号:入参为已在前端校验过的合法用户名 */
+  createOffline: (username: string) => Promise<void>;
   logout: (id: string) => Promise<void>;
 
   // ms-login-* 事件回调(由 LoginModal 注册监听)
@@ -78,6 +81,16 @@ export const useAccountStore = create<AccountStore>((set, get) => ({
       await cancelMicrosoftLogin();
     } finally {
       set({ loginOpen: false, stage: "idle", device: null });
+    }
+  },
+
+  createOffline: async (username) => {
+    try {
+      await createOfflineAccount(username);
+      set({ loginOpen: false, stage: "idle", device: null, loginError: "" });
+      await get().loadAccounts();
+    } catch (e) {
+      set({ stage: "error", loginError: String(e) });
     }
   },
 

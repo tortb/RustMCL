@@ -191,6 +191,32 @@ fn emit_launch_result(app: &AppHandle, result: Result<i32, RmclError>) {
     }
 }
 
+/// 解析启动账号:
+/// - DB 激活账号为离线类型 → 使用固定 UUID,access_token 置 "0"
+/// - DB 激活账号为微软类型 → 通过 keyring refresh token 静默续期
+/// - 无激活账号 → 离线 Steve 占位(随机 v4 UUID)
+async fn resolve_launch_account(
+    client: &reqwest::Client,
+    db_path: &std::path::Path,
+) -> Result<(String, String, String), RmclError> {
+    let conn = rusqlite::Connection::open(db_path)?;
+    let active = Repository::get_active_account(&conn)?;
+    drop(conn);
+    match active {
+        Some(acc) if acc.account_type == "offline" => {
+            Ok((acc.username, acc.uuid, "0".into()))
+        }
+        Some(_) => resolve_active_account(client)
+            .await?
+            .ok_or_else(|| RmclError::other("微软账号令牌已失效,请重新登录")),
+        None => Ok((
+            "Steve".into(),
+            uuid::Uuid::new_v4().to_string(),
+            "0".into(),
+        )),
+    }
+}
+
 async fn run_launch(
     client: reqwest::Client,
     data_dir: &Path,
@@ -243,16 +269,10 @@ async fn run_launch(
     // 3. 解压 natives
     extract_natives(&native_plan(&version, &ctx, &layout.libraries_dir), &natives_dir)?;
 
-    // 4. 账号解析:未指定用户名时优先使用已登录微软账号,否则离线 Steve
+    // 4. 账号解析:未指定用户名时优先 DB 中激活账号(离线用固定 UUID,微软走 token 续期),否则离线 Steve
     let (username, uuid, access_token) = if opts.username.is_empty() {
-        match resolve_active_account(&client).await? {
-            Some((name, uid, tok)) => (name, uid, tok),
-            None => (
-                "Steve".into(),
-                uuid::Uuid::new_v4().to_string(),
-                "0".into(),
-            ),
-        }
+        let db_path = data_dir.join("rmcl.db");
+        resolve_launch_account(&client, &db_path).await?
     } else {
         (
             opts.username.clone(),

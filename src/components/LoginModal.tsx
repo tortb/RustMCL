@@ -1,16 +1,25 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { Copy, Check, Loader2, X } from "lucide-react";
-import { useState } from "react";
+import { Copy, Check, Loader2, X, Wifi, User } from "lucide-react";
 import { useAccountStore } from "../stores/account";
 import type { MsDeviceInfo, MsLoginFinished, MsLoginStatus } from "../lib/types";
 
 const ease = [0.32, 0.72, 0, 1] as const;
+// MC 用户名规则:3-16 位字母数字下划线
+const USERNAME_RE = /^[A-Za-z0-9_]{3,16}$/;
+
+type LoginMode = "microsoft" | "offline";
 
 export default function LoginModal() {
   const s = useAccountStore();
   const [copied, setCopied] = useState(false);
+  const [mode, setMode] = useState<LoginMode>("microsoft");
+
+  // 弹窗打开时默认切到微软登录
+  useEffect(() => {
+    if (s.loginOpen) setMode("microsoft");
+  }, [s.loginOpen]);
 
   // 常驻组件:始终注册事件监听,避免弹窗关闭期间丢失事件
   useEffect(() => {
@@ -59,8 +68,8 @@ export default function LoginModal() {
             className="w-[400px] rounded-[20px] bg-white p-7 shadow-[0_24px_64px_rgba(0,0,0,0.16)]"
           >
             <div className="flex items-center justify-between">
-              <h2 className="text-[18px] font-bold tracking-tight text-ink">登录微软账号</h2>
-              {s.stage === "waiting" && (
+              <h2 className="text-[18px] font-bold tracking-tight text-ink">账号登录</h2>
+              {s.stage === "waiting" && mode === "microsoft" && (
                 <button
                   onClick={s.cancelLogin}
                   className="rounded-full p-1.5 text-ink-3 transition-colors hover:bg-black/[0.05]"
@@ -71,105 +80,206 @@ export default function LoginModal() {
               )}
             </div>
 
-            {/* 初始状态:开始登录 */}
-            {s.stage === "idle" && (
-              <>
-                <p className="mt-2 text-[13px] leading-relaxed text-ink-3">
-                  通过微软官方授权登录你的 Minecraft 账号,refresh token 将安全保存在系统钥匙串中。
-                </p>
-                <motion.button
-                  whileTap={{ scale: 0.97 }}
-                  onClick={s.startLogin}
-                  className="mt-6 w-full rounded-[12px] bg-accent py-3 text-[14px] font-semibold text-white transition-colors hover:bg-accent-hover"
-                >
-                  开始登录
-                </motion.button>
-              </>
-            )}
-
-            {/* 获取设备码中 */}
-            {s.stage === "device" && (
-              <div className="mt-6 flex flex-col items-center gap-3 py-4">
-                <Loader2 size={22} className="animate-spin text-accent" />
-                <p className="text-[13px] text-ink-3">正在获取设备码…</p>
-              </div>
-            )}
-
-            {/* 等待授权:展示设备码 */}
-            {s.stage === "waiting" && s.device && (
-              <>
-                <p className="mt-3 text-[13px] leading-relaxed text-ink-3">
-                  请在浏览器打开授权页面,输入以下代码完成登录:
-                </p>
-                <div className="mt-4 flex items-center justify-center gap-3 rounded-[14px] bg-[#f5f5f7] py-4">
-                  <span className="font-mono text-[26px] font-bold tracking-[0.2em] text-ink">
-                    {s.device.user_code}
-                  </span>
+            {/* 登录方式切换 */}
+            <div className="mt-4 flex rounded-[10px] bg-[#f2f2f4] p-1 text-[13px] font-medium">
+              {(
+                [
+                  { key: "microsoft", label: "微软账号", icon: Wifi },
+                  { key: "offline", label: "离线账号", icon: User },
+                ] as { key: LoginMode; label: string; icon: React.ElementType }[]
+              ).map((tab) => {
+                const Icon = tab.icon;
+                const active = mode === tab.key;
+                return (
                   <button
-                    onClick={copyCode}
-                    className="rounded-full p-2 text-ink-3 transition-colors hover:bg-black/[0.06]"
-                    aria-label="复制设备码"
+                    key={tab.key}
+                    onClick={() => {
+                      setMode(tab.key);
+                      // 重置到初始状态,清除上次失败的错误
+                      s.openLogin();
+                    }}
+                    className={`flex flex-1 items-center justify-center gap-1.5 rounded-[8px] py-2 transition-colors duration-150 ${
+                      active ? "bg-white text-ink shadow-sm" : "text-ink-3 hover:text-ink"
+                    }`}
                   >
-                    {copied ? <Check size={15} className="text-accent" /> : <Copy size={15} />}
+                    <Icon size={14} strokeWidth={1.8} />
+                    {tab.label}
                   </button>
-                </div>
-                <p className="mt-2 text-center font-mono text-[12px] text-ink-3">
-                  {s.device.verification_uri}
-                </p>
-                {s.statusMsg && (
-                  <p className="mt-3 text-center text-[12.5px] text-ink-3">{s.statusMsg}</p>
+                );
+              })}
+            </div>
+
+            {/* 微软面板 */}
+            {mode === "microsoft" && (
+              <>
+                {/* 初始状态:开始登录 */}
+                {s.stage === "idle" && (
+                  <>
+                    <p className="mt-2 text-[13px] leading-relaxed text-ink-3">
+                      通过微软官方授权登录你的 Minecraft 账号,refresh token 将安全保存在系统钥匙串中。
+                    </p>
+                    <motion.button
+                      whileTap={{ scale: 0.97 }}
+                      onClick={s.startLogin}
+                      className="mt-6 w-full rounded-[12px] bg-accent py-3 text-[14px] font-semibold text-white transition-colors hover:bg-accent-hover"
+                    >
+                      开始登录
+                    </motion.button>
+                  </>
                 )}
-                <div className="mt-4 flex items-center justify-center gap-2">
-                  <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-60" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
-                  </span>
-                  <span className="text-[12px] text-ink-2">等待授权…</span>
-                </div>
-                <button
-                  onClick={s.cancelLogin}
-                  className="mt-5 w-full rounded-[12px] border border-divider py-2.5 text-[13.5px] font-medium text-ink-2 transition-colors hover:bg-black/[0.03]"
-                >
-                  取消
-                </button>
+
+                {/* 获取设备码中 */}
+                {s.stage === "device" && (
+                  <div className="mt-6 flex flex-col items-center gap-3 py-4">
+                    <Loader2 size={22} className="animate-spin text-accent" />
+                    <p className="text-[13px] text-ink-3">正在获取设备码…</p>
+                  </div>
+                )}
+
+                {/* 等待授权:展示设备码 */}
+                {s.stage === "waiting" && s.device && (
+                  <>
+                    <p className="mt-3 text-[13px] leading-relaxed text-ink-3">
+                      请在浏览器打开授权页面,输入以下代码完成登录:
+                    </p>
+                    <div className="mt-4 flex items-center justify-center gap-3 rounded-[14px] bg-[#f5f5f7] py-4">
+                      <span className="font-mono text-[26px] font-bold tracking-[0.2em] text-ink">
+                        {s.device.user_code}
+                      </span>
+                      <button
+                        onClick={copyCode}
+                        className="rounded-full p-2 text-ink-3 transition-colors hover:bg-black/[0.06]"
+                        aria-label="复制设备码"
+                      >
+                        {copied ? <Check size={15} className="text-accent" /> : <Copy size={15} />}
+                      </button>
+                    </div>
+                    <p className="mt-2 text-center font-mono text-[12px] text-ink-3">
+                      {s.device.verification_uri}
+                    </p>
+                    {s.statusMsg && (
+                      <p className="mt-3 text-center text-[12.5px] text-ink-3">{s.statusMsg}</p>
+                    )}
+                    <div className="mt-4 flex items-center justify-center gap-2">
+                      <span className="relative flex h-2 w-2">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-60" />
+                        <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
+                      </span>
+                      <span className="text-[12px] text-ink-2">等待授权…</span>
+                    </div>
+                    <button
+                      onClick={s.cancelLogin}
+                      className="mt-5 w-full rounded-[12px] border border-divider py-2.5 text-[13.5px] font-medium text-ink-2 transition-colors hover:bg-black/[0.03]"
+                    >
+                      取消
+                    </button>
+                  </>
+                )}
+
+                {/* 兑换令牌 / 保存中 */}
+                {(s.stage === "exchanging" || s.stage === "saving") && (
+                  <div className="mt-6 flex flex-col items-center gap-3 py-4">
+                    <Loader2 size={22} className="animate-spin text-accent" />
+                    <p className="text-[13px] text-ink-3">{s.statusMsg || "正在完成登录…"}</p>
+                  </div>
+                )}
+
+                {/* 错误 */}
+                {s.stage === "error" && (
+                  <ErrorPanel error={s.loginError} onRetry={s.startLogin} onClose={s.closeLogin} />
+                )}
               </>
             )}
 
-            {/* 兑换令牌 / 保存中 */}
-            {(s.stage === "exchanging" || s.stage === "saving") && (
-              <div className="mt-6 flex flex-col items-center gap-3 py-4">
-                <Loader2 size={22} className="animate-spin text-accent" />
-                <p className="text-[13px] text-ink-3">
-                  {s.statusMsg || "正在完成登录…"}
-                </p>
-              </div>
-            )}
-
-            {/* 错误 */}
-            {s.stage === "error" && (
-              <>
-                <p className="mt-3 rounded-[10px] bg-red-50 px-3.5 py-2.5 text-[13px] leading-relaxed text-red-600">
-                  {s.loginError}
-                </p>
-                <div className="mt-4 flex gap-3">
-                  <button
-                    onClick={s.startLogin}
-                    className="flex-1 rounded-[12px] bg-accent py-2.5 text-[13.5px] font-semibold text-white transition-colors hover:bg-accent-hover"
-                  >
-                    重试
-                  </button>
-                  <button
-                    onClick={s.closeLogin}
-                    className="flex-1 rounded-[12px] border border-divider py-2.5 text-[13.5px] font-medium text-ink-2 transition-colors hover:bg-black/[0.03]"
-                  >
-                    关闭
-                  </button>
-                </div>
-              </>
+            {/* 离线面板 */}
+            {mode === "offline" && (
+              <OfflinePanel error={s.stage === "error" ? s.loginError : ""} />
             )}
           </motion.div>
         </motion.div>
       )}
     </AnimatePresence>
+  );
+}
+
+function ErrorPanel({
+  error,
+  onRetry,
+  onClose,
+}: {
+  error: string;
+  onRetry: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <>
+      <p className="mt-3 rounded-[10px] bg-red-50 px-3.5 py-2.5 text-[13px] leading-relaxed text-red-600">
+        {error}
+      </p>
+      <div className="mt-4 flex gap-3">
+        <button
+          onClick={onRetry}
+          className="flex-1 rounded-[12px] bg-accent py-2.5 text-[13.5px] font-semibold text-white transition-colors hover:bg-accent-hover"
+        >
+          重试
+        </button>
+        <button
+          onClick={onClose}
+          className="flex-1 rounded-[12px] border border-divider py-2.5 text-[13.5px] font-medium text-ink-2 transition-colors hover:bg-black/[0.03]"
+        >
+          关闭
+        </button>
+      </div>
+    </>
+  );
+}
+
+function OfflinePanel({ error }: { error: string }) {
+  const s = useAccountStore();
+  const [name, setName] = useState("");
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async () => {
+    if (!USERNAME_RE.test(name)) {
+      setErr("用户名需为 3-16 位字母、数字或下划线");
+      return;
+    }
+    setErr("");
+    setBusy(true);
+    await s.createOffline(name);
+    setBusy(false);
+  };
+
+  return (
+    <div className="mt-4">
+      <p className="text-[13px] leading-relaxed text-ink-3">
+        离线模式无需联网,输入一个用户名即可生成固定的身份(UUID)进入游戏;相同用户名会得到相同身份。
+      </p>
+      <input
+        value={name}
+        onChange={(e) => {
+          setName(e.target.value);
+          if (err) setErr("");
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") submit();
+        }}
+        placeholder="请输入用户名"
+        maxLength={16}
+        className="mt-4 w-full rounded-[12px] bg-[#f5f5f7] px-4 py-3 text-[14px] text-ink outline-none placeholder:text-ink-3 focus:ring-2 focus:ring-accent/40"
+      />
+      {err && <p className="mt-2 text-[12.5px] text-red-600">{err}</p>}
+      {error && <p className="mt-2 rounded-[10px] bg-red-50 px-3.5 py-2.5 text-[13px] leading-relaxed text-red-600">{error}</p>}
+      <motion.button
+        whileTap={{ scale: 0.97 }}
+        onClick={submit}
+        disabled={busy}
+        className="mt-4 flex w-full items-center justify-center gap-2 rounded-[12px] bg-accent py-3 text-[14px] font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-60"
+      >
+        {busy && <Loader2 size={16} className="animate-spin" />}
+        创建离线账号
+      </motion.button>
+    </div>
   );
 }

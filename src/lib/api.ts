@@ -63,6 +63,11 @@ export function cancelMicrosoftLogin(): Promise<void> {
   return invoke("cancel_microsoft_login");
 }
 
+/** 创建(或再次登录)离线账号,生成固定 UUID 并置为当前账号 */
+export function createOfflineAccount(username: string): Promise<Account> {
+  return invoke<Account>("create_offline_account", { username });
+}
+
 export function logoutAccount(id: string): Promise<void> {
   return invoke("logout_account", { id });
 }

@@ -28,7 +28,14 @@ rusqlite = { version = "0.40.2", features = ["bundled"] }
 reqwest = { version = "0.13.4", default-features = false, features = ["json", "form", "stream", "query", "native-tls"] }
 futures-util = "0.3"
 sha1 = "0.10"
+md-5 = "0.10"
 regex = "1"
 sysinfo = "0.33"
 zip = { version = "2", default-features = false, features = ["deflate"] }
 keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }
+
+# 开发构建内存优化(8G 机器):
+# 默认 dev 会生成完整 DWARF 调试信息,编译依赖时内存与产物体积都很大。
+# 改为仅行号表(debug=1),显著降低峰值内存,同时保留 panic 回溯的行号。
+[profile.dev]
+debug = 1

@@ -72,6 +72,35 @@ pub fn cancel_microsoft_login() -> Result<(), String> {
     Ok(())
 }
 
+/// 创建(或再次登录)离线账号:相同用户名生成固定 UUID 并置为当前账号
+#[tauri::command]
+pub fn create_offline_account(
+    state: State<'_, AppState>,
+    username: String,
+) -> Result<crate::db::schema::Account, String> {
+    crate::core::account::offline::validate_username(&username).map_err(|e| e.to_string())?;
+    let uuid = crate::core::account::offline::offline_uuid(&username);
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0);
+    let account = Account {
+        // 离线账号以稳定 UUID 作为主键 id,保证同名账号可幂等更新
+        id: uuid.clone(),
+        username,
+        uuid,
+        account_type: "offline".into(),
+        is_active: true,
+        refreshed_at: Some(now),
+    };
+    let conn = state
+        .db
+        .lock()
+        .map_err(|e| format!("数据库锁获取失败: {e}"))?;
+    Repository::upsert_account(&conn, &account).map_err(|e| e.to_string())?;
+    Ok(account)
+}
+
 /// 返回当前激活账号
 #[tauri::command]
 pub fn get_active_account(state: State<'_, AppState>) -> Result<Option<Account>, String> {

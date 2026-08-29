@@ -100,6 +100,7 @@ pub fn run() {
             commands::list_accounts,
             commands::account::start_microsoft_login,
             commands::account::cancel_microsoft_login,
+            commands::account::create_offline_account,
             commands::account::get_active_account,
             commands::account::logout_account,
             commands::version::list_versions,
