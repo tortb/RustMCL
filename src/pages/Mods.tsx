@@ -11,6 +11,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { useModsStore } from "../stores/mods";
+import { AppSelect } from "../components/AppSelect";
 import type {
   CurseForgeFile,
   ModEntry,
@@ -60,19 +61,18 @@ export default function Mods() {
             <p className="mt-1 text-[13px] text-ink-3">浏览 Modrinth 并安装到指定实例</p>
           </div>
           {/* 实例选择 */}
-          <select
+          <AppSelect
             value={s.selectedInstanceId}
-            onChange={(e) => s.selectInstance(e.target.value)}
-            className="max-w-[220px] rounded-[10px] border border-divider bg-white px-3.5 py-2.5 text-[13px] text-ink outline-none transition-colors focus:border-accent"
-          >
-            {s.instances.length === 0 && <option value="">暂无实例</option>}
-            {s.instances.map((inst) => (
-              <option key={inst.id} value={inst.id}>
-                {inst.name} ({inst.config.meta.mc_version} ·{" "}
-                {inst.config.meta.loader || "vanilla"})
-              </option>
-            ))}
-          </select>
+            onChange={(v) => s.selectInstance(v)}
+            placeholder={s.instances.length === 0 ? "暂无实例" : undefined}
+            className="max-w-[220px]"
+            options={s.instances.map((inst) => ({
+              value: inst.id,
+              label: `${inst.name} (${inst.config.meta.mc_version} · ${
+                inst.config.meta.loader || "vanilla"
+              })`,
+            }))}
+          />
         </div>
 
         {/* 来源切换 */}

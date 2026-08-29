@@ -10,6 +10,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { usePacksStore, type PackType } from "../stores/packs";
+import { AppSelect } from "../components/AppSelect";
 
 const ease = [0.32, 0.72, 0, 1] as const;
 
@@ -40,21 +41,16 @@ export default function Packs() {
             <h1 className="text-[24px] font-bold tracking-tight text-ink">资源包与光影</h1>
             <p className="mt-1 text-[13px] text-ink-3">管理实例的材质包与光影包</p>
           </div>
-          <select
+          <AppSelect
             value={s.selectedInstanceId}
-            onChange={(e) => {
-              usePacksStore.setState({ selectedInstanceId: e.target.value });
+            onChange={(v) => {
+              usePacksStore.setState({ selectedInstanceId: v });
               void usePacksStore.getState().scan();
             }}
-            className="max-w-[220px] rounded-[10px] border border-divider bg-white px-3.5 py-2.5 text-[13px] text-ink outline-none transition-colors focus:border-accent"
-          >
-            {s.instances.length === 0 && <option value="">暂无实例</option>}
-            {s.instances.map((inst) => (
-              <option key={inst.id} value={inst.id}>
-                {inst.name}
-              </option>
-            ))}
-          </select>
+            placeholder={s.instances.length === 0 ? "暂无实例" : undefined}
+            className="max-w-[220px]"
+            options={s.instances.map((inst) => ({ value: inst.id, label: inst.name }))}
+          />
         </div>
 
         {/* 类型切换 */}

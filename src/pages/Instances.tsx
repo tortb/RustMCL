@@ -17,6 +17,7 @@ import {
   Upload,
 } from "lucide-react";
 import { useInstanceStore } from "../stores/instance";
+import { AppSelect } from "../components/AppSelect";
 import { analyzeCrashReport, recommendJvm } from "../lib/api";
 import SavePanel from "../components/SavePanel";
 import type {
@@ -673,34 +674,27 @@ function InstanceModal() {
               {!editing && (
                 <div>
                   <label className="text-[12.5px] font-medium text-ink-2">Minecraft 版本</label>
-                  <select
+                  <AppSelect
                     value={mcVersion}
-                    onChange={(e) => setMcVersion(e.target.value)}
-                    className="mt-1.5 w-full rounded-[10px] border border-divider bg-white px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
-                  >
-                    <option value="">选择版本</option>
-                    {s.versions.map((v) => (
-                      <option key={v.id} value={v.id}>
-                        {v.id}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(v) => setMcVersion(v)}
+                    placeholder="选择版本"
+                    className="mt-1.5 w-full"
+                    options={s.versions.map((v) => ({ value: v.id, label: v.id }))}
+                  />
                 </div>
               )}
 
               <div>
                 <label className="text-[12.5px] font-medium text-ink-2">加载器</label>
-                <select
+                <AppSelect
                   value={loader}
-                  onChange={(e) => setLoader(e.target.value as Loader)}
-                  className="mt-1.5 w-full rounded-[10px] border border-divider bg-white px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
-                >
-                  {(Object.keys(loaderLabels) as Loader[]).map((l) => (
-                    <option key={l} value={l}>
-                      {loaderLabels[l]}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(v) => setLoader(v as Loader)}
+                  className="mt-1.5 w-full"
+                  options={(Object.keys(loaderLabels) as Loader[]).map((l) => ({
+                    value: l,
+                    label: loaderLabels[l],
+                  }))}
+                />
                 {loader !== "vanilla" && loader !== "forge" && (
                   <p className="mt-1.5 text-[11.5px] text-ink-3">
                     将自动安装最新版 {loaderLabels[loader]} 并下载对应资源
@@ -714,26 +708,23 @@ function InstanceModal() {
                     Forge 版本
                     {!mcVersion && <span className="ml-1 text-ink-3">(先选择 MC 版本)</span>}
                   </label>
-                  <select
+                  <AppSelect
                     value={forgeVersion}
-                    onChange={(e) => setForgeVersion(e.target.value)}
+                    onChange={(v) => setForgeVersion(v)}
                     disabled={!mcVersion || s.forgeVersionsLoading}
-                    className="mt-1.5 w-full rounded-[10px] border border-divider bg-white px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent disabled:opacity-50"
-                  >
-                    <option value="">
-                      {s.forgeVersionsLoading
+                    placeholder={
+                      s.forgeVersionsLoading
                         ? "加载中..."
                         : s.forgeVersions.length === 0
                           ? "该版本暂无 Forge"
-                          : "选择版本"}
-                    </option>
-                    {s.forgeVersions.map((fv) => (
-                      <option key={fv.version} value={fv.version}>
-                        {fv.version}
-                        {fv.is_recommended ? " (推荐)" : fv.is_latest ? " (最新)" : ""}
-                      </option>
-                    ))}
-                  </select>
+                          : "选择版本"
+                    }
+                    className="mt-1.5 w-full"
+                    options={s.forgeVersions.map((fv) => ({
+                      value: fv.version,
+                      label: `${fv.version}${fv.is_recommended ? " (推荐)" : fv.is_latest ? " (最新)" : ""}`,
+                    }))}
+                  />
                   {mcVersion && s.forgeVersions.length > 0 && (
                     <p className="mt-1.5 text-[11.5px] text-ink-3">
                       安装过程将执行 Forge 处理器,耗时较长请耐心等待

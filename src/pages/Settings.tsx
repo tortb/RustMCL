@@ -33,6 +33,7 @@ import type { MirrorSpec, SkinEntry, SpeedResult, UpdateInfo } from "../lib/type
 import { useSettingsStore } from "../stores/settings";
 import { useAccountStore } from "../stores/account";
 import SkinPreview from "../components/SkinPreview";
+import { AppSelect } from "../components/AppSelect";
 
 const ease = [0.32, 0.72, 0, 1] as const;
 
@@ -313,20 +314,17 @@ export default function Settings() {
             {/* 下载源 */}
             <Section icon={<Zap size={16} />} title="下载源">
               <Field label="镜像源">
-                <select
+                <AppSelect
                   value={selectedMirror}
-                  onChange={(e) => setSelectedMirror(e.target.value)}
-                  className="mt-1.5 w-full rounded-[10px] border border-divider bg-white px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
-                >
-                  {mirrors.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                    </option>
-                  ))}
-                  {mirrors.every((m) => m.id !== "custom") && (
-                    <option value="custom">自定义</option>
-                  )}
-                </select>
+                  onChange={(v) => setSelectedMirror(v)}
+                  className="mt-1.5 w-full"
+                  options={[
+                    ...mirrors.map((m) => ({ value: m.id, label: m.name })),
+                    ...(mirrors.every((m) => m.id !== "custom")
+                      ? [{ value: "custom", label: "自定义" }]
+                      : []),
+                  ]}
+                />
               </Field>
 
               {selectedMirror === "custom" && (
@@ -475,14 +473,14 @@ export default function Settings() {
                 <div className="flex min-w-0 flex-1 flex-col gap-3">
                   <div className="flex items-center gap-2">
                     <label className="text-[12.5px] font-medium text-ink-2">模型</label>
-                    <select
+                    <AppSelect
                       value={skinModel}
-                      onChange={(e) => setSkinModel(e.target.value as "classic" | "slim")}
-                      className="rounded-[10px] border border-divider bg-white px-3 py-2 text-[12.5px] text-ink outline-none transition-colors focus:border-accent"
-                    >
-                      <option value="classic">经典(粗臂)</option>
-                      <option value="slim">细臂</option>
-                    </select>
+                      onChange={(v) => setSkinModel(v as "classic" | "slim")}
+                      options={[
+                        { value: "classic", label: "经典(粗臂)" },
+                        { value: "slim", label: "细臂" },
+                      ]}
+                    />
                     <button
                       onClick={handleImportSkin}
                       disabled={skinImporting}
@@ -615,27 +613,23 @@ export default function Settings() {
             <Section icon={<FolderOpen size={16} />} title="外观与语言">
               <div className="grid grid-cols-2 gap-4">
                 <Field label="主题">
-                  <select
+                  <AppSelect
                     value={theme}
-                    onChange={(e) => setTheme(e.target.value)}
-                    className="mt-1.5 w-full rounded-[10px] border border-divider bg-white px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
-                  >
-                    {Object.entries(themeLabels).map(([k, v]) => (
-                      <option key={k} value={k}>
-                        {v}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(v) => setTheme(v)}
+                    className="mt-1.5 w-full"
+                    options={Object.entries(themeLabels).map(([k, v]) => ({ value: k, label: v }))}
+                  />
                 </Field>
                 <Field label="语言">
-                  <select
+                  <AppSelect
                     value={language}
-                    onChange={(e) => setLanguage(e.target.value)}
-                    className="mt-1.5 w-full rounded-[10px] border border-divider bg-white px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
-                  >
-                    <option value="zh-CN">简体中文</option>
-                    <option value="en-US">English</option>
-                  </select>
+                    onChange={(v) => setLanguage(v)}
+                    className="mt-1.5 w-full"
+                    options={[
+                      { value: "zh-CN", label: "简体中文" },
+                      { value: "en-US", label: "English" },
+                    ]}
+                  />
                 </Field>
               </div>
             </Section>

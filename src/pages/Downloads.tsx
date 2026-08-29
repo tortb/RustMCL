@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { Download, Play, Terminal, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { useDownloadsStore } from "../stores/download";
+import { AppSelect } from "../components/AppSelect";
 import type { DownloadFinished, DownloadProgress, GameExit, GameLog } from "../lib/types";
 
 const ease = [0.32, 0.72, 0, 1] as const;
@@ -75,20 +76,14 @@ export default function Downloads() {
         >
           <label className="text-[13px] font-medium text-ink-2">Minecraft 版本</label>
           <div className="mt-2 flex items-center gap-3">
-            <select
+            <AppSelect
               value={s.selected}
-              onChange={(e) => s.setSelected(e.target.value)}
+              onChange={(v) => s.setSelected(v)}
               disabled={downloading || s.runState === "running"}
-              className="flex-1 rounded-[10px] border border-divider bg-white px-3.5 py-2.5 text-[14px] text-ink outline-none transition-colors focus:border-accent disabled:opacity-50"
-            >
-              {s.versionsLoading && <option>加载中…</option>}
-              {!s.versionsLoading &&
-                s.versions.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.id}
-                  </option>
-                ))}
-            </select>
+              placeholder={s.versionsLoading ? "加载中…" : undefined}
+              className="flex-1"
+              options={s.versions.map((v) => ({ value: v.id, label: v.id }))}
+            />
             <motion.button
               whileTap={{ scale: 0.97 }}
               onClick={s.startDownload}
