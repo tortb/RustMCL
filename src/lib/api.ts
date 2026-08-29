@@ -3,6 +3,7 @@ import type {
   Account,
   AppConfig,
   AppInfo,
+  ForgeVersionInfo,
   Instance,
   InstanceDetail,
   InstanceInput,
@@ -121,6 +122,11 @@ export function setModEnabled(id: string, enabled: boolean): Promise<void> {
 /** 删除 mod(DB 记录 + 文件) */
 export function deleteMod(id: string): Promise<void> {
   return invoke("delete_mod", { id });
+}
+
+/** 列出指定 MC 版本可用的 Forge 版本 */
+export function listForgeVersions(mcVersion: string): Promise<ForgeVersionInfo[]> {
+  return invoke<ForgeVersionInfo[]>("list_forge_versions", { mcVersion });
 }
 
 export function listVersions(

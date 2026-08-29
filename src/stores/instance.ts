@@ -6,12 +6,14 @@ import {
   getLatestLoaderVersion,
   installLoader,
   launchInstance,
+  listForgeVersions,
   listInstances,
   listVersions,
   updateInstance,
 } from "../lib/api";
 import type {
   DownloadProgress,
+  ForgeVersionInfo,
   InstanceDetail,
   InstanceInput,
   VersionInfo,
@@ -22,6 +24,10 @@ interface InstanceStore {
   loading: boolean;
   versions: VersionInfo[];
   versionsLoading: boolean;
+
+  // Forge 版本(创建弹窗用)
+  forgeVersions: ForgeVersionInfo[];
+  forgeVersionsLoading: boolean;
 
   // 创建/编辑弹窗
   modalOpen: boolean;
@@ -38,6 +44,7 @@ interface InstanceStore {
 
   loadInstances: () => Promise<void>;
   loadVersions: () => Promise<void>;
+  loadForgeVersions: (mcVersion: string) => Promise<void>;
   openCreate: () => void;
   openEdit: (inst: InstanceDetail) => void;
   closeModal: () => void;
@@ -56,6 +63,9 @@ export const useInstanceStore = create<InstanceStore>((set, get) => ({
   loading: false,
   versions: [],
   versionsLoading: false,
+
+  forgeVersions: [],
+  forgeVersionsLoading: false,
 
   modalOpen: false,
   editing: null,
@@ -89,6 +99,20 @@ export const useInstanceStore = create<InstanceStore>((set, get) => ({
     }
   },
 
+  loadForgeVersions: async (mcVersion) => {
+    if (!mcVersion) {
+      set({ forgeVersions: [], forgeVersionsLoading: false });
+      return;
+    }
+    set({ forgeVersionsLoading: true });
+    try {
+      const list = await listForgeVersions(mcVersion);
+      set({ forgeVersions: list, forgeVersionsLoading: false });
+    } catch {
+      set({ forgeVersions: [], forgeVersionsLoading: false });
+    }
+  },
+
   openCreate: () => set({ modalOpen: true, editing: null }),
   openEdit: (inst) => set({ modalOpen: true, editing: inst }),
   closeModal: () => set({ modalOpen: false, editing: null }),
@@ -113,9 +137,9 @@ export const useInstanceStore = create<InstanceStore>((set, get) => ({
     await get().loadInstances();
     set({ modalOpen: false, editing: null });
 
-    // 非原版实例:后台安装加载器并展示进度
+    // 非原版实例:后台安装加载器并展示进度(仅 Fabric/Quilt;Forge 处理器流程待 T5.6 接线)
     const meta = detail.config.meta;
-    if (meta.loader !== "vanilla") {
+    if (meta.loader === "fabric" || meta.loader === "quilt") {
       set({ installingId: detail.id, installProgress: null, installError: "" });
       try {
         await installLoader(meta.mc_version, meta.loader, meta.loader_version || "");

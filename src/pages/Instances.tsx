@@ -322,6 +322,7 @@ function InstanceModal() {
   const [name, setName] = useState("");
   const [mcVersion, setMcVersion] = useState("");
   const [loader, setLoader] = useState<Loader>("vanilla");
+  const [forgeVersion, setForgeVersion] = useState("");
   const [minMemory, setMinMemory] = useState(1024);
   const [maxMemory, setMaxMemory] = useState(4096);
   const [width, setWidth] = useState(1280);
@@ -335,6 +336,7 @@ function InstanceModal() {
       setName(editing?.name ?? "");
       setMcVersion(editing?.mc_version ?? "");
       setLoader((editing?.loader ?? "vanilla") as Loader);
+      setForgeVersion(editing?.config.meta.loader_version ?? "");
       setMinMemory(editing?.config.jvm.min_memory ?? 1024);
       setMaxMemory(editing?.config.jvm.max_memory ?? 4096);
       setWidth(editing?.config.game.resolution.width ?? 1280);
@@ -344,6 +346,16 @@ function InstanceModal() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [s.modalOpen]);
 
+  // loader 选 Forge 且选定 MC 版本时,拉取可用 Forge 版本
+  useEffect(() => {
+    if (s.modalOpen && loader === "forge" && mcVersion) {
+      s.loadForgeVersions(mcVersion);
+    } else {
+      setForgeVersion("");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loader, mcVersion, s.modalOpen]);
+
   const submit = async () => {
     if (!name.trim()) {
       setError("请填写实例名称");
@@ -351,6 +363,10 @@ function InstanceModal() {
     }
     if (!editing && !mcVersion) {
       setError("请选择 Minecraft 版本");
+      return;
+    }
+    if (loader === "forge" && !forgeVersion) {
+      setError("请选择 Forge 版本");
       return;
     }
     setSaving(true);
@@ -364,6 +380,8 @@ function InstanceModal() {
       height,
     };
     if (!editing) input.mc_version = mcVersion;
+    // fix: Forge 版本由用户选择,其它加载器自动解析
+    if (loader === "forge") input.loader_version = forgeVersion;
     try {
       await s.save(input);
     } catch (e) {
@@ -445,12 +463,46 @@ function InstanceModal() {
                     </option>
                   ))}
                 </select>
-                {loader !== "vanilla" && (
+                {loader !== "vanilla" && loader !== "forge" && (
                   <p className="mt-1.5 text-[11.5px] text-ink-3">
                     将自动安装最新版 {loaderLabels[loader]} 并下载对应资源
                   </p>
                 )}
               </div>
+
+              {loader === "forge" && (
+                <div>
+                  <label className="text-[12.5px] font-medium text-ink-2">
+                    Forge 版本
+                    {!mcVersion && <span className="ml-1 text-ink-3">(先选择 MC 版本)</span>}
+                  </label>
+                  <select
+                    value={forgeVersion}
+                    onChange={(e) => setForgeVersion(e.target.value)}
+                    disabled={!mcVersion || s.forgeVersionsLoading}
+                    className="mt-1.5 w-full rounded-[10px] border border-divider bg-white px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent disabled:opacity-50"
+                  >
+                    <option value="">
+                      {s.forgeVersionsLoading
+                        ? "加载中..."
+                        : s.forgeVersions.length === 0
+                          ? "该版本暂无 Forge"
+                          : "选择版本"}
+                    </option>
+                    {s.forgeVersions.map((fv) => (
+                      <option key={fv.version} value={fv.version}>
+                        {fv.version}
+                        {fv.is_recommended ? " (推荐)" : fv.is_latest ? " (最新)" : ""}
+                      </option>
+                    ))}
+                  </select>
+                  {mcVersion && s.forgeVersions.length > 0 && (
+                    <p className="mt-1.5 text-[11.5px] text-ink-3">
+                      安装过程将执行 Forge 处理器,耗时较长请耐心等待
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <div>

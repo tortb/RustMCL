@@ -201,3 +201,11 @@ export interface ModrinthVersion {
   loaders: string[];
   files: ModrinthFile[];
 }
+
+// ---------- Forge ----------
+
+export interface ForgeVersionInfo {
+  version: string;
+  is_recommended: boolean;
+  is_latest: boolean;
+}
