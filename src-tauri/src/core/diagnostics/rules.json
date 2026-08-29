@@ -1,0 +1,92 @@
+{
+  "rules": [
+    {
+      "id": "oom",
+      "name": "内存不足",
+      "patterns": [
+        "OutOfMemoryError",
+        "Java heap space",
+        "GC overhead limit exceeded"
+      ],
+      "summary": "游戏内存不足导致崩溃。",
+      "suggestions": [
+        "在实例设置的 JVM 参数中把最大内存调大(建议 4G 及以上)。",
+        "大型整合包会占用大量内存,必要时关闭无关 mod 或降低画质。"
+      ]
+    },
+    {
+      "id": "java_version",
+      "name": "Java 版本不匹配",
+      "patterns": [
+        "UnsupportedClassVersionError",
+        "class file version",
+        "has been compiled by a more recent version",
+        "IncompatibleClassChangeError"
+      ],
+      "summary": "Java 版本与游戏/加载器不匹配。",
+      "suggestions": [
+        "Minecraft 1.18+ 需要 Java 17,1.20.5+ 需要 Java 21,请在设置页选择匹配的 Java 版本。",
+        "部分 mod/加载器对 Java 大版本有硬性要求,可在对应 MOD 页面查看所需版本。"
+      ]
+    },
+    {
+      "id": "mod_resolution",
+      "name": "mod 加载/冲突错误",
+      "patterns": [
+        "ModLoadingException",
+        "ModResolutionException",
+        "MissingModsException",
+        "DuplicateModsFoundException",
+        "Failed to load mod",
+        "missingmods"
+      ],
+      "summary": "mod 缺失、冲突或依赖不完整导致无法加载。",
+      "suggestions": [
+        "查看报错中列出的具体 mod,补充缺失的依赖。",
+        "重复/冲突的 mod 会导致加载失败,尝试更新或删除后再启动。"
+      ]
+    },
+    {
+      "id": "graphics_driver",
+      "name": "显卡/图形驱动错误",
+      "patterns": [
+        "Pixel format not accelerated",
+        "GLXBadFBConfig",
+        "Failed to create OpenGL context",
+        "GLFW error"
+      ],
+      "summary": "显卡驱动或图形上下文初始化失败。",
+      "suggestions": [
+        "更新显卡驱动到最新版本。",
+        "若运行在虚拟机/远程桌面中,请切换到物理机并启用 GPU 加速。"
+      ]
+    },
+    {
+      "id": "jvm_native_crash",
+      "name": "JVM 原生崩溃",
+      "patterns": [
+        "A fatal error has been detected by the Java Runtime Environment",
+        "SIGSEGV",
+        "hs_err_pid"
+      ],
+      "summary": "JVM 发生了原生崩溃(通常是显卡驱动或 natives 库冲突)。",
+      "suggestions": [
+        "尝试关闭光影/优化类 mod,或更换游戏视频设置。",
+        "若反复崩溃,请更新显卡驱动并检查是否安装了与 Forge/Fabric 冲突的 natives 库。"
+      ]
+    },
+    {
+      "id": "missing_class",
+      "name": "缺少类定义",
+      "patterns": [
+        "NoClassDefFoundError",
+        "ClassNotFoundException"
+      ],
+      "summary": "运行期缺少类定义,通常是某个库或 mod 缺失/损坏。",
+      "suggestions": [
+        "重新从来源下载对应 mod / 库并替换损坏的文件。",
+        "安装整合包时若中途失败,请先补齐缺失的依赖再启动。"
+      ]
+    }
+  ]
+}
