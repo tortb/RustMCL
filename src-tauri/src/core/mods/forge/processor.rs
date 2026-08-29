@@ -73,23 +73,39 @@ pub fn runs_on_client(p: &Processor) -> bool {
     true
 }
 
-/// 收集 data 中的 client 值并合并特殊变量,形成 `{KEY}` → 值 的映射
-pub fn build_vars(data: &Value, special: &HashMap<String, String>) -> HashMap<String, String> {
+/// 收集 data 中的 client 值并合并特殊变量,形成 `{KEY}` → 值 的映射。
+/// 形如 `[net/minecraft/.../x.jar]` 的 Forge「括号 maven 路径」会被解析为
+/// `libraries_dir/<路径>`,使处理器命令行拿到可用的绝对路径。
+pub fn build_vars(
+    data: &Value,
+    special: &HashMap<String, String>,
+    libraries_dir: &Path,
+) -> HashMap<String, String> {
     let mut vars = special.clone();
     if let Some(obj) = data.as_object() {
         for (key, entry) in obj {
             if let Some(v) = client_value(entry) {
-                vars.insert(key.clone(), v);
+                vars.insert(key.clone(), resolve_data_value(v, libraries_dir));
             }
         }
     }
     vars
 }
 
+/// 解析 Forge data 值:
+/// - `[maven/path]` → `libraries_dir/maven/path`(绝对路径)
+/// - 其它值(含普通相对路径)原样返回
+fn resolve_data_value(v: String, libraries_dir: &Path) -> String {
+    match v.strip_prefix('[').and_then(|s| s.strip_suffix(']')) {
+        Some(inner) if !inner.is_empty() => libraries_dir.join(inner).to_string_lossy().to_string(),
+        _ => v,
+    }
+}
+
 /// 取 data 条目中 client(优先)的「真实字符串值」:
 /// - 值为 JSON 数组 → 逗号连接
 /// - 值为带引号的 JSON 字符串 → 解码去引号
-/// - 值为字符串形式的 JSON 数组(如 "[...]")→ 解析后取元素
+/// - 值为字符串形式的 JSON 数组(如 "[...]")→ 保留原文(括号 maven 路径由 build_vars 再解析)
 /// - 值为普通字符串 → 原样
 fn client_value(entry: &Value) -> Option<String> {
     let v = entry.get("client").or_else(|| entry.get("server"))?;
@@ -207,7 +223,7 @@ pub fn run_processors(
     let data = profile.get("data");
     let special = special_vars(installer_dir, libraries_dir);
     let vars = match data {
-        Some(d) => build_vars(d, &special),
+        Some(d) => build_vars(d, &special, libraries_dir),
         None => special,
     };
 
@@ -242,11 +258,13 @@ pub fn run_processors(
     Ok(())
 }
 
-/// 特殊占位符(非来自 data):SIDE/ROOT/INSTALLER_DIR/MINECRAFT_JAR 等
+/// 特殊占位符(非来自 data):SIDE/ROOT/INSTALLER_DIR/MINECRAFT_JAR_DIRECTORY 等。
+/// ROOT 取 minecraft 根目录(libraries 的父目录),用于 `{ROOT}` 指向游戏根。
 fn special_vars(installer_dir: &Path, libraries_dir: &Path) -> HashMap<String, String> {
+    let root = libraries_dir.parent().unwrap_or(libraries_dir);
     let mut m = HashMap::new();
     m.insert("SIDE".into(), "client".into());
-    m.insert("ROOT".into(), libraries_dir.to_string_lossy().to_string());
+    m.insert("ROOT".into(), root.to_string_lossy().to_string());
     m.insert("INSTALLER_DIR".into(), installer_dir.to_string_lossy().to_string());
     m.insert("MINECRAFT_JAR_DIRECTORY".into(), libraries_dir.to_string_lossy().to_string());
     m
@@ -326,13 +344,32 @@ mod tests {
     }
 
     #[test]
-    fn build_vars_includes_special() {
+    fn build_vars_includes_special_and_resolves_bracket_paths() {
         let binding = profile();
         let data = binding.get("data").unwrap();
         let mut special = HashMap::new();
         special.insert("SIDE".into(), "client".into());
-        let vars = build_vars(data, &special);
+        let libs = Path::new("/root/libraries");
+        let vars = build_vars(data, &special, libs);
         assert_eq!(vars.get("SIDE").unwrap(), "client");
-        assert_eq!(vars.get("MINECRAFT_JAR").unwrap(), "[net/minecraft/client/1.20.1/client-1.20.1.jar]");
+        // Forge 括号 maven 路径被解析为 libraries 下的绝对路径
+        assert_eq!(
+            vars.get("MINECRAFT_JAR").unwrap(),
+            "/root/libraries/net/minecraft/client/1.20.1/client-1.20.1.jar"
+        );
+        // 非括号值保持不变
+        assert_eq!(
+            vars.get("BSERVICE").unwrap(),
+            "net.minecraftforge:forge:1.20.1-47.2.0"
+        );
+    }
+
+    #[test]
+    fn resolve_data_value_only_touches_bracketed() {
+        assert_eq!(resolve_data_value("/data/client.lzma".into(), Path::new("/lib")), "/data/client.lzma");
+        assert_eq!(
+            resolve_data_value("[net/x/y.jar]".into(), Path::new("/lib")),
+            "/lib/net/x/y.jar"
+        );
     }
 }
