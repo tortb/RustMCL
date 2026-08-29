@@ -85,11 +85,14 @@ struct TokenError {
 
 /// 请求 Device Code,展示给用户在浏览器完成授权
 pub async fn request_device_code(client: &Client) -> Result<DeviceCodeInfo, RmclError> {
+    eprintln!("[rmcl-ms] POST {DEVICE_CODE_URL} client_id={CLIENT_ID} scope={SCOPE}");
     let resp = client
         .post(DEVICE_CODE_URL)
         .form(&[("client_id", CLIENT_ID), ("scope", SCOPE)])
         .send()
         .await?;
+    let status = resp.status();
+    eprintln!("[rmcl-ms] device_code HTTP {status}");
     if resp.status().is_success() {
         Ok(resp.json::<DeviceCodeInfo>().await?)
     } else {
@@ -122,6 +125,7 @@ pub async fn poll_device_token(client: &Client, device_code: &str) -> PollResult
             Err(e) => PollResult::Failed(format!("解析令牌失败: {e}")),
         };
     }
+    let status = resp.status();
     let err: TokenError = resp
         .json()
         .await
@@ -129,6 +133,7 @@ pub async fn poll_device_token(client: &Client, device_code: &str) -> PollResult
             error: "unknown".into(),
             error_description: None,
         });
+    eprintln!("[rmcl-ms] poll_token HTTP {status}: {}", err.error);
     match err.error.as_str() {
         "authorization_pending" | "slow_down" => PollResult::Pending,
         "authorization_declined" => PollResult::Failed("用户拒绝了授权".into()),
@@ -151,14 +156,18 @@ struct XboxAuthRequest<'a> {
 
 #[derive(Serialize)]
 struct XboxAuthProperties<'a> {
-    #[serde(rename = "AuthMethod")]
-    auth_method: &'a str,
-    #[serde(rename = "SiteName")]
-    site_name: &'a str,
-    #[serde(rename = "RelyingParty")]
-    relying_party: &'a str,
-    #[serde(rename = "Token")]
-    token: String,
+    /// 仅 XBL 使用(值为 "RelyingParty");XSTS 不携带
+    #[serde(rename = "AuthMethod", skip_serializing_if = "Option::is_none")]
+    auth_method: Option<&'a str>,
+    /// 仅 XBL 使用
+    #[serde(rename = "SiteName", skip_serializing_if = "Option::is_none")]
+    site_name: Option<&'a str>,
+    /// 仅 XBL 使用(Properties 内嵌的 RelyingParty)
+    #[serde(rename = "RelyingParty", skip_serializing_if = "Option::is_none")]
+    relying_party: Option<&'a str>,
+    /// 仅 XBL 使用("d=<msa_token>");XSTS 不携带
+    #[serde(rename = "Token", skip_serializing_if = "Option::is_none")]
+    token: Option<String>,
     #[serde(rename = "SandboxId", skip_serializing_if = "Option::is_none")]
     sandbox_id: Option<&'a str>,
     #[serde(rename = "UserTokens", skip_serializing_if = "Option::is_none")]
@@ -166,27 +175,19 @@ struct XboxAuthProperties<'a> {
 }
 
 /// 调用 XBL / XSTS 认证端点,返回 (token, user_hash)
+/// 二者对 Properties 的字段要求不同,由调用方分别构造。
 async fn xbox_auth(
     client: &Client,
     url: &str,
     relying_party: &str,
-    site_name: &str,
-    token: String,
-    sandbox_id: Option<&str>,
-    user_tokens: Option<Vec<String>>,
+    properties: XboxAuthProperties<'_>,
 ) -> Result<(String, String), RmclError> {
     let req = XboxAuthRequest {
-        properties: XboxAuthProperties {
-            auth_method: "RelyingParty",
-            site_name,
-            relying_party,
-            token,
-            sandbox_id,
-            user_tokens,
-        },
+        properties,
         relying_party,
         token_type: "JWT",
     };
+    eprintln!("[rmcl-ms] POST {url} relying_party={relying_party}");
     let resp = client
         .post(url)
         .header("x-xbl-contract-version", "1")
@@ -206,6 +207,7 @@ async fn xbox_auth(
             .to_string();
         Ok((token, uhs))
     } else {
+        eprintln!("[rmcl-ms] {url} HTTP {status}: {body}");
         Err(xbox_error(&body, url))
     }
 }
@@ -213,10 +215,12 @@ async fn xbox_auth(
 /// 把 XSTS 的错误码(XErr)映射为中文可读信息
 fn xbox_error(body: &serde_json::Value, url: &str) -> RmclError {
     let msg = match body["XErr"].as_i64() {
-        Some(2148916233) => "该微软账号未关联 Xbox 账号,请先到 xbox.com 注册".into(),
-        Some(2148916235) => "Xbox 服务暂不可用,请稍后重试".into(),
-        Some(2148916236 | 2148916237) => "需要先在 Xbox 页面同意服务条款".into(),
-        Some(2148916238) => "该账号为未成年人,需加入家庭组后才能使用".into(),
+        Some(2148916233) => "该微软账号未关联 Xbox 账号,请先到 xbox.com 创建".into(),
+        Some(2148916235) => "该地区暂不支持 Xbox Live,请检查账号所在地".into(),
+        Some(2148916236) => "Xbox Live 服务暂时不可用,请稍后重试".into(),
+        Some(2148916237) => "需要先在 Xbox 页面同意服务条款".into(),
+        Some(2148916238) => "该账号为未成年人,需由监护人完成认证后使用".into(),
+        Some(2148916258) => "该账号不满足使用条件(可能未拥有 Minecraft 正版)".into(),
         _ => format!(
             "Xbox 认证失败({url}): {}",
             body["Message"].as_str().unwrap_or("未知错误")
@@ -231,29 +235,38 @@ pub async fn exchange_tokens(
     msa_access_token: &str,
     msa_refresh_token: Option<&str>,
 ) -> Result<MicrosoftAccount, RmclError> {
-    // 1. XBL token
+    // 1. XBL token(携带 MSA access token)
     let (xbl_token, _uhs) = xbox_auth(
         client,
         XBL_AUTH_URL,
         "http://auth.xboxlive.com",
-        "user.auth.xboxlive.com",
-        format!("d={msa_access_token}"),
-        None,
-        None,
+        XboxAuthProperties {
+            auth_method: Some("RelyingParty"),
+            site_name: Some("user.auth.xboxlive.com"),
+            relying_party: Some("http://auth.xboxlive.com"),
+            token: Some(format!("d={msa_access_token}")),
+            sandbox_id: None,
+            user_tokens: None,
+        },
     )
     .await?;
-    // 2. XSTS token(携带 XBL,拿到 user hash)
+    // 2. XSTS token(仅携带 SandboxId + UserTokens,拿到 user hash)
     let (xsts_token, uhs) = xbox_auth(
         client,
         XSTS_AUTH_URL,
         "rp://api.minecraftservices.com/",
-        "user.auth.xboxlive.com",
-        xbl_token.clone(),
-        Some("RETAIL"),
-        Some(vec![xbl_token]),
+        XboxAuthProperties {
+            auth_method: None,
+            site_name: None,
+            relying_party: None,
+            token: None,
+            sandbox_id: Some("RETAIL"),
+            user_tokens: Some(vec![xbl_token]),
+        },
     )
     .await?;
     // 3. Minecraft 登录
+    eprintln!("[rmcl-ms] POST {MC_LOGIN_URL}");
     let resp = client
         .post(MC_LOGIN_URL)
         .json(&serde_json::json!({
@@ -264,6 +277,7 @@ pub async fn exchange_tokens(
     let status = resp.status();
     let body: serde_json::Value = resp.json().await?;
     if !status.is_success() {
+        eprintln!("[rmcl-ms] {MC_LOGIN_URL} HTTP {status}: {body}");
         return Err(RmclError::other(format!(
             "Minecraft 登录失败: {}",
             body["errorMessage"].as_str().unwrap_or("未知错误")
@@ -283,6 +297,7 @@ pub async fn exchange_tokens(
 
 /// 用 access_token 拉取 Minecraft Profile(id + name)
 pub async fn fetch_profile(client: &Client, access_token: &str) -> Result<McProfile, RmclError> {
+    eprintln!("[rmcl-ms] GET {MC_PROFILE_URL}");
     let resp = client
         .get(MC_PROFILE_URL)
         .bearer_auth(access_token)
@@ -301,8 +316,10 @@ pub async fn fetch_profile(client: &Client, access_token: &str) -> Result<McProf
             .to_string();
         Ok(McProfile { id, name })
     } else if status.as_u16() == 404 {
+        eprintln!("[rmcl-ms] profile HTTP 404: 没有 Minecraft Java 版");
         Err(RmclError::other("该微软账号没有 Minecraft Java 版,请先购买游戏"))
     } else {
+        eprintln!("[rmcl-ms] {MC_PROFILE_URL} HTTP {status}: {body}");
         Err(RmclError::other(format!(
             "获取 Profile 失败: HTTP {}",
             status.as_u16()
