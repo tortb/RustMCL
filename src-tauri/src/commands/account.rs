@@ -49,7 +49,7 @@ pub struct MsFinishedEvent {
 #[tauri::command]
 pub fn start_microsoft_login(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
     let client = state.client.clone();
-    let db_path = state.data_dir.join("runa.db");
+    let db_path = state.data_dir.join("rmcl.db");
     cancel_flag().store(false, Ordering::SeqCst);
 
     tauri::async_runtime::spawn(async move {

@@ -13,7 +13,7 @@ use sha1::{Digest, Sha1};
 use tokio::io::AsyncWriteExt;
 use tokio::sync::Semaphore;
 
-use crate::error::RunaError;
+use crate::error::RmclError;
 
 /// 单个待下载文件
 #[derive(Debug, Clone)]
@@ -35,7 +35,7 @@ pub struct DownloadProgress {
 }
 
 /// 计算文件 SHA1(已存在文件,用于跳过校验)
-pub fn sha1_of(path: &Path) -> Result<String, RunaError> {
+pub fn sha1_of(path: &Path) -> Result<String, RmclError> {
     let mut file = std::fs::File::open(path)?;
     let mut hasher = Sha1::new();
     std::io::copy(&mut file, &mut hasher)?;
@@ -48,7 +48,7 @@ pub async fn download_one(
     client: &reqwest::Client,
     item: &DownloadItem,
     retry_times: u32,
-) -> Result<(), RunaError> {
+) -> Result<(), RmclError> {
     // 已存在:有 sha1 则校验,无 sha1(maven 库)只做存在性判断
     if item.dest.exists() {
         if item.sha1.is_empty()
@@ -76,7 +76,7 @@ pub async fn download_one(
                         return Ok(());
                     }
                     Ok(_) => {
-                        last_err = Some(RunaError::other(format!(
+                        last_err = Some(RmclError::other(format!(
                             "SHA1 校验失败: {}",
                             item.dest.display()
                         )));
@@ -91,10 +91,10 @@ pub async fn download_one(
         }
     }
     let _ = tokio::fs::remove_file(&tmp).await;
-    Err(last_err.unwrap_or_else(|| RunaError::other("下载失败")))
+    Err(last_err.unwrap_or_else(|| RmclError::other("下载失败")))
 }
 
-async fn fetch_to_file(client: &reqwest::Client, url: &str, dest: &Path) -> Result<(), RunaError> {
+async fn fetch_to_file(client: &reqwest::Client, url: &str, dest: &Path) -> Result<(), RmclError> {
     let resp = client.get(url).send().await?.error_for_status()?;
     let mut file = tokio::fs::File::create(dest).await?;
     let mut stream = resp.bytes_stream();
@@ -112,7 +112,7 @@ pub async fn download_many<F>(
     max_concurrent: usize,
     retry_times: u32,
     on_progress: F,
-) -> Result<(), RunaError>
+) -> Result<(), RmclError>
 where
     F: Fn(DownloadProgress) + Send + Sync + 'static,
 {
@@ -134,7 +134,7 @@ where
             let _permit = semaphore
                 .acquire()
                 .await
-                .map_err(|_| RunaError::other("并发限制信号量关闭"))?;
+                .map_err(|_| RmclError::other("并发限制信号量关闭"))?;
             let result = download_one(&client, &item, retry_times).await;
             let current = done.fetch_add(1, Ordering::SeqCst) + 1;
             let file = item
@@ -153,7 +153,7 @@ where
     for handle in handles {
         handle
             .await
-            .map_err(|e| RunaError::other(format!("下载任务异常: {e}")))??;
+            .map_err(|e| RmclError::other(format!("下载任务异常: {e}")))??;
     }
     Ok(())
 }

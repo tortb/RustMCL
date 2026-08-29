@@ -1,10 +1,10 @@
-//! 实例级配置,对应 ~/.runa/instances/<id>/instance.toml
+//! 实例级配置,对应 ~/.rustmcl/instances/<id>/instance.toml
 
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-use crate::error::RunaError;
+use crate::error::RmclError;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
@@ -96,12 +96,12 @@ impl Default for Resolution {
 }
 
 impl InstanceConfig {
-    pub fn load(path: &Path) -> Result<Self, RunaError> {
+    pub fn load(path: &Path) -> Result<Self, RmclError> {
         let content = std::fs::read_to_string(path)?;
         Ok(toml::from_str(&content)?)
     }
 
-    pub fn save(&self, path: &Path) -> Result<(), RunaError> {
+    pub fn save(&self, path: &Path) -> Result<(), RmclError> {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;
         }
@@ -121,7 +121,7 @@ mod tests {
         cfg.meta.name = "我的生存".into();
         cfg.meta.mc_version = "1.21.1".into();
         cfg.jvm.max_memory = 8192;
-        let path = std::env::temp_dir().join("runa_instance_test.toml");
+        let path = std::env::temp_dir().join("rmcl_instance_test.toml");
         cfg.save(&path).unwrap();
         let loaded = InstanceConfig::load(&path).unwrap();
         assert_eq!(loaded.meta.name, "我的生存");

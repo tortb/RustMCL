@@ -11,7 +11,7 @@ use crate::core::downloader::download_many;
 use crate::core::loader;
 use crate::core::version::rules::{FeaturesCtx, RuleContext};
 use crate::core::version::version_json::VersionJson;
-use crate::error::RunaError;
+use crate::error::RmclError;
 use crate::AppState;
 
 #[derive(Clone, serde::Serialize)]
@@ -98,7 +98,7 @@ pub(crate) async fn run_download(
     retry_times: u32,
     max_concurrent: usize,
     app: AppHandle,
-) -> Result<(), RunaError> {
+) -> Result<(), RmclError> {
     let version = loader::resolve_version(
         &client,
         data_dir,
@@ -119,7 +119,7 @@ pub(crate) async fn run_download_for_version(
     retry_times: u32,
     max_concurrent: usize,
     app: AppHandle,
-) -> Result<(), RunaError> {
+) -> Result<(), RmclError> {
     let ctx = RuleContext::current(FeaturesCtx::default());
     let layout = DirLayout::new(data_dir);
     let version_dir = layout.versions_dir.join(&version.id);

@@ -1,12 +1,12 @@
 use rusqlite::Connection;
 
-use crate::error::RunaError;
+use crate::error::RmclError;
 
 /// 当前 schema 版本,与 migrations/ 目录下的文件一一对应
 const CURRENT_VERSION: i64 = 1;
 
 /// 启动时按需执行未应用的 migration,通过 PRAGMA user_version 追踪版本
-pub fn run(conn: &Connection) -> Result<(), RunaError> {
+pub fn run(conn: &Connection) -> Result<(), RmclError> {
     let version: i64 = conn.query_row("PRAGMA user_version", [], |row| row.get(0))?;
     if version < CURRENT_VERSION {
         conn.execute_batch(include_str!("001_init.sql"))?;

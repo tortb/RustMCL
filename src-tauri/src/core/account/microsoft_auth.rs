@@ -14,7 +14,7 @@ use reqwest::Client;
 use serde::Deserialize;
 use serde::Serialize;
 
-use crate::error::RunaError;
+use crate::error::RmclError;
 
 /// 第三方启动器通用的 Microsoft client id(Mojang 官方授权)
 pub const CLIENT_ID: &str = "00000000402b5328";
@@ -28,8 +28,8 @@ const XSTS_AUTH_URL: &str = "https://xsts.auth.xboxlive.com/xsts/authorize";
 const MC_LOGIN_URL: &str = "https://api.minecraftservices.com/authentication/login_with_xbox";
 const MC_PROFILE_URL: &str = "https://api.minecraftservices.com/minecraft/profile";
 
-/// keyring 条目:服务名 "runa",条目名固定,保存微软 refresh token
-const KEYRING_SERVICE: &str = "runa";
+/// keyring 条目:服务名 "rustmcl",条目名固定,保存微软 refresh token
+const KEYRING_SERVICE: &str = "rustmcl";
 const KEYRING_ENTRY: &str = "microsoft-refresh-token";
 
 /// Device Code 响应(展示给用户 + 轮询用)
@@ -84,7 +84,7 @@ struct TokenError {
 }
 
 /// 请求 Device Code,展示给用户在浏览器完成授权
-pub async fn request_device_code(client: &Client) -> Result<DeviceCodeInfo, RunaError> {
+pub async fn request_device_code(client: &Client) -> Result<DeviceCodeInfo, RmclError> {
     let resp = client
         .post(DEVICE_CODE_URL)
         .form(&[("client_id", CLIENT_ID), ("scope", SCOPE)])
@@ -97,7 +97,7 @@ pub async fn request_device_code(client: &Client) -> Result<DeviceCodeInfo, Runa
             error: "unknown".into(),
             error_description: None,
         });
-        Err(RunaError::other(format!("获取设备码失败: {}", e.error)))
+        Err(RmclError::other(format!("获取设备码失败: {}", e.error)))
     }
 }
 
@@ -174,7 +174,7 @@ async fn xbox_auth(
     token: String,
     sandbox_id: Option<&str>,
     user_tokens: Option<Vec<String>>,
-) -> Result<(String, String), RunaError> {
+) -> Result<(String, String), RmclError> {
     let req = XboxAuthRequest {
         properties: XboxAuthProperties {
             auth_method: "RelyingParty",
@@ -198,11 +198,11 @@ async fn xbox_auth(
     if status.is_success() {
         let token = body["Token"]
             .as_str()
-            .ok_or_else(|| RunaError::other("Xbox 响应缺少 Token"))?
+            .ok_or_else(|| RmclError::other("Xbox 响应缺少 Token"))?
             .to_string();
         let uhs = body["DisplayClaims"]["xui"][0]["uhs"]
             .as_str()
-            .ok_or_else(|| RunaError::other("Xbox 响应缺少 uhs"))?
+            .ok_or_else(|| RmclError::other("Xbox 响应缺少 uhs"))?
             .to_string();
         Ok((token, uhs))
     } else {
@@ -211,7 +211,7 @@ async fn xbox_auth(
 }
 
 /// 把 XSTS 的错误码(XErr)映射为中文可读信息
-fn xbox_error(body: &serde_json::Value, url: &str) -> RunaError {
+fn xbox_error(body: &serde_json::Value, url: &str) -> RmclError {
     let msg = match body["XErr"].as_i64() {
         Some(2148916233) => "该微软账号未关联 Xbox 账号,请先到 xbox.com 注册".into(),
         Some(2148916235) => "Xbox 服务暂不可用,请稍后重试".into(),
@@ -222,7 +222,7 @@ fn xbox_error(body: &serde_json::Value, url: &str) -> RunaError {
             body["Message"].as_str().unwrap_or("未知错误")
         ),
     };
-    RunaError::other(msg)
+    RmclError::other(msg)
 }
 
 /// 使用 MSA access/refresh token 完成 XBL → XSTS → Minecraft 全链路
@@ -230,7 +230,7 @@ pub async fn exchange_tokens(
     client: &Client,
     msa_access_token: &str,
     msa_refresh_token: Option<&str>,
-) -> Result<MicrosoftAccount, RunaError> {
+) -> Result<MicrosoftAccount, RmclError> {
     // 1. XBL token
     let (xbl_token, _uhs) = xbox_auth(
         client,
@@ -264,14 +264,14 @@ pub async fn exchange_tokens(
     let status = resp.status();
     let body: serde_json::Value = resp.json().await?;
     if !status.is_success() {
-        return Err(RunaError::other(format!(
+        return Err(RmclError::other(format!(
             "Minecraft 登录失败: {}",
             body["errorMessage"].as_str().unwrap_or("未知错误")
         )));
     }
     let access_token = body["access_token"]
         .as_str()
-        .ok_or_else(|| RunaError::other("Minecraft 响应缺少 access_token"))?
+        .ok_or_else(|| RmclError::other("Minecraft 响应缺少 access_token"))?
         .to_string();
     // 4. 拉取 Profile
     let profile = fetch_profile(client, &access_token).await?;
@@ -282,7 +282,7 @@ pub async fn exchange_tokens(
 }
 
 /// 用 access_token 拉取 Minecraft Profile(id + name)
-pub async fn fetch_profile(client: &Client, access_token: &str) -> Result<McProfile, RunaError> {
+pub async fn fetch_profile(client: &Client, access_token: &str) -> Result<McProfile, RmclError> {
     let resp = client
         .get(MC_PROFILE_URL)
         .bearer_auth(access_token)
@@ -293,17 +293,17 @@ pub async fn fetch_profile(client: &Client, access_token: &str) -> Result<McProf
     if status.is_success() {
         let id = body["id"]
             .as_str()
-            .ok_or_else(|| RunaError::other("Profile 缺少 id"))?
+            .ok_or_else(|| RmclError::other("Profile 缺少 id"))?
             .to_string();
         let name = body["name"]
             .as_str()
-            .ok_or_else(|| RunaError::other("Profile 缺少 name"))?
+            .ok_or_else(|| RmclError::other("Profile 缺少 name"))?
             .to_string();
         Ok(McProfile { id, name })
     } else if status.as_u16() == 404 {
-        Err(RunaError::other("该微软账号没有 Minecraft Java 版,请先购买游戏"))
+        Err(RmclError::other("该微软账号没有 Minecraft Java 版,请先购买游戏"))
     } else {
-        Err(RunaError::other(format!(
+        Err(RmclError::other(format!(
             "获取 Profile 失败: HTTP {}",
             status.as_u16()
         )))
@@ -314,7 +314,7 @@ pub async fn fetch_profile(client: &Client, access_token: &str) -> Result<McProf
 pub async fn refresh_access_token(
     client: &Client,
     refresh_token: &str,
-) -> Result<(String, String), RunaError> {
+) -> Result<(String, String), RmclError> {
     let resp = client
         .post(TOKEN_URL)
         .form(&[
@@ -336,43 +336,43 @@ pub async fn refresh_access_token(
             error: "unknown".into(),
             error_description: None,
         });
-        Err(RunaError::other(format!("刷新令牌失败: {}", e.error)))
+        Err(RmclError::other(format!("刷新令牌失败: {}", e.error)))
     }
 }
 
 // ---------- keyring 存储(T3.2) ----------
 
-pub fn save_refresh_token(token: &str) -> Result<(), RunaError> {
+pub fn save_refresh_token(token: &str) -> Result<(), RmclError> {
     let entry = keyring::Entry::new(KEYRING_SERVICE, KEYRING_ENTRY)
-        .map_err(|e| RunaError::other(format!("打开系统钥匙串失败: {e}")))?;
+        .map_err(|e| RmclError::other(format!("打开系统钥匙串失败: {e}")))?;
     entry
         .set_password(token)
-        .map_err(|e| RunaError::other(format!("保存令牌失败: {e}")))?;
+        .map_err(|e| RmclError::other(format!("保存令牌失败: {e}")))?;
     Ok(())
 }
 
-pub fn load_refresh_token() -> Result<String, RunaError> {
+pub fn load_refresh_token() -> Result<String, RmclError> {
     let entry = keyring::Entry::new(KEYRING_SERVICE, KEYRING_ENTRY)
-        .map_err(|e| RunaError::other(format!("打开系统钥匙串失败: {e}")))?;
+        .map_err(|e| RmclError::other(format!("打开系统钥匙串失败: {e}")))?;
     entry
         .get_password()
-        .map_err(|e| RunaError::other(format!("读取令牌失败: {e}")))
+        .map_err(|e| RmclError::other(format!("读取令牌失败: {e}")))
 }
 
-pub fn delete_refresh_token() -> Result<(), RunaError> {
+pub fn delete_refresh_token() -> Result<(), RmclError> {
     let entry = keyring::Entry::new(KEYRING_SERVICE, KEYRING_ENTRY)
-        .map_err(|e| RunaError::other(format!("打开系统钥匙串失败: {e}")))?;
+        .map_err(|e| RmclError::other(format!("打开系统钥匙串失败: {e}")))?;
     match entry.delete_credential() {
         Ok(()) => Ok(()),
         Err(keyring::Error::NoEntry) => Ok(()),
-        Err(e) => Err(RunaError::other(format!("删除令牌失败: {e}"))),
+        Err(e) => Err(RmclError::other(format!("删除令牌失败: {e}"))),
     }
 }
 
 /// 静默续期并返回当前账号的 (name, uuid, access_token);未登录或无有效令牌时返回 None
 pub async fn resolve_active_account(
     client: &Client,
-) -> Result<Option<(String, String, String)>, RunaError> {
+) -> Result<Option<(String, String, String)>, RmclError> {
     let refresh = match load_refresh_token() {
         Ok(t) if !t.is_empty() => t,
         _ => return Ok(None),

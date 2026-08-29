@@ -5,10 +5,10 @@ use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 
-use crate::error::RunaError;
+use crate::error::RmclError;
 
 /// 启动子进程并逐行转发输出,等待退出后返回退出码
-pub async fn launch_process<F>(java_path: &str, args: &[String], on_line: F) -> Result<i32, RunaError>
+pub async fn launch_process<F>(java_path: &str, args: &[String], on_line: F) -> Result<i32, RmclError>
 where
     F: Fn(String) + Send + Sync + 'static,
 {
@@ -19,7 +19,7 @@ where
         .kill_on_drop(true)
         .spawn()
         .map_err(|e| {
-            RunaError::other(format!(
+            RmclError::other(format!(
                 "无法启动 Java 进程(路径: {java_path}): {e}。请确认已安装 Java 或在设置中指定路径"
             ))
         })?;

@@ -1,13 +1,13 @@
 [package]
-name = "runa"
+name = "rustmcl"
 version = "0.1.0"
-description = "Runa - 现代化 Minecraft 启动器"
+description = "RustMCL - 现代化 Minecraft 启动器"
 authors = ["tortb"]
 edition = "2021"
 
 [lib]
 # `_lib` 后缀在 Windows 上避免与 bin 名冲突,见 https://github.com/rust-lang/cargo/issues/8519
-name = "runa_lib"
+name = "rustmcl_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

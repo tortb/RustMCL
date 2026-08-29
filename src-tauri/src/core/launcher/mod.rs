@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 
 use crate::core::version::rules::{rules_allow, RuleContext};
 use crate::core::version::version_json::VersionJson;
-use crate::error::RunaError;
+use crate::error::RmclError;
 
 /// 单个 native 库的解压计划
 pub struct NativePlan {
@@ -40,7 +40,7 @@ pub fn native_plan(version: &VersionJson, ctx: &RuleContext, libraries_dir: &Pat
 }
 
 /// 将 native jar 解压到 natives 目录(排除 extract.exclude 指定项)
-pub fn extract_natives(plans: &[NativePlan], natives_dir: &Path) -> Result<(), RunaError> {
+pub fn extract_natives(plans: &[NativePlan], natives_dir: &Path) -> Result<(), RmclError> {
     std::fs::create_dir_all(natives_dir)?;
     for plan in plans {
         let file = std::fs::File::open(&plan.jar_path)?;
@@ -78,7 +78,7 @@ mod tests {
 
     #[test]
     fn extract_native_jar_skips_excludes() {
-        let dir = std::env::temp_dir().join(format!("runa_natives_test_{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("rmcl_natives_test_{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
 

@@ -2,7 +2,7 @@ use thiserror::Error;
 
 /// 统一错误类型:所有可失败路径都收敛到该枚举,避免散落 unwrap()
 #[derive(Debug, Error)]
-pub enum RunaError {
+pub enum RmclError {
     #[error("数据库错误: {0}")]
     Db(#[from] rusqlite::Error),
     #[error("配置错误: {0}")]
@@ -23,15 +23,15 @@ pub enum RunaError {
     Other(String),
 }
 
-impl RunaError {
+impl RmclError {
     pub fn other(msg: impl Into<String>) -> Self {
-        RunaError::Other(msg.into())
+        RmclError::Other(msg.into())
     }
 }
 
-/// Tauri command 层统一把 RunaError 转成 String 返回给前端
-impl From<RunaError> for String {
-    fn from(e: RunaError) -> Self {
+/// Tauri command 层统一把 RmclError 转成 String 返回给前端
+impl From<RmclError> for String {
+    fn from(e: RmclError) -> Self {
         e.to_string()
     }
 }

@@ -24,7 +24,7 @@ pub struct AppInfo {
 #[tauri::command]
 pub fn get_app_info(state: State<AppState>) -> Result<AppInfo, String> {
     Ok(AppInfo {
-        name: "Runa".into(),
+        name: "RustMCL".into(),
         version: env!("CARGO_PKG_VERSION").into(),
         data_dir: state.data_dir.display().to_string(),
     })

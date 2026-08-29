@@ -7,7 +7,7 @@ mod error;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
-pub use error::RunaError;
+pub use error::RmclError;
 
 /// Tauri 管理的全局状态
 pub struct AppState {
@@ -21,9 +21,12 @@ pub struct AppState {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // 旧数据目录兼容:首次改名后把 ~/.runa 迁移到 ~/.rustmcl(仅当新目录不存在时)
+    config::migrate_legacy_data_dir();
+
     let data_dir = config::default_data_dir();
     if let Err(e) = std::fs::create_dir_all(&data_dir) {
-        eprintln!("[runa] 创建数据目录失败: {e}");
+        eprintln!("[rmcl] 创建数据目录失败: {e}");
         std::process::exit(1);
     }
 
@@ -31,16 +34,16 @@ pub fn run() {
     let app_config = match config::app_config::AppConfig::load_or_create(&config_path) {
         Ok(c) => c,
         Err(e) => {
-            eprintln!("[runa] 初始化配置失败: {e}");
+            eprintln!("[rmcl] 初始化配置失败: {e}");
             std::process::exit(1);
         }
     };
 
-    let db_path = data_dir.join("runa.db");
+    let db_path = data_dir.join("rmcl.db");
     let conn = match db::init(&db_path) {
         Ok(c) => c,
         Err(e) => {
-            eprintln!("[runa] 初始化数据库失败: {e}");
+            eprintln!("[rmcl] 初始化数据库失败: {e}");
             std::process::exit(1);
         }
     };
@@ -52,13 +55,13 @@ pub fn run() {
     {
         Ok(c) => c,
         Err(e) => {
-            eprintln!("[runa] 初始化 HTTP 客户端失败: {e}");
+            eprintln!("[rmcl] 初始化 HTTP 客户端失败: {e}");
             std::process::exit(1);
         }
     };
 
     eprintln!(
-        "[runa] 数据目录: {}, 主题: {}, 语言: {}",
+        "[rmcl] 数据目录: {}, 主题: {}, 语言: {}",
         data_dir.display(),
         app_config.general.theme,
         app_config.general.language
@@ -104,7 +107,7 @@ pub fn run() {
         ]);
 
     if let Err(e) = builder.run(tauri::generate_context!()) {
-        eprintln!("[runa] 启动失败: {e}");
+        eprintln!("[rmcl] 启动失败: {e}");
         std::process::exit(1);
     }
 }

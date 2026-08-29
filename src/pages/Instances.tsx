@@ -49,7 +49,7 @@ export default function Instances() {
     Promise.all([
       listen<GameLog>("game-log", (e) => s.appendLog(e.payload.line)),
       listen<GameExit>("game-exit", (e) => {
-        s.appendLog(`[Runa] 游戏进程退出,退出码 ${e.payload.code}`);
+        s.appendLog(`[RustMCL] 游戏进程退出,退出码 ${e.payload.code}`);
         s.setRunning(null);
       }),
       // 加载器安装进度/结束(仅在有安装任务时响应)
@@ -299,7 +299,7 @@ export default function Instances() {
               className="h-56 overflow-y-auto px-4 py-3 font-mono text-[12px] leading-relaxed text-[#d4d4d4]"
             >
               {s.logs.map((line, i) => (
-                <p key={i} className={line.startsWith("[Runa]") ? "text-[#7cb342]" : ""}>
+                <p key={i} className={line.startsWith("[RustMCL]") ? "text-[#7cb342]" : ""}>
                   {line || "\u00a0"}
                 </p>
               ))}

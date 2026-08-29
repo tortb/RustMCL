@@ -16,7 +16,7 @@ use crate::core::launcher::{extract_natives, native_plan};
 use crate::core::loader;
 use crate::core::version::rules::{FeaturesCtx, RuleContext};
 use crate::db::repository::Repository;
-use crate::error::RunaError;
+use crate::error::RmclError;
 use crate::AppState;
 
 use super::download::{run_download, DirLayout};
@@ -112,7 +112,7 @@ pub fn launch_instance(
         let _ = app.emit(
             "game-log",
             GameLogEvent {
-                line: "[Runa] 检查并补齐资源...".into(),
+                line: "[RustMCL] 检查并补齐资源...".into(),
             },
         );
         if let Err(e) = run_download(
@@ -130,7 +130,7 @@ pub fn launch_instance(
             let _ = app.emit(
                 "game-log",
                 GameLogEvent {
-                    line: format!("[Runa] 资源下载失败: {e}"),
+                    line: format!("[RustMCL] 资源下载失败: {e}"),
                 },
             );
             let _ = app.emit("game-exit", GameExitEvent { code: -1 });
@@ -156,7 +156,7 @@ pub fn launch_instance(
     Ok(())
 }
 
-fn emit_launch_result(app: &AppHandle, result: Result<i32, RunaError>) {
+fn emit_launch_result(app: &AppHandle, result: Result<i32, RmclError>) {
     match result {
         Ok(code) => {
             let _ = app.emit("game-exit", GameExitEvent { code });
@@ -165,7 +165,7 @@ fn emit_launch_result(app: &AppHandle, result: Result<i32, RunaError>) {
             let _ = app.emit(
                 "game-log",
                 GameLogEvent {
-                    line: format!("[Runa] 启动失败: {e}"),
+                    line: format!("[RustMCL] 启动失败: {e}"),
                 },
             );
             let _ = app.emit("game-exit", GameExitEvent { code: -1 });
@@ -184,7 +184,7 @@ async fn run_launch(
     opts: LaunchOptions,
     retry_times: u32,
     app: AppHandle,
-) -> Result<i32, RunaError> {
+) -> Result<i32, RmclError> {
     // 1. version.json(vanilla 或 loader 合并结果,均带本地缓存)
     let version = loader::resolve_version(
         &client,
@@ -204,7 +204,7 @@ async fn run_launch(
     // 2. 检查文件是否已下载
     let client_item = client_download_item(&version, &version_dir);
     if !client_item.dest.exists() {
-        return Err(RunaError::other(format!(
+        return Err(RmclError::other(format!(
             "缺少客户端文件 {} ,请先在下载页获取该版本",
             client_item.dest.display()
         )));
@@ -213,7 +213,7 @@ async fn run_launch(
     let natives = native_items(&version, &ctx, &layout.libraries_dir);
     for item in libs.iter().chain(natives.iter()) {
         if !item.dest.exists() {
-            return Err(RunaError::other(format!(
+            return Err(RmclError::other(format!(
                 "缺少依赖 {} ,请先在下载页获取该版本",
                 item.dest.display()
             )));

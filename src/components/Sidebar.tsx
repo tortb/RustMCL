@@ -45,7 +45,7 @@ export default function Sidebar({
               <rect x="10" y="18" width="10" height="8" rx="1" fill="#4e342e" opacity="0.5" />
             </svg>
           </div>
-          <span className="text-[18px] font-bold tracking-tight text-ink">Runa</span>
+          <span className="text-[18px] font-bold tracking-tight text-ink">RustMCL</span>
         </div>
       </div>
 

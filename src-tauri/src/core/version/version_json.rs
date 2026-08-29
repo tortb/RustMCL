@@ -9,7 +9,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-use crate::error::RunaError;
+use crate::error::RmclError;
 
 use super::rules::Rule;
 
@@ -186,7 +186,7 @@ pub async fn fetch_version_json(
     url: &str,
     cache_path: &Path,
     retry_times: u32,
-) -> Result<VersionJson, RunaError> {
+) -> Result<VersionJson, RmclError> {
     if let Some(v) = load_cache(cache_path) {
         return Ok(v);
     }
@@ -195,24 +195,24 @@ pub async fn fetch_version_json(
     Ok(serde_json::from_str(&body)?)
 }
 
-async fn fetch_body(client: &reqwest::Client, url: &str, retry_times: u32) -> Result<String, RunaError> {
+async fn fetch_body(client: &reqwest::Client, url: &str, retry_times: u32) -> Result<String, RmclError> {
     let mut last_err = None;
     for attempt in 0..=retry_times {
         match client.get(url).send().await {
             Ok(resp) => match resp.error_for_status() {
                 Ok(resp) => match resp.text().await {
                     Ok(body) => return Ok(body),
-                    Err(e) => last_err = Some(RunaError::Network(e)),
+                    Err(e) => last_err = Some(RmclError::Network(e)),
                 },
-                Err(e) => last_err = Some(RunaError::Network(e)),
+                Err(e) => last_err = Some(RmclError::Network(e)),
             },
-            Err(e) => last_err = Some(RunaError::Network(e)),
+            Err(e) => last_err = Some(RmclError::Network(e)),
         }
         if attempt < retry_times {
             tokio::time::sleep(std::time::Duration::from_millis(500)).await;
         }
     }
-    Err(last_err.unwrap_or_else(|| RunaError::other("拉取 version.json 失败")))
+    Err(last_err.unwrap_or_else(|| RmclError::other("拉取 version.json 失败")))
 }
 
 fn load_cache(path: &Path) -> Option<VersionJson> {
@@ -220,7 +220,7 @@ fn load_cache(path: &Path) -> Option<VersionJson> {
     serde_json::from_str(&content).ok()
 }
 
-fn save_cache(path: &Path, body: &str) -> Result<(), RunaError> {
+fn save_cache(path: &Path, body: &str) -> Result<(), RmclError> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
     }

@@ -3,7 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::error::RunaError;
+use crate::error::RmclError;
 
 const API_BASE: &str = "https://api.modrinth.com/v2";
 
@@ -74,7 +74,7 @@ pub async fn search(
     query: &str,
     limit: u32,
     retry_times: u32,
-) -> Result<Vec<ModrinthHit>, RunaError> {
+) -> Result<Vec<ModrinthHit>, RmclError> {
     let url = format!("{API_BASE}/search");
     let body = fetch(client, &url, retry_times, &[
         ("query", query),
@@ -93,7 +93,7 @@ pub async fn compatible_versions(
     mc_version: &str,
     loader: &str,
     retry_times: u32,
-) -> Result<Vec<ModrinthVersion>, RunaError> {
+) -> Result<Vec<ModrinthVersion>, RmclError> {
     let url = format!("{API_BASE}/project/{project_id}/version");
     let body = fetch(client, &url, retry_times, &[]).await?;
     let all: Vec<ModrinthVersion> = serde_json::from_str(&body)?;
@@ -120,7 +120,7 @@ pub async fn fetch_version(
     client: &reqwest::Client,
     version_id: &str,
     retry_times: u32,
-) -> Result<ModrinthVersion, RunaError> {
+) -> Result<ModrinthVersion, RmclError> {
     let url = format!("{API_BASE}/version/{version_id}");
     let body = fetch(client, &url, retry_times, &[]).await?;
     Ok(serde_json::from_str(&body)?)
@@ -131,7 +131,7 @@ async fn fetch(
     url: &str,
     retry_times: u32,
     query: &[(&str, &str)],
-) -> Result<String, RunaError> {
+) -> Result<String, RmclError> {
     let mut last_err = None;
     for attempt in 0..=retry_times {
         let mut req = client.get(url);
@@ -142,17 +142,17 @@ async fn fetch(
             Ok(resp) => match resp.error_for_status() {
                 Ok(resp) => match resp.text().await {
                     Ok(body) => return Ok(body),
-                    Err(e) => last_err = Some(RunaError::Network(e)),
+                    Err(e) => last_err = Some(RmclError::Network(e)),
                 },
-                Err(e) => last_err = Some(RunaError::Network(e)),
+                Err(e) => last_err = Some(RmclError::Network(e)),
             },
-            Err(e) => last_err = Some(RunaError::Network(e)),
+            Err(e) => last_err = Some(RmclError::Network(e)),
         }
         if attempt < retry_times {
             tokio::time::sleep(std::time::Duration::from_millis(500)).await;
         }
     }
-    Err(last_err.unwrap_or_else(|| RunaError::other("Modrinth 请求失败")))
+    Err(last_err.unwrap_or_else(|| RmclError::other("Modrinth 请求失败")))
 }
 
 #[cfg(test)]

@@ -4,14 +4,14 @@ use std::path::PathBuf;
 
 use crate::core::version::rules::{rules_allow, FeaturesCtx, RuleContext};
 use crate::core::version::version_json::{Arg, VersionJson};
-use crate::error::RunaError;
+use crate::error::RmclError;
 
 #[cfg(target_os = "windows")]
 const CP_SEP: &str = ";";
 #[cfg(not(target_os = "windows"))]
 const CP_SEP: &str = ":";
 
-const LAUNCHER_NAME: &str = "Runa";
+const LAUNCHER_NAME: &str = "RustMCL";
 
 /// 启动选项(离线 MVP)
 #[derive(Debug, Clone)]
@@ -62,7 +62,7 @@ pub fn build_launch_command(
     paths: &LaunchPaths,
     opts: &LaunchOptions,
     java_path: &str,
-) -> Result<LaunchCommand, RunaError> {
+) -> Result<LaunchCommand, RmclError> {
     let ctx = RuleContext::current(FeaturesCtx {
         has_custom_resolution: true,
         is_demo_user: false,

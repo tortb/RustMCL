@@ -85,12 +85,12 @@ export const useDownloadsStore = create<DownloadsStore>((set, get) => ({
     const id = get().selected;
     if (!id || get().runState === "running") return;
     set({ logs: [], runState: "running", exitCode: null });
-    get().appendLog(`[Runa] 正在启动 ${id} ...`);
+    get().appendLog(`[RustMCL] 正在启动 ${id} ...`);
     try {
       // 不传用户名:Rust 侧优先使用已登录的微软账号,否则离线 Steve
       await launchVersion(id);
     } catch (e) {
-      get().appendLog(`[Runa] 启动失败: ${e}`);
+      get().appendLog(`[RustMCL] 启动失败: ${e}`);
       get().setRunState("exited", -1);
     }
   },

@@ -2,7 +2,7 @@
 
 use std::path::PathBuf;
 
-use crate::error::RunaError;
+use crate::error::RmclError;
 
 use super::DownloadItem;
 use crate::core::version::version_json::{AssetIndexFile, VersionJson};
@@ -22,7 +22,7 @@ pub fn asset_index_item(version: &VersionJson, assets_dir: &PathBuf) -> Download
 }
 
 /// 加载已下载的 assetIndex.json
-pub fn load_asset_index(path: &std::path::Path) -> Result<AssetIndexFile, RunaError> {
+pub fn load_asset_index(path: &std::path::Path) -> Result<AssetIndexFile, RmclError> {
     let content = std::fs::read_to_string(path)?;
     Ok(serde_json::from_str(&content)?)
 }

@@ -1,5 +1,5 @@
 //! 实例管理命令:SQLite + instance.toml 双写
-//! 实例目录结构: ~/.runa/instances/<id>/instance.toml
+//! 实例目录结构: ~/.rustmcl/instances/<id>/instance.toml
 
 use std::time::{SystemTime, UNIX_EPOCH};
 

@@ -6,10 +6,10 @@ use std::path::Path;
 
 use rusqlite::Connection;
 
-use crate::error::RunaError;
+use crate::error::RmclError;
 
 /// 打开数据库连接并应用 migration
-pub fn init(path: &Path) -> Result<Connection, RunaError> {
+pub fn init(path: &Path) -> Result<Connection, RmclError> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
     }

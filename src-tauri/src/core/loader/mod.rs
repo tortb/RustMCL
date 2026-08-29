@@ -10,7 +10,7 @@ use crate::core::version::manifest;
 use crate::core::version::version_json::{
     fetch_version_json, Download, Library, LibraryDownloads, VersionJson,
 };
-use crate::error::RunaError;
+use crate::error::RmclError;
 
 /// 支持的加载器与对应 meta 仓库
 struct LoaderMeta {
@@ -44,14 +44,14 @@ pub async fn resolve_version(
     loader: &str,
     loader_version: &str,
     retry_times: u32,
-) -> Result<VersionJson, RunaError> {
+) -> Result<VersionJson, RmclError> {
     let meta = match loader {
         "fabric" => FABRIC,
         "quilt" => QUILT,
         // vanilla:直接读原版 version.json
         "" | "vanilla" => return fetch_vanilla(client, data_dir, mc_version, retry_times).await,
         other => {
-            return Err(RunaError::other(format!("暂不支持加载器: {other}")));
+            return Err(RmclError::other(format!("暂不支持加载器: {other}")));
         }
     };
 
@@ -91,14 +91,14 @@ async fn fetch_vanilla(
     data_dir: &Path,
     mc_version: &str,
     retry_times: u32,
-) -> Result<VersionJson, RunaError> {
+) -> Result<VersionJson, RmclError> {
     let manifest_cache = data_dir.join("cache").join("version_manifest_v2.json");
     let manifest = manifest::get_manifest(client, &manifest_cache, false, retry_times).await?;
     let info = manifest
         .versions
         .iter()
         .find(|v| v.id == mc_version)
-        .ok_or_else(|| RunaError::other(format!("版本清单中不存在 {mc_version}")))?;
+        .ok_or_else(|| RmclError::other(format!("版本清单中不存在 {mc_version}")))?;
     let vj_cache = data_dir
         .join("cache")
         .join("versions")
@@ -112,11 +112,11 @@ pub async fn latest_loader_version(
     loader_name: &str,
     mc_version: &str,
     retry_times: u32,
-) -> Result<String, RunaError> {
+) -> Result<String, RmclError> {
     let meta = match loader_name {
         "fabric" => FABRIC,
         "quilt" => QUILT,
-        other => return Err(RunaError::other(format!("暂不支持加载器: {other}"))),
+        other => return Err(RmclError::other(format!("暂不支持加载器: {other}"))),
     };
     resolve_latest_loader(client, &meta, mc_version, retry_times).await
 }
@@ -127,7 +127,7 @@ async fn resolve_latest_loader(
     meta: &LoaderMeta,
     mc_version: &str,
     retry_times: u32,
-) -> Result<String, RunaError> {
+) -> Result<String, RmclError> {
     let url = format!("{}/versions/loader/{mc_version}", meta.base);
     let body = fetch_body(client, &url, retry_times).await?;
     let list: Vec<Value> = serde_json::from_str(&body)?;
@@ -140,7 +140,7 @@ async fn resolve_latest_loader(
             return Ok(v.to_string());
         }
     }
-    Err(RunaError::other(format!(
+    Err(RmclError::other(format!(
         "{} meta 未返回可用加载器(MC {mc_version})",
         meta.name
     )))
@@ -153,7 +153,7 @@ async fn fetch_profile(
     mc_version: &str,
     loader_version: &str,
     retry_times: u32,
-) -> Result<Value, RunaError> {
+) -> Result<Value, RmclError> {
     let url = format!(
         "{}/versions/loader/{mc_version}/{loader_version}/profile/json",
         meta.base
@@ -166,24 +166,24 @@ async fn fetch_body(
     client: &reqwest::Client,
     url: &str,
     retry_times: u32,
-) -> Result<String, RunaError> {
+) -> Result<String, RmclError> {
     let mut last_err = None;
     for attempt in 0..=retry_times {
         match client.get(url).send().await {
             Ok(resp) => match resp.error_for_status() {
                 Ok(resp) => match resp.text().await {
                     Ok(body) => return Ok(body),
-                    Err(e) => last_err = Some(RunaError::Network(e)),
+                    Err(e) => last_err = Some(RmclError::Network(e)),
                 },
-                Err(e) => last_err = Some(RunaError::Network(e)),
+                Err(e) => last_err = Some(RmclError::Network(e)),
             },
-            Err(e) => last_err = Some(RunaError::Network(e)),
+            Err(e) => last_err = Some(RmclError::Network(e)),
         }
         if attempt < retry_times {
             tokio::time::sleep(std::time::Duration::from_millis(500)).await;
         }
     }
-    Err(last_err.unwrap_or_else(|| RunaError::other("拉取加载器元数据失败")))
+    Err(last_err.unwrap_or_else(|| RmclError::other("拉取加载器元数据失败")))
 }
 
 /// 合并规则:
@@ -191,7 +191,7 @@ async fn fetch_body(
 /// - arguments 的 game/jvm 追加到原版后面
 /// - profile 的 maven 库(仅 name+url,无 sha1)转换后追加到 libraries
 /// - 其余(assetIndex/downloads/javaVersion)沿用原版
-fn merge_loader(mut vanilla: VersionJson, profile: &Value) -> Result<VersionJson, RunaError> {
+fn merge_loader(mut vanilla: VersionJson, profile: &Value) -> Result<VersionJson, RmclError> {
     if let Some(mc) = profile.get("mainClass").and_then(|v| v.as_str()) {
         vanilla.main_class = mc.to_string();
     }

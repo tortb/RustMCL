@@ -4,7 +4,7 @@
 use rusqlite::{Connection, OptionalExtension, params};
 
 use crate::db::schema::*;
-use crate::error::RunaError;
+use crate::error::RmclError;
 
 /// 对 SQLite 连接的 CRUD 封装。方法接受 &Connection,便于在 Tauri state 的 Mutex 中调用。
 pub struct Repository;
@@ -12,7 +12,7 @@ pub struct Repository;
 impl Repository {
     // ---------- instances ----------
 
-    pub fn create_instance(conn: &Connection, inst: &Instance) -> Result<(), RunaError> {
+    pub fn create_instance(conn: &Connection, inst: &Instance) -> Result<(), RmclError> {
         conn.execute(
             "INSERT INTO instances (id, name, mc_version, loader, loader_version, game_dir, icon_path, created_at, last_played)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
@@ -31,7 +31,7 @@ impl Repository {
         Ok(())
     }
 
-    pub fn list_instances(conn: &Connection) -> Result<Vec<Instance>, RunaError> {
+    pub fn list_instances(conn: &Connection) -> Result<Vec<Instance>, RmclError> {
         let mut stmt = conn.prepare(
             "SELECT id, name, mc_version, loader, loader_version, game_dir, icon_path, created_at, last_played
              FROM instances ORDER BY COALESCE(last_played, created_at) DESC",
@@ -56,7 +56,7 @@ impl Repository {
         Ok(out)
     }
 
-    pub fn get_instance(conn: &Connection, id: &str) -> Result<Option<Instance>, RunaError> {
+    pub fn get_instance(conn: &Connection, id: &str) -> Result<Option<Instance>, RmclError> {
         let inst = conn
             .query_row(
                 "SELECT id, name, mc_version, loader, loader_version, game_dir, icon_path, created_at, last_played
@@ -80,7 +80,7 @@ impl Repository {
         Ok(inst)
     }
 
-    pub fn update_instance(conn: &Connection, inst: &Instance) -> Result<(), RunaError> {
+    pub fn update_instance(conn: &Connection, inst: &Instance) -> Result<(), RmclError> {
         conn.execute(
             "UPDATE instances SET name = ?1, mc_version = ?2, loader = ?3, loader_version = ?4
              WHERE id = ?5",
@@ -95,14 +95,14 @@ impl Repository {
         Ok(())
     }
 
-    pub fn delete_instance(conn: &Connection, id: &str) -> Result<(), RunaError> {
+    pub fn delete_instance(conn: &Connection, id: &str) -> Result<(), RmclError> {
         conn.execute("DELETE FROM instances WHERE id = ?1", [id])?;
         Ok(())
     }
 
     // ---------- accounts ----------
 
-    pub fn insert_account(conn: &Connection, acc: &Account) -> Result<(), RunaError> {
+    pub fn insert_account(conn: &Connection, acc: &Account) -> Result<(), RmclError> {
         conn.execute(
             "INSERT INTO accounts (id, username, uuid, account_type, is_active, refreshed_at)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
@@ -118,7 +118,7 @@ impl Repository {
         Ok(())
     }
 
-    pub fn list_accounts(conn: &Connection) -> Result<Vec<Account>, RunaError> {
+    pub fn list_accounts(conn: &Connection) -> Result<Vec<Account>, RmclError> {
         let mut stmt = conn.prepare(
             "SELECT id, username, uuid, account_type, is_active, refreshed_at FROM accounts",
         )?;
@@ -140,7 +140,7 @@ impl Repository {
     }
 
     /// 登录成功后写入或更新账号,同时置为当前账号
-    pub fn upsert_account(conn: &Connection, acc: &Account) -> Result<(), RunaError> {
+    pub fn upsert_account(conn: &Connection, acc: &Account) -> Result<(), RmclError> {
         conn.execute(
             "INSERT INTO accounts (id, username, uuid, account_type, is_active, refreshed_at)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6)
@@ -164,12 +164,12 @@ impl Repository {
     }
 
     /// 将指定账号置为非当前(退出登录)
-    pub fn deactivate_account(conn: &Connection, id: &str) -> Result<(), RunaError> {
+    pub fn deactivate_account(conn: &Connection, id: &str) -> Result<(), RmclError> {
         conn.execute("UPDATE accounts SET is_active = 0 WHERE id = ?1", [id])?;
         Ok(())
     }
 
-    pub fn get_active_account(conn: &Connection) -> Result<Option<Account>, RunaError> {
+    pub fn get_active_account(conn: &Connection) -> Result<Option<Account>, RmclError> {
         let acc = conn
             .query_row(
                 "SELECT id, username, uuid, account_type, is_active, refreshed_at
@@ -190,7 +190,7 @@ impl Repository {
         Ok(acc)
     }
 
-    pub fn set_active_account(conn: &Connection, id: &str) -> Result<(), RunaError> {
+    pub fn set_active_account(conn: &Connection, id: &str) -> Result<(), RmclError> {
         conn.execute("UPDATE accounts SET is_active = 0", [])?;
         conn.execute("UPDATE accounts SET is_active = 1 WHERE id = ?1", [id])?;
         Ok(())
@@ -198,7 +198,7 @@ impl Repository {
 
     // ---------- mods ----------
 
-    pub fn insert_mod(conn: &Connection, m: &ModEntry) -> Result<(), RunaError> {
+    pub fn insert_mod(conn: &Connection, m: &ModEntry) -> Result<(), RmclError> {
         conn.execute(
             "INSERT INTO mods (id, instance_id, file_name, source, project_id, version_id, enabled)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
@@ -215,7 +215,7 @@ impl Repository {
         Ok(())
     }
 
-    pub fn list_mods(conn: &Connection, instance_id: &str) -> Result<Vec<ModEntry>, RunaError> {
+    pub fn list_mods(conn: &Connection, instance_id: &str) -> Result<Vec<ModEntry>, RmclError> {
         let mut stmt = conn.prepare(
             "SELECT id, instance_id, file_name, source, project_id, version_id, enabled
              FROM mods WHERE instance_id = ?1 ORDER BY file_name",
@@ -238,7 +238,7 @@ impl Repository {
         Ok(out)
     }
 
-    pub fn get_mod(conn: &Connection, id: &str) -> Result<Option<ModEntry>, RunaError> {
+    pub fn get_mod(conn: &Connection, id: &str) -> Result<Option<ModEntry>, RmclError> {
         let m = conn
             .query_row(
                 "SELECT id, instance_id, file_name, source, project_id, version_id, enabled
@@ -260,12 +260,12 @@ impl Repository {
         Ok(m)
     }
 
-    pub fn set_mod_enabled(conn: &Connection, id: &str, enabled: bool) -> Result<(), RunaError> {
+    pub fn set_mod_enabled(conn: &Connection, id: &str, enabled: bool) -> Result<(), RmclError> {
         conn.execute("UPDATE mods SET enabled = ?1 WHERE id = ?2", params![enabled as i64, id])?;
         Ok(())
     }
 
-    pub fn delete_mod(conn: &Connection, id: &str) -> Result<(), RunaError> {
+    pub fn delete_mod(conn: &Connection, id: &str) -> Result<(), RmclError> {
         conn.execute("DELETE FROM mods WHERE id = ?1", [id])?;
         Ok(())
     }

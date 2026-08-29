@@ -33,7 +33,7 @@ export default function Downloads() {
       ),
       listen<GameLog>("game-log", (e) => s.appendLog(e.payload.line)),
       listen<GameExit>("game-exit", (e) => {
-        s.appendLog(`[Runa] 游戏进程退出,退出码 ${e.payload.code}`);
+        s.appendLog(`[RustMCL] 游戏进程退出,退出码 ${e.payload.code}`);
         s.setRunState("exited", e.payload.code);
       }),
     ]).then((un) => {
@@ -187,7 +187,7 @@ export default function Downloads() {
               <p className="text-white/25">暂无日志,启动后在此显示游戏输出…</p>
             ) : (
               s.logs.map((line, i) => (
-                <p key={i} className={line.startsWith("[Runa]") ? "text-[#7cb342]" : ""}>
+                <p key={i} className={line.startsWith("[RustMCL]") ? "text-[#7cb342]" : ""}>
                   {line || "\u00a0"}
                 </p>
               ))

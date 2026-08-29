@@ -1,38 +1,38 @@
 @import "tailwindcss";
 
 /*
- * Runa design tokens —— 参考图复刻
+ * RustMCL design tokens —— 参考图复刻
  * 浅色主题:macOS 原生应用风格,左侧毛玻璃侧栏 + 右侧浅灰内容区
  */
 :root {
-  --runa-bg: #f3f4f6;
-  --runa-sidebar: rgba(246, 246, 247, 0.82);
-  --runa-card: #ffffff;
-  --runa-text: #1a1a1a;
-  --runa-text-2: #6b7280;
-  --runa-text-3: #9ca3af;
-  --runa-divider: rgba(0, 0, 0, 0.06);
-  --runa-accent: #7cb342;
-  --runa-accent-hover: #689f38;
-  --runa-nav-active: #e8f5e9;
-  --runa-badge-bg: #f1f8e9;
-  --runa-badge-text: #558b2f;
-  --runa-hero-overlay: linear-gradient(90deg, rgba(243,244,246,0.95) 0%, rgba(243,244,246,0.7) 40%, transparent 70%);
+  --rmcl-bg: #f3f4f6;
+  --rmcl-sidebar: rgba(246, 246, 247, 0.82);
+  --rmcl-card: #ffffff;
+  --rmcl-text: #1a1a1a;
+  --rmcl-text-2: #6b7280;
+  --rmcl-text-3: #9ca3af;
+  --rmcl-divider: rgba(0, 0, 0, 0.06);
+  --rmcl-accent: #7cb342;
+  --rmcl-accent-hover: #689f38;
+  --rmcl-nav-active: #e8f5e9;
+  --rmcl-badge-bg: #f1f8e9;
+  --rmcl-badge-text: #558b2f;
+  --rmcl-hero-overlay: linear-gradient(90deg, rgba(243,244,246,0.95) 0%, rgba(243,244,246,0.7) 40%, transparent 70%);
 }
 
 @theme inline {
-  --color-bg: var(--runa-bg);
-  --color-sidebar: var(--runa-sidebar);
-  --color-card: var(--runa-card);
-  --color-ink: var(--runa-text);
-  --color-ink-2: var(--runa-text-2);
-  --color-ink-3: var(--runa-text-3);
-  --color-accent: var(--runa-accent);
-  --color-accent-hover: var(--runa-accent-hover);
-  --color-nav-active: var(--runa-nav-active);
-  --color-badge-bg: var(--runa-badge-bg);
-  --color-badge-text: var(--runa-badge-text);
-  --color-divider: var(--runa-divider);
+  --color-bg: var(--rmcl-bg);
+  --color-sidebar: var(--rmcl-sidebar);
+  --color-card: var(--rmcl-card);
+  --color-ink: var(--rmcl-text);
+  --color-ink-2: var(--rmcl-text-2);
+  --color-ink-3: var(--rmcl-text-3);
+  --color-accent: var(--rmcl-accent);
+  --color-accent-hover: var(--rmcl-accent-hover);
+  --color-nav-active: var(--rmcl-nav-active);
+  --color-badge-bg: var(--rmcl-badge-bg);
+  --color-badge-text: var(--rmcl-badge-text);
+  --color-divider: var(--rmcl-divider);
 }
 
 @theme {
@@ -55,8 +55,8 @@ body,
 body {
   margin: 0;
   font-family: var(--font-sans);
-  background-color: var(--runa-bg);
-  color: var(--runa-text);
+  background-color: var(--rmcl-bg);
+  color: var(--rmcl-text);
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
   user-select: none;

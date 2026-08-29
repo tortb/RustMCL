@@ -2,7 +2,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-use crate::error::RunaError;
+use crate::error::RmclError;
 
 /// Mojang 版本清单地址
 pub const MANIFEST_URL: &str = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json";
@@ -51,7 +51,7 @@ impl VersionFilter {
 }
 
 /// 拉取清单,失败时按 retry_times 重试
-pub async fn fetch(client: &reqwest::Client, retry_times: u32) -> Result<VersionManifest, RunaError> {
+pub async fn fetch(client: &reqwest::Client, retry_times: u32) -> Result<VersionManifest, RmclError> {
     let mut last_err = None;
     for attempt in 0..=retry_times {
         match client.get(MANIFEST_URL).send().await {
@@ -60,15 +60,15 @@ pub async fn fetch(client: &reqwest::Client, retry_times: u32) -> Result<Version
                     let body = resp.text().await?;
                     return Ok(serde_json::from_str(&body)?);
                 }
-                Err(e) => last_err = Some(RunaError::Network(e)),
+                Err(e) => last_err = Some(RmclError::Network(e)),
             },
-            Err(e) => last_err = Some(RunaError::Network(e)),
+            Err(e) => last_err = Some(RmclError::Network(e)),
         }
         if attempt < retry_times {
             tokio::time::sleep(std::time::Duration::from_millis(500)).await;
         }
     }
-    Err(last_err.unwrap_or_else(|| RunaError::other("拉取版本清单失败")))
+    Err(last_err.unwrap_or_else(|| RmclError::other("拉取版本清单失败")))
 }
 
 /// 优先读本地缓存;force_refresh 时强制重新拉取
@@ -77,7 +77,7 @@ pub async fn get_manifest(
     cache_path: &Path,
     force_refresh: bool,
     retry_times: u32,
-) -> Result<VersionManifest, RunaError> {
+) -> Result<VersionManifest, RmclError> {
     if !force_refresh {
         if let Some(m) = load_cache(cache_path) {
             return Ok(m);
@@ -105,7 +105,7 @@ fn load_cache(path: &Path) -> Option<VersionManifest> {
     serde_json::from_str(&content).ok()
 }
 
-fn save_cache(path: &Path, manifest: &VersionManifest) -> Result<(), RunaError> {
+fn save_cache(path: &Path, manifest: &VersionManifest) -> Result<(), RmclError> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
     }
@@ -155,7 +155,7 @@ mod tests {
     #[test]
     fn cache_roundtrip() {
         let m: VersionManifest = serde_json::from_str(SAMPLE).unwrap();
-        let path = std::env::temp_dir().join("runa_manifest_cache_test.json");
+        let path = std::env::temp_dir().join("rmcl_manifest_cache_test.json");
         save_cache(&path, &m).unwrap();
         let loaded = load_cache(&path).unwrap();
         assert_eq!(loaded.versions.len(), m.versions.len());

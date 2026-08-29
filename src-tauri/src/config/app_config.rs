@@ -2,9 +2,9 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-use crate::error::RunaError;
+use crate::error::RmclError;
 
-/// 应用级配置,对应 ~/.runa/config.toml
+/// 应用级配置,对应 ~/.rustmcl/config.toml
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct AppConfig {
@@ -34,7 +34,7 @@ pub struct GeneralConfig {
 impl Default for GeneralConfig {
     fn default() -> Self {
         Self {
-            data_dir: "~/.runa".into(),
+            data_dir: "~/.rustmcl".into(),
             theme: "dark".into(),
             language: "zh-CN".into(),
         }
@@ -88,7 +88,7 @@ impl AppConfig {
 
     /// 加载配置;文件不存在时生成默认配置并落盘
     /// 反序列化采用 #[serde(default)],字段缺失不崩溃
-    pub fn load_or_create(path: &Path) -> Result<Self, RunaError> {
+    pub fn load_or_create(path: &Path) -> Result<Self, RmclError> {
         if !path.exists() {
             let cfg = Self::default();
             cfg.save(path)?;
@@ -99,7 +99,7 @@ impl AppConfig {
         Ok(cfg)
     }
 
-    pub fn save(&self, path: &Path) -> Result<(), RunaError> {
+    pub fn save(&self, path: &Path) -> Result<(), RmclError> {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;
         }
@@ -116,7 +116,7 @@ mod tests {
     #[test]
     fn roundtrip_preserves_values() {
         let cfg = AppConfig::default();
-        let path = std::env::temp_dir().join("runa_config_test.toml");
+        let path = std::env::temp_dir().join("rmcl_config_test.toml");
         cfg.save(&path).unwrap();
         let loaded = AppConfig::load_or_create(&path).unwrap();
         assert_eq!(loaded.general.theme, "dark");

@@ -134,11 +134,11 @@ export const useInstanceStore = create<InstanceStore>((set, get) => ({
   launch: async (id) => {
     if (get().runningId) return;
     set({ runningId: id, logs: [] });
-    get().appendLog(`[Runa] 正在启动实例 ${id.slice(0, 8)} ...`);
+    get().appendLog(`[RustMCL] 正在启动实例 ${id.slice(0, 8)} ...`);
     try {
       await launchInstance(id);
     } catch (e) {
-      get().appendLog(`[Runa] 启动失败: ${e}`);
+      get().appendLog(`[RustMCL] 启动失败: ${e}`);
       get().setRunning(null);
     }
   },

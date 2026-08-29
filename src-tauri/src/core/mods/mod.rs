@@ -5,7 +5,7 @@ pub mod modrinth;
 use std::path::Path;
 
 use crate::core::downloader::{download_one, DownloadItem};
-use crate::error::RunaError;
+use crate::error::RmclError;
 
 use self::modrinth::ModrinthVersion;
 
@@ -15,9 +15,9 @@ pub async fn install_version(
     version: &ModrinthVersion,
     dest_dir: &Path,
     retry_times: u32,
-) -> Result<String, RunaError> {
+) -> Result<String, RmclError> {
     let file = modrinth::primary_file(version)
-        .ok_or_else(|| RunaError::other(format!("版本 {} 没有可下载的文件", version.id)))?;
+        .ok_or_else(|| RmclError::other(format!("版本 {} 没有可下载的文件", version.id)))?;
     let filename = &file.filename;
     // Modrinth 文件名含路径时只取最后一段
     let final_name = filename
