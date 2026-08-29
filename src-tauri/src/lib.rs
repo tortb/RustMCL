@@ -98,6 +98,9 @@ pub fn run() {
             commands::mods::list_instance_mods,
             commands::mods::set_mod_enabled,
             commands::mods::delete_mod,
+            commands::config::get_app_config,
+            commands::config::update_app_config,
+            commands::config::detect_java,
         ]);
 
     if let Err(e) = builder.run(tauri::generate_context!()) {

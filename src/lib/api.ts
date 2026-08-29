@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import type {
   Account,
+  AppConfig,
   AppInfo,
   Instance,
   InstanceDetail,
@@ -137,4 +138,19 @@ export function downloadVersion(mcVersion: string): Promise<void> {
 /** 启动指定版本(离线账号),日志/退出通过事件上报 */
 export function launchVersion(mcVersion: string, username?: string): Promise<void> {
   return invoke("launch_version", { mcVersion, username });
+}
+
+// ---------- 应用配置 ----------
+
+export function getAppConfig(): Promise<AppConfig> {
+  return invoke<AppConfig>("get_app_config");
+}
+
+export function updateAppConfig(config: AppConfig): Promise<AppConfig> {
+  return invoke<AppConfig>("update_app_config", { config });
+}
+
+/** 检测系统 Java 版本,返回如 "21.0.5"(未安装返回 null) */
+export function detectJava(): Promise<string | null> {
+  return invoke<string | null>("detect_java");
 }

@@ -152,6 +152,25 @@ export interface InstanceInput {
 /** 实例详情:DB 记录 + TOML 配置 */
 export type InstanceDetail = Instance & { config: InstanceConfig };
 
+// ---------- 应用配置 ----------
+
+export interface AppConfig {
+  general: {
+    data_dir: string;
+    theme: string;
+    language: string;
+  };
+  java: {
+    auto_detect: boolean;
+    default_java_path: string;
+  };
+  download: {
+    max_concurrent: number;
+    mirror: string;
+    retry_times: number;
+  };
+}
+
 // ---------- Mod ----------
 
 export interface ModrinthHit {
