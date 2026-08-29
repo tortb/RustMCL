@@ -70,7 +70,9 @@ pub async fn resolve_forge_version(
         .or(contents.install_profile.as_ref())
         .ok_or_else(|| RmclError::other("Forge installer 缺少 version.json / install_profile.json"))?;
     let vanilla = crate::core::loader::fetch_vanilla(client, data_dir, mc_version, retry_times).await?;
-    let merged = profile_merge::merge_forge(&vanilla, forge_json)?;
+    let mut merged = profile_merge::merge_forge(&vanilla, forge_json)?;
+    // 合并后版本 id 取 forge-<mc>-<forge>,保证 client.jar、缓存文件名、launch classpath 一致
+    merged.id = merged_id.clone();
 
     if let Some(parent) = merged_cache.parent() {
         std::fs::create_dir_all(parent)?;
@@ -79,7 +81,8 @@ pub async fn resolve_forge_version(
     Ok(merged)
 }
 
-/// 运行 Forge 新版所需的 processors(仅 ≥1.13;旧版走 legacy)
+/// 运行 Forge 新版所需的 processors(仅 ≥1.13;旧版走 legacy)。
+/// `{MINECRAFT_JAR}` 取 versions/<merged_id>/<merged_id>.jar(client.jar 本地路径)。
 pub fn run_installer_processors(
     contents: &InstallerContents,
     data_dir: &Path,
@@ -92,12 +95,46 @@ pub fn run_installer_processors(
     }
     let work = forge_work_dir(data_dir, mc_version, forge_version);
     let libraries_dir = data_dir.join("libraries");
-    processor::run_processors(contents, &work, &libraries_dir, java_path)
+    let merged_id = forge_merged_id(mc_version, forge_version);
+    let minecraft_jar = data_dir
+        .join("versions")
+        .join(&merged_id)
+        .join(format!("{merged_id}.jar"));
+    processor::run_processors(contents, &work, &libraries_dir, java_path, &minecraft_jar)
 }
 
 fn load_cached(path: &Path) -> Option<VersionJson> {
     let content = std::fs::read_to_string(path).ok()?;
     serde_json::from_str(&content).ok()
+}
+
+/// 从 install_profile.json 提取处理器工具链库(processors 的 classpath/jar 依赖),
+/// 转成下载项(dest 落到 libraries/<path>)。库条目通常自带 downloads.artifact。
+pub fn processor_library_items(contents: &InstallerContents, data_dir: &Path) -> Vec<crate::core::downloader::DownloadItem> {
+    let Some(profile) = contents.install_profile.as_ref() else {
+        return Vec::new();
+    };
+    let Some(libs) = profile.get("libraries").and_then(|v| v.as_array()) else {
+        return Vec::new();
+    };
+    let libraries_dir = data_dir.join("libraries");
+    libs.iter()
+        .filter_map(|lib| {
+            let dl = lib.get("downloads")?.get("artifact")?;
+            let url = dl.get("url")?.as_str()?.to_string();
+            let sha1 = dl.get("sha1").and_then(|s| s.as_str()).unwrap_or("").to_string();
+            let size = dl.get("size").and_then(|s| s.as_i64()).unwrap_or(0);
+            let path = dl.get("path").and_then(|s| s.as_str()).unwrap_or("");
+            let dest = if path.is_empty() {
+                let name = lib.get("name").and_then(|n| n.as_str()).unwrap_or("");
+                let rel = processor::maven_rel_path(name).unwrap_or_else(|| name.to_string());
+                libraries_dir.join(rel)
+            } else {
+                libraries_dir.join(path)
+            };
+            Some(crate::core::downloader::DownloadItem { url, sha1, size, dest })
+        })
+        .collect()
 }
 
 /// 判断某个 MC 版本走新版(processor)还是旧版(universal jar)路径
@@ -231,5 +268,87 @@ mod tests {
         assert!(version_le("1.12.1", "1.12.2"));
         assert!(version_le("1.12", "1.12.2"));
         assert!(!version_le("1.13", "1.12.2"));
+    }
+
+    /// 快速:加载已下载的真实 installer 并打印处理器变量与命令(不执行)。
+    /// 运行:cargo test --lib forge_preview -- --ignored --nocapture
+    #[ignore]
+    #[test]
+    fn forge_live_preview_commands() {
+        let mc = "1.20.1";
+        let fv = "47.2.0";
+        let data_dir = std::path::PathBuf::from("/tmp/forge-verify/run");
+        let work = forge_work_dir(&data_dir, mc, fv);
+        let jar = work.join("forge-installer.jar");
+        let contents = installer::extract_installer(&jar, mc, fv).unwrap();
+        print_preview(&contents, &data_dir, mc, fv);
+    }
+
+    /// 真实环境验证:下载真实 Forge 1.20.1-47.2.0 installer,下载依赖,运行全部 java 处理器。
+    /// 默认忽略(需网络 + Java)。运行:cargo test --lib forge_live -- --ignored
+    #[ignore]
+    #[tokio::test]
+    async fn forge_live_processors_on_real_installer() {
+        let client = reqwest::Client::new();
+        let mc = "1.20.1";
+        let fv = "47.2.0";
+        let data_dir = std::path::PathBuf::from("/tmp/forge-verify/run");
+        // 复用已缓存的下载(installer/依赖),便于重复验证;如需完全干净可取消下一行注释
+        // let _ = std::fs::remove_dir_all(&data_dir);
+        std::fs::create_dir_all(&data_dir).unwrap();
+
+        // 1. 下载 installer 并解压(内存 json + 全量文件到工作目录)
+        let work = forge_work_dir(&data_dir, mc, fv);
+        let jar = installer::download_installer(&client, mc, fv, &work, 3).await.unwrap();
+        let contents = installer::extract_installer(&jar, mc, fv).unwrap();
+        installer::extract_installer_files(&jar, &work).unwrap();
+
+        // 2. 合并 version.json(幂等,复用已下载 installer)
+        let version = resolve_forge_version(&client, &data_dir, mc, fv, 3).await.unwrap();
+        assert_eq!(version.id, forge_merged_id(mc, fv), "合并版本 id 应为 forge-<mc>-<forge>");
+
+        // 3. 下载依赖(client.jar + libraries + natives + 处理器工具链库)
+        let ctx = crate::core::version::rules::RuleContext::current(
+            crate::core::version::rules::FeaturesCtx::default(),
+        );
+        let vdir = data_dir.join("versions").join(&version.id);
+        let libs = data_dir.join("libraries");
+        let mut items = vec![crate::core::downloader::library::client_download_item(&version, &vdir)];
+        items.extend(crate::core::downloader::library::library_items(&version, &ctx, &libs));
+        items.extend(crate::core::downloader::library::native_items(&version, &ctx, &libs));
+        items.extend(processor_library_items(&contents, &data_dir));
+        crate::core::downloader::download_many(&client, items, 4, 2, |_| {}).await.unwrap();
+
+        // 4. 运行全部 java 处理器
+        let java = std::env::var("JAVA").unwrap_or_else(|_| "java".into());
+        run_installer_processors(&contents, &data_dir, mc, fv, &java).unwrap();
+
+        // 5. 校验关键产物:patched client jar(处理器最终产出)
+        let patched = libs.join("net/minecraftforge/forge/1.20.1-47.2.0/forge-1.20.1-47.2.0-client.jar");
+        assert!(patched.exists(), "patched client jar 应已生成: {}", patched.display());
+    }
+
+    /// 打印处理器变量与命令(仅用于真实环境验证)。
+    fn print_preview(contents: &InstallerContents, data_dir: &Path, mc: &str, fv: &str) {
+        let work = forge_work_dir(data_dir, mc, fv);
+        let libs = data_dir.join("libraries");
+        let merged_id = forge_merged_id(mc, fv);
+        let mcjar = data_dir.join("versions").join(&merged_id).join(format!("{merged_id}.jar"));
+
+        let vars = super::processor::build_processor_vars(contents, &work, &libs, &mcjar);
+        let mut keys: Vec<_> = vars.keys().cloned().collect();
+        keys.sort();
+        println!("=== 变量表 ===");
+        for k in keys {
+            println!("  {k} = {}", vars.get(&k).unwrap());
+        }
+        let preview = super::processor::build_processors_preview(contents, &work, &libs, &mcjar, "java").unwrap();
+        println!("=== 处理器命令 ===");
+        for (i, cmd) in &preview {
+            println!("--- processor[{i}] ---");
+            for a in cmd {
+                println!("  {a}");
+            }
+        }
     }
 }

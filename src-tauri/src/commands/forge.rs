@@ -96,21 +96,45 @@ async fn install_forge_inner(
         resolve_forge_version(&client, data_dir, mc_version, forge_version, retry_times).await?
     };
 
-    // 2. 下载合并版本的全部依赖(client.jar + libraries + natives + assets),为 processors 就绪
-    run_download_for_version(&client, data_dir, &version, retry_times, max_concurrent, app).await?;
+    // 2. 下载合并版本的全部依赖(client.jar + libraries + natives + assets),供 processors 使用
+    run_download_for_version(&client, data_dir, &version, retry_times, max_concurrent, app.clone()).await?;
 
     // 3. 旧版无需二进制补丁处理器,直接完成
     if is_legacy(mc_version) {
         return Ok(());
     }
 
-    // 4. 新版:解压 installer(内存读取 processors + 全量解压到工作目录供 processor.jar / data/ 读取)
+    // 4. 新版:解压 installer(内存读取 processors + 全量解压到工作目录供 data/ 读取)
     let work = forge_work_dir(data_dir, mc_version, forge_version);
     let jar = work.join("forge-installer.jar");
     let contents = extract_installer(&jar, mc_version, forge_version)?;
     extract_installer_files(&jar, &work)?;
 
-    // 5. 运行 java 处理器(阻塞,放到 blocking 池)
+    // 5. 下载处理器工具链库(install_profile.libraries,processors 的 classpath/jar 依赖)
+    let items = crate::core::mods::forge::processor_library_items(&contents, data_dir);
+    if !items.is_empty() {
+        let app2 = app.clone();
+        crate::core::downloader::download_many(
+            &client,
+            items,
+            max_concurrent,
+            retry_times,
+            move |p| {
+                let _ = app2.emit(
+                    "download-progress",
+                    super::download::DownloadProgressEvent {
+                        phase: "processor-libs".into(),
+                        current: p.done,
+                        total: p.total,
+                        file: p.file,
+                    },
+                );
+            },
+        )
+        .await?;
+    }
+
+    // 6. 运行 java 处理器(阻塞,放到 blocking 池)
     let java_path = AppConfig::load_or_create(config_path)?.java_path();
     if java_path.trim().is_empty() {
         return Err(RmclError::other("未配置 Java 路径,请先在设置页选择 Java"));

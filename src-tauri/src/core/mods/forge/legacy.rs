@@ -48,6 +48,7 @@ pub async fn resolve_legacy(
 
     // 3. 旧版固定主类 + 确保 universal jar 为库
     merged.main_class = "net.minecraft.launchwrapper.Launch".to_string();
+    merged.id = merged_id.clone();
     ensure_universal_jar(&mut merged, mc_version, forge_version);
 
     // 4. 写缓存,供启动链路复用
