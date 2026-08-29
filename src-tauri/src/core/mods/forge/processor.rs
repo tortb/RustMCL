@@ -25,6 +25,8 @@ pub struct Processor {
     pub jar: String,
     pub classpath: Vec<String>,
     pub args: Vec<String>,
+    /// 适用的安装侧("client" / "server");为空表示通用
+    pub sides: Vec<String>,
     /// 产出校验:文件相对安装根的路径 → 期望 SHA1
     pub outputs: HashMap<String, String>,
 }
@@ -47,6 +49,11 @@ pub fn parse_processors(profile: &Value) -> Vec<Processor> {
                 .and_then(Value::as_array)
                 .map(|a| a.iter().filter_map(|v| v.as_str().map(String::from)).collect())
                 .unwrap_or_default();
+            let sides = p
+                .get("sides")
+                .and_then(Value::as_array)
+                .map(|a| a.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+                .unwrap_or_default();
             let outputs = p
                 .get("outputs")
                 .and_then(Value::as_object)
@@ -60,17 +67,17 @@ pub fn parse_processors(profile: &Value) -> Vec<Processor> {
                 jar,
                 classpath,
                 args,
+                sides,
                 outputs,
             })
         })
         .collect()
 }
 
-/// 判断某 processor 是否需要在 client 侧执行(无 sides 字段视为通用)
+/// 判断某 processor 是否需要在 client 侧执行。
+/// sides 为空表示通用(scoped),不含 "client"(如 ["server"])时跳过。
 pub fn runs_on_client(p: &Processor) -> bool {
-    // 该信息在 parse 时未保留,默认 client 场景下全部执行
-    let _ = p;
-    true
+    p.sides.is_empty() || p.sides.iter().any(|s| s == "client")
 }
 
 /// 收集 data 中的 client 值并合并特殊变量,形成 `{KEY}` → 值 的映射。
@@ -442,6 +449,7 @@ mod tests {
         {
           "jar": "net.minecraftforge:installertools:1.3.0",
           "classpath": ["net.md-5:SpecialSource:1.11.0"],
+          "sides": ["client"],
           "args": ["{SIDE}", "{MINECRAFT_JAR}", "{BINPATCH}", "{BSERVICE}"],
           "outputs": {"{MINECRAFT_JAR}": "{MC_SLIM_SHA}"}
         }
@@ -473,7 +481,23 @@ mod tests {
         assert_eq!(p.jar, "net.minecraftforge:installertools:1.3.0");
         assert_eq!(p.classpath.len(), 1);
         assert_eq!(p.args.len(), 4);
+        assert_eq!(p.sides, vec!["client".to_string()]);
         assert!(p.outputs.contains_key("{MINECRAFT_JAR}"));
+    }
+
+    #[test]
+    fn runs_on_client_skips_server_only() {
+        let make = |sides: Vec<String>| Processor {
+            jar: "x".into(),
+            classpath: vec![],
+            args: vec![],
+            sides,
+            outputs: Default::default(),
+        };
+        assert!(!runs_on_client(&make(vec!["server".into()])), "仅 server 应跳过");
+        assert!(runs_on_client(&make(vec!["client".into()])), "client 应执行");
+        assert!(runs_on_client(&make(vec!["client".into(), "server".into()])), "含 client 应执行");
+        assert!(runs_on_client(&make(vec![])), "无 sides(通用)应执行");
     }
 
     #[test]
