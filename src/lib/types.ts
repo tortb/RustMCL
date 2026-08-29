@@ -151,3 +151,34 @@ export interface InstanceInput {
 
 /** 实例详情:DB 记录 + TOML 配置 */
 export type InstanceDetail = Instance & { config: InstanceConfig };
+
+// ---------- Mod ----------
+
+export interface ModrinthHit {
+  project_id: string;
+  slug: string;
+  title: string;
+  description: string;
+  categories: string[];
+  downloads: number;
+  icon_url: string | null;
+  versions: string[];
+}
+
+export interface ModrinthFile {
+  url: string;
+  filename: string;
+  primary: boolean;
+  size: number;
+  hashes: Record<string, string>;
+}
+
+export interface ModrinthVersion {
+  id: string;
+  project_id: string;
+  name: string;
+  version_number: string;
+  game_versions: string[];
+  loaders: string[];
+  files: ModrinthFile[];
+}

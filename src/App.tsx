@@ -5,6 +5,7 @@ import LoginModal from "./components/LoginModal";
 import Home from "./pages/Home";
 import Downloads from "./pages/Downloads";
 import Instances from "./pages/Instances";
+import Mods from "./pages/Mods";
 import JavaPage from "./pages/JavaPage";
 import Placeholder from "./components/Placeholder";
 import { useAppStore } from "./stores/app";
@@ -12,10 +13,9 @@ import { useAccountStore } from "./stores/account";
 
 export type PageKey = "home" | "instances" | "downloads" | "mods" | "java" | "settings";
 
-const pages: Record<Exclude<PageKey, "home">, string> = {
+const pages: Record<Exclude<PageKey, "home" | "mods">, string> = {
   instances: "实例管理",
   downloads: "下载管理",
-  mods: "Mod 管理",
   java: "Java 管理",
   settings: "设置",
 };
@@ -46,6 +46,7 @@ export default function App() {
             {page === "home" && <Home />}
             {page === "instances" && <Instances />}
             {page === "downloads" && <Downloads />}
+            {page === "mods" && <Mods />}
             {page === "java" && <JavaPage />}
             {page in pages && <Placeholder title={pages[page as keyof typeof pages]} />}
           </motion.div>

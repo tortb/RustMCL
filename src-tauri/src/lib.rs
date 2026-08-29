@@ -92,6 +92,12 @@ pub fn run() {
             commands::instance::delete_instance,
             commands::loader::install_loader,
             commands::loader::get_latest_loader_version,
+            commands::mods::search_mods,
+            commands::mods::get_mod_versions,
+            commands::mods::install_mod,
+            commands::mods::list_instance_mods,
+            commands::mods::set_mod_enabled,
+            commands::mods::delete_mod,
         ]);
 
     if let Err(e) = builder.run(tauri::generate_context!()) {

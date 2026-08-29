@@ -195,4 +195,78 @@ impl Repository {
         conn.execute("UPDATE accounts SET is_active = 1 WHERE id = ?1", [id])?;
         Ok(())
     }
+
+    // ---------- mods ----------
+
+    pub fn insert_mod(conn: &Connection, m: &ModEntry) -> Result<(), RunaError> {
+        conn.execute(
+            "INSERT INTO mods (id, instance_id, file_name, source, project_id, version_id, enabled)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            params![
+                m.id,
+                m.instance_id,
+                m.file_name,
+                m.source,
+                m.project_id,
+                m.version_id,
+                m.enabled as i64,
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn list_mods(conn: &Connection, instance_id: &str) -> Result<Vec<ModEntry>, RunaError> {
+        let mut stmt = conn.prepare(
+            "SELECT id, instance_id, file_name, source, project_id, version_id, enabled
+             FROM mods WHERE instance_id = ?1 ORDER BY file_name",
+        )?;
+        let rows = stmt.query_map([instance_id], |row| {
+            Ok(ModEntry {
+                id: row.get(0)?,
+                instance_id: row.get(1)?,
+                file_name: row.get(2)?,
+                source: row.get(3)?,
+                project_id: row.get(4)?,
+                version_id: row.get(5)?,
+                enabled: row.get::<_, i64>(6)? != 0,
+            })
+        })?;
+        let mut out = Vec::new();
+        for row in rows {
+            out.push(row?);
+        }
+        Ok(out)
+    }
+
+    pub fn get_mod(conn: &Connection, id: &str) -> Result<Option<ModEntry>, RunaError> {
+        let m = conn
+            .query_row(
+                "SELECT id, instance_id, file_name, source, project_id, version_id, enabled
+                 FROM mods WHERE id = ?1",
+                [id],
+                |row| {
+                    Ok(ModEntry {
+                        id: row.get(0)?,
+                        instance_id: row.get(1)?,
+                        file_name: row.get(2)?,
+                        source: row.get(3)?,
+                        project_id: row.get(4)?,
+                        version_id: row.get(5)?,
+                        enabled: row.get::<_, i64>(6)? != 0,
+                    })
+                },
+            )
+            .optional()?;
+        Ok(m)
+    }
+
+    pub fn set_mod_enabled(conn: &Connection, id: &str, enabled: bool) -> Result<(), RunaError> {
+        conn.execute("UPDATE mods SET enabled = ?1 WHERE id = ?2", params![enabled as i64, id])?;
+        Ok(())
+    }
+
+    pub fn delete_mod(conn: &Connection, id: &str) -> Result<(), RunaError> {
+        conn.execute("DELETE FROM mods WHERE id = ?1", [id])?;
+        Ok(())
+    }
 }

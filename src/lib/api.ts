@@ -5,6 +5,9 @@ import type {
   Instance,
   InstanceDetail,
   InstanceInput,
+  ModrinthHit,
+  ModrinthVersion,
+  ModEntry,
   VersionFilter,
   VersionInfo,
 } from "./types";
@@ -85,6 +88,38 @@ export function installLoader(
   loaderVersion: string,
 ): Promise<void> {
   return invoke("install_loader", { mcVersion, loader, loaderVersion });
+}
+
+// ---------- Mod ----------
+
+/** 搜索 Modrinth 项目 */
+export function searchMods(query: string, limit?: number): Promise<ModrinthHit[]> {
+  return invoke<ModrinthHit[]>("search_mods", { query, limit });
+}
+
+/** 获取某项目与指定实例兼容的版本列表 */
+export function getModVersions(projectId: string, instanceId: string): Promise<ModrinthVersion[]> {
+  return invoke<ModrinthVersion[]>("get_mod_versions", { projectId, instanceId });
+}
+
+/** 安装 mod 到实例(幂等),进度通过 mod-install 事件 */
+export function installMod(instanceId: string, versionId: string): Promise<ModEntry> {
+  return invoke<ModEntry>("install_mod", { instanceId, versionId });
+}
+
+/** 列出实例已安装的 mod */
+export function listInstanceMods(instanceId: string): Promise<ModEntry[]> {
+  return invoke<ModEntry[]>("list_instance_mods", { instanceId });
+}
+
+/** 启用/禁用 mod */
+export function setModEnabled(id: string, enabled: boolean): Promise<void> {
+  return invoke("set_mod_enabled", { id, enabled });
+}
+
+/** 删除 mod(DB 记录 + 文件) */
+export function deleteMod(id: string): Promise<void> {
+  return invoke("delete_mod", { id });
 }
 
 export function listVersions(
