@@ -25,6 +25,14 @@
       "csp": null
     }
   },
+  "plugins": {
+    "updater": {
+      "pubkey": "vYx3mNpb8F2kQ7sLmK1pR5uT0wH4jC9dXa6ZeE3gBcUo=",
+      "endpoints": [
+        "https://example.com/rustmcl/latest.json"
+      ]
+    }
+  },
   "bundle": {
     "active": true,
     "targets": "all",
