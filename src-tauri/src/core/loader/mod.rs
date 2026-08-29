@@ -122,7 +122,7 @@ pub async fn latest_loader_version(
 }
 
 /// 拉取加载器版本列表,取第一个可用版本(meta 按新→旧排序)
-pub(crate) async fn resolve_latest_loader(
+async fn resolve_latest_loader(
     client: &reqwest::Client,
     meta: &LoaderMeta,
     mc_version: &str,

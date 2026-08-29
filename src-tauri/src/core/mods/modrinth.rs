@@ -33,6 +33,7 @@ struct SearchResponse {
     #[serde(default)]
     hits: Vec<ModrinthHit>,
     #[serde(default)]
+    #[allow(dead_code)]
     total_hits: i64,
 }
 

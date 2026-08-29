@@ -56,6 +56,7 @@ pub fn launch_version(
             &mc_version,
             None,
             None,
+            None,
             opts,
             retry_times,
             app.clone(),
@@ -135,21 +136,23 @@ pub fn launch_instance(
             let _ = app.emit("game-exit", GameExitEvent { code: -1 });
             return;
         }
-        // 2. 启动
-        let result = run_launch(
-            client,
-            &data_dir,
-            &config_path,
-            &mc_version,
-            Some(&loader_name),
-            Some(&loader_version),
-            opts,
-            retry_times,
-            app.clone(),
-        )
-        .await;
-        emit_launch_result(&app, result);
-    });
+        // 2. 启动:游戏目录使用实例专属目录(保证 mods/存档隔离)
+    let game_dir = inst.game_dir.clone();
+    let result = run_launch(
+        client,
+        &data_dir,
+        &config_path,
+        &mc_version,
+        Some(&loader_name),
+         Some(&loader_version),
+         Some(std::path::Path::new(&game_dir)),
+         opts,
+        retry_times,
+        app.clone(),
+    )
+    .await;
+    emit_launch_result(&app, result);
+});
     Ok(())
 }
 
@@ -177,6 +180,7 @@ async fn run_launch(
     mc_version: &str,
     loader: Option<&str>,
     loader_version: Option<&str>,
+    game_dir_override: Option<&Path>,
     opts: LaunchOptions,
     retry_times: u32,
     app: AppHandle,
@@ -246,8 +250,11 @@ async fn run_launch(
     // 5. 拼装启动参数
     let cfg = AppConfig::load_or_create(config_path)?;
     let java_path = cfg.java_path();
+    let game_dir = game_dir_override
+        .map(|p| p.to_path_buf())
+        .unwrap_or_else(|| layout.game_dir.clone());
     let paths = LaunchPaths {
-        game_dir: layout.game_dir,
+        game_dir,
         assets_dir: layout.assets_dir,
         libraries_dir: layout.libraries_dir,
         version_dir: version_dir.clone(),
