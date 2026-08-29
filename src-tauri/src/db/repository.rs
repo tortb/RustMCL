@@ -269,4 +269,170 @@ impl Repository {
         conn.execute("DELETE FROM mods WHERE id = ?1", [id])?;
         Ok(())
     }
+
+    // ---------- servers ----------
+
+    pub fn insert_server(conn: &Connection, s: &ServerEntry) -> Result<(), RmclError> {
+        conn.execute(
+            "INSERT INTO servers (id, name, address, port, is_favorite, icon_base64, last_ping_ms, sort_order, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            params![
+                s.id,
+                s.name,
+                s.address,
+                s.port as i64,
+                s.is_favorite as i64,
+                s.icon_base64,
+                s.last_ping_ms,
+                s.sort_order,
+                s.created_at,
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn list_servers(conn: &Connection) -> Result<Vec<ServerEntry>, RmclError> {
+        let mut stmt = conn.prepare(
+            "SELECT id, name, address, port, is_favorite, icon_base64, last_ping_ms, sort_order, created_at
+             FROM servers ORDER BY is_favorite DESC, sort_order ASC, name ASC",
+        )?;
+        let rows = stmt.query_map([], |row| {
+            Ok(ServerEntry {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                address: row.get(2)?,
+                port: row.get::<_, i64>(3)? as u16,
+                is_favorite: row.get::<_, i64>(4)? != 0,
+                icon_base64: row.get(5)?,
+                last_ping_ms: row.get(6)?,
+                sort_order: row.get(7)?,
+                created_at: row.get(8)?,
+            })
+        })?;
+        let mut out = Vec::new();
+        for row in rows {
+            out.push(row?);
+        }
+        Ok(out)
+    }
+
+    pub fn get_server(conn: &Connection, id: &str) -> Result<Option<ServerEntry>, RmclError> {
+        let s = conn
+            .query_row(
+                "SELECT id, name, address, port, is_favorite, icon_base64, last_ping_ms, sort_order, created_at
+                 FROM servers WHERE id = ?1",
+                [id],
+                |row| {
+                    Ok(ServerEntry {
+                        id: row.get(0)?,
+                        name: row.get(1)?,
+                        address: row.get(2)?,
+                        port: row.get::<_, i64>(3)? as u16,
+                        is_favorite: row.get::<_, i64>(4)? != 0,
+                        icon_base64: row.get(5)?,
+                        last_ping_ms: row.get(6)?,
+                        sort_order: row.get(7)?,
+                        created_at: row.get(8)?,
+                    })
+                },
+            )
+            .optional()?;
+        Ok(s)
+    }
+
+    pub fn delete_server(conn: &Connection, id: &str) -> Result<(), RmclError> {
+        conn.execute("DELETE FROM servers WHERE id = ?1", [id])?;
+        Ok(())
+    }
+
+    /// 更新服务器(仅更新传入的 Some 字段)
+    pub fn update_server(conn: &Connection, id: &str, name: Option<&str>, favorite: Option<bool>, sort_order: Option<i64>) -> Result<(), RmclError> {
+        if let Some(name) = name {
+            conn.execute("UPDATE servers SET name = ?1 WHERE id = ?2", params![name, id])?;
+        }
+        if let Some(fav) = favorite {
+            conn.execute("UPDATE servers SET is_favorite = ?1 WHERE id = ?2", params![fav as i64, id])?;
+        }
+        if let Some(so) = sort_order {
+            conn.execute("UPDATE servers SET sort_order = ?1 WHERE id = ?2", params![so, id])?;
+        }
+        Ok(())
+    }
+
+    pub fn set_server_ping(conn: &Connection, id: &str, ping_ms: i64) -> Result<(), RmclError> {
+        conn.execute("UPDATE servers SET last_ping_ms = ?1 WHERE id = ?2", params![ping_ms, id])?;
+        Ok(())
+    }
+
+    // ---------- resource_packs ----------
+
+    pub fn upsert_resource_pack(conn: &Connection, p: &ResourcePackEntry) -> Result<(), RmclError> {
+        conn.execute(
+            "INSERT INTO resource_packs (id, instance_id, type, file_name, enabled, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+             ON CONFLICT(id) DO UPDATE SET file_name = excluded.file_name, enabled = excluded.enabled",
+            params![
+                p.id,
+                p.instance_id,
+                p.type_kind,
+                p.file_name,
+                p.enabled as i64,
+                p.created_at,
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn list_resource_packs(conn: &Connection, instance_id: &str) -> Result<Vec<ResourcePackEntry>, RmclError> {
+        let mut stmt = conn.prepare(
+            "SELECT id, instance_id, type, file_name, enabled, created_at
+             FROM resource_packs WHERE instance_id = ?1 ORDER BY type, file_name",
+        )?;
+        let rows = stmt.query_map([instance_id], |row| {
+            Ok(ResourcePackEntry {
+                id: row.get(0)?,
+                instance_id: row.get(1)?,
+                type_kind: row.get(2)?,
+                file_name: row.get(3)?,
+                enabled: row.get::<_, i64>(4)? != 0,
+                created_at: row.get(5)?,
+            })
+        })?;
+        let mut out = Vec::new();
+        for row in rows {
+            out.push(row?);
+        }
+        Ok(out)
+    }
+
+    pub fn get_resource_pack(conn: &Connection, id: &str) -> Result<Option<ResourcePackEntry>, RmclError> {
+        let p = conn
+            .query_row(
+                "SELECT id, instance_id, type, file_name, enabled, created_at
+                 FROM resource_packs WHERE id = ?1",
+                [id],
+                |row| {
+                    Ok(ResourcePackEntry {
+                        id: row.get(0)?,
+                        instance_id: row.get(1)?,
+                        type_kind: row.get(2)?,
+                        file_name: row.get(3)?,
+                        enabled: row.get::<_, i64>(4)? != 0,
+                        created_at: row.get(5)?,
+                    })
+                },
+            )
+            .optional()?;
+        Ok(p)
+    }
+
+    pub fn delete_resource_pack(conn: &Connection, id: &str) -> Result<(), RmclError> {
+        conn.execute("DELETE FROM resource_packs WHERE id = ?1", [id])?;
+        Ok(())
+    }
+
+    pub fn set_resource_pack_enabled(conn: &Connection, id: &str, enabled: bool) -> Result<(), RmclError> {
+        conn.execute("UPDATE resource_packs SET enabled = ?1 WHERE id = ?2", params![enabled as i64, id])?;
+        Ok(())
+    }
 }

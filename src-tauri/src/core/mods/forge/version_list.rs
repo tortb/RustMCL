@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
+use crate::core::mirror::Mirror;
 use crate::error::RmclError;
 
 use super::{fetch_body, PROMOTIONS_URL};
@@ -58,10 +59,11 @@ pub fn parse_promotions(promos: &BTreeMap<String, String>, mc_version: &str) -> 
 /// 拉取并解析 Forge 版本清单
 pub async fn list_forge_versions(
     client: &reqwest::Client,
+    mirror: &Mirror,
     mc_version: &str,
     retry_times: u32,
 ) -> Result<Vec<ForgeVersionInfo>, RmclError> {
-    let body = fetch_body(client, PROMOTIONS_URL, retry_times).await?;
+    let body = fetch_body(client, mirror, PROMOTIONS_URL, retry_times).await?;
     let promos: Promotions = serde_json::from_str(&body)?;
     Ok(parse_promotions(&promos.promos, mc_version))
 }

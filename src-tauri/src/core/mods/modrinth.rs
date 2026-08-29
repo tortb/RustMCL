@@ -66,6 +66,23 @@ pub struct ModrinthVersion {
     pub loaders: Vec<String>,
     #[serde(default)]
     pub files: Vec<ModrinthFile>,
+    /// 该版本的依赖声明(required/optional/incompatible),用于模块 5 依赖检测
+    #[serde(default)]
+    pub dependencies: Vec<ModrinthDependency>,
+}
+
+/// mod 依赖声明
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ModrinthDependency {
+    #[serde(default)]
+    pub version_id: Option<String>,
+    #[serde(default)]
+    pub project_id: Option<String>,
+    /// required | optional | incompatible
+    #[serde(default)]
+    pub dependency_type: String,
+    #[serde(default)]
+    pub file_name: Option<String>,
 }
 
 /// 搜索 Modrinth 项目
@@ -80,6 +97,27 @@ pub async fn search(
         ("query", query),
         ("limit", &limit.to_string()),
         ("index", "relevance"),
+    ])
+    .await?;
+    let resp: SearchResponse = serde_json::from_str(&body)?;
+    Ok(resp.hits)
+}
+
+/// 按 project_type 搜索(资源包 resourcepack、光影 shader 等)
+pub async fn search_by_type(
+    client: &reqwest::Client,
+    query: &str,
+    project_type: &str,
+    limit: u32,
+    retry_times: u32,
+) -> Result<Vec<ModrinthHit>, RmclError> {
+    let url = format!("{API_BASE}/search");
+    let facets = format!(r#"[["project_type:{project_type}"]]"#);
+    let body = fetch(client, &url, retry_times, &[
+        ("query", query),
+        ("limit", &limit.to_string()),
+        ("index", "relevance"),
+        ("facets", &facets),
     ])
     .await?;
     let resp: SearchResponse = serde_json::from_str(&body)?;

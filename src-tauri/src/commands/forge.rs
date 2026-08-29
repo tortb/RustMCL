@@ -5,6 +5,7 @@ use tauri::{AppHandle, Emitter, State};
 use crate::core::mods::forge::installer::{extract_installer, extract_installer_files};
 use crate::core::mods::forge::version_list::ForgeVersionInfo;
 use crate::core::mods::forge::{forge_work_dir, is_legacy, resolve_forge_version, run_installer_processors};
+use crate::core::mirror::Mirror;
 use crate::error::RmclError;
 use crate::{config::app_config::AppConfig, AppState};
 
@@ -18,6 +19,7 @@ pub async fn list_forge_versions(
 ) -> Result<Vec<ForgeVersionInfo>, String> {
     crate::core::mods::forge::version_list::list_forge_versions(
         &state.client,
+        &state.mirror(),
         &mc_version,
         state.retry_times,
     )
@@ -40,6 +42,7 @@ pub fn install_forge(
     let config_path = state.config_path.clone();
     let retry_times = state.retry_times;
     let max_concurrent = (state.max_concurrent.max(1)) as usize;
+    let mirror = state.mirror();
 
     tauri::async_runtime::spawn(async move {
         let result = install_forge_inner(
@@ -51,6 +54,7 @@ pub fn install_forge(
             retry_times,
             max_concurrent,
             app.clone(),
+            &mirror,
         )
         .await;
 
@@ -80,12 +84,14 @@ async fn install_forge_inner(
     retry_times: u32,
     max_concurrent: usize,
     app: AppHandle,
+    mirror: &Mirror,
 ) -> Result<(), RmclError> {
     // 1. 解析并合并 version.json(下载 installer + 与原版合并,带缓存)。
     //    旧版(≤1.12.2)走 legacy 路径(锁定 launchwrapper + universal jar),但同样拿到合并结果。
     let version = if is_legacy(mc_version) {
         crate::core::mods::forge::legacy::resolve_legacy(
             &client,
+            mirror,
             data_dir,
             mc_version,
             forge_version,
@@ -93,11 +99,11 @@ async fn install_forge_inner(
         )
         .await?
     } else {
-        resolve_forge_version(&client, data_dir, mc_version, forge_version, retry_times).await?
+        resolve_forge_version(&client, mirror, data_dir, mc_version, forge_version, retry_times).await?
     };
 
     // 2. 下载合并版本的全部依赖(client.jar + libraries + natives + assets),供 processors 使用
-    run_download_for_version(&client, data_dir, &version, retry_times, max_concurrent, app.clone()).await?;
+    run_download_for_version(&client, data_dir, &version, retry_times, max_concurrent, app.clone(), mirror).await?;
 
     // 3. 旧版无需二进制补丁处理器,直接完成
     if is_legacy(mc_version) {
@@ -111,11 +117,12 @@ async fn install_forge_inner(
     extract_installer_files(&jar, &work)?;
 
     // 5. 下载处理器工具链库(install_profile.libraries,processors 的 classpath/jar 依赖)
-    let items = crate::core::mods::forge::processor_library_items(&contents, data_dir);
+    let items = crate::core::mods::forge::processor_library_items(&contents, data_dir, mirror);
     if !items.is_empty() {
         let app2 = app.clone();
         crate::core::downloader::download_many(
             &client,
+            mirror,
             items,
             max_concurrent,
             retry_times,

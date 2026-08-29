@@ -167,8 +167,168 @@ export interface AppConfig {
   download: {
     max_concurrent: number;
     mirror: string;
+    mirror_custom_base: string | null;
     retry_times: number;
   };
+  curseforge_api_key: string | null;
+}
+
+// ---------- 下载镜像 ----------
+
+export interface MirrorSpec {
+  id: string;
+  name: string;
+  base: string;
+}
+
+export interface Mirror {
+  id: string;
+  base: string;
+}
+
+export interface SpeedResult {
+  id: string;
+  name: string;
+  base: string;
+  latency_ms: number;
+  throughput: number;
+  ok: boolean;
+  error: string;
+}
+
+// ---------- 崩溃诊断 ----------
+
+export interface CrashDiagnosis {
+  found: boolean;
+  path: string;
+  summary: string;
+  suggestions: string[];
+  matched: string[];
+  raw_content: string;
+  truncated: boolean;
+}
+
+// ---------- JVM 内存推荐 ----------
+
+export interface SystemMemory {
+  total_mb: number;
+  available_mb: number;
+}
+
+export interface JvmRecommendation {
+  min_mb: number;
+  max_mb: number;
+  extra_args: string[];
+  tier_label: string;
+  note: string;
+}
+
+// ---------- 整合包 ----------
+
+export interface ModpackProgress {
+  current: number;
+  total: number;
+  file: string;
+}
+
+export interface ModpackFinished {
+  ok: boolean;
+  error: string;
+  installed: string[];
+  failures: string[];
+  name: string;
+}
+
+// ---------- 服务器 ----------
+
+export interface ServerEntry {
+  id: string;
+  name: string;
+  address: string;
+  port: number;
+  is_favorite: boolean;
+  icon_base64: string | null;
+  last_ping_ms: number | null;
+  sort_order: number;
+  created_at: number;
+}
+
+export interface ServerStatus {
+  id: string;
+  motd: string;
+  players_online: number;
+  players_max: number;
+  latency_ms: number;
+  favicon: string | null;
+  ok: boolean;
+}
+
+/** 从 servers.dat 导入的服务器记录 */
+export interface ImportedServer {
+  name: string;
+  address: string;
+  port: number;
+}
+
+// ---------- 资源包 / 光影包 ----------
+
+export interface ResourcePackEntry {
+  id: string;
+  instance_id: string;
+  type_kind: "resourcepack" | "shaderpack";
+  file_name: string;
+  enabled: boolean;
+  created_at: number;
+}
+
+/** 光影依赖检测结果 */
+export interface ShaderSupportInfo {
+  supported: boolean;
+  message: string;
+}
+
+// ---------- 存档 / 截图 ----------
+
+export interface SaveInfo {
+  name: string;
+  path: string;
+  size_bytes: number;
+  modified_at: number;
+}
+
+export interface BackupInfo {
+  name: string;
+  path: string;
+  size_bytes: number;
+  created_at: number;
+}
+
+export interface ScreenshotInfo {
+  name: string;
+  path: string;
+  size_bytes: number;
+  modified_at: number;
+}
+
+// ---------- 更新 ----------
+
+export interface UpdateInfo {
+  current: string;
+  latest: string;
+  has_update: boolean;
+  notes: string;
+}
+
+// ---------- 皮肤 ----------
+
+export type SkinModel = "classic" | "slim";
+
+export interface SkinEntry {
+  id: string;
+  name: string;
+  model: SkinModel;
+  width: number;
+  height: number;
 }
 
 // ---------- Mod ----------
@@ -200,6 +360,57 @@ export interface ModrinthVersion {
   game_versions: string[];
   loaders: string[];
   files: ModrinthFile[];
+  dependencies: ModrinthDependency[];
+}
+
+export interface ModrinthDependency {
+  version_id: string | null;
+  project_id: string | null;
+  dependency_type: string;
+  file_name: string | null;
+}
+
+export type ModSourceType = "modrinth" | "curseforge";
+
+/** 统一的搜索条目(Modrinth / CurseForge 字段对齐,前端统一展示) */
+export interface ModSearchResult {
+  source: ModSourceType;
+  project_id: string;
+  slug: string;
+  title: string;
+  description: string;
+  downloads: number;
+  icon_url: string | null;
+  categories: string[];
+  versions: string[];
+  /** 仅 CurseForge 来源有值:false 表示禁止第三方启动器分发 */
+  allow_mod_distribution?: boolean;
+}
+
+export interface CurseForgeHit {
+  project_id: string;
+  slug: string;
+  title: string;
+  description: string;
+  categories: string[];
+  downloads: number;
+  icon_url: string | null;
+  versions: string[];
+  allow_mod_distribution: boolean;
+}
+
+export interface CurseForgeFile {
+  file_id: number;
+  filename: string;
+  url: string;
+  size: number;
+  sha1: string;
+}
+
+export interface DepCheckResult {
+  missing_required: { project_id: string; version_id: string; file_name: string }[];
+  conflicts: string[];
+  ok: boolean;
 }
 
 // ---------- Forge ----------

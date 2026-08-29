@@ -17,7 +17,7 @@ pub async fn get_latest_loader_version(
     mc_version: String,
     loader: String,
 ) -> Result<String, String> {
-    loader::latest_loader_version(&state.client, &loader, &mc_version, state.retry_times)
+    loader::latest_loader_version(&state.client, &state.mirror(), &loader, &mc_version, state.retry_times)
         .await
         .map_err(|e| e.to_string())
 }
@@ -35,11 +35,13 @@ pub fn install_loader(
     let data_dir = state.data_dir.clone();
     let retry_times = state.retry_times;
     let max_concurrent = (state.max_concurrent.max(1)) as usize;
+    let mirror = state.mirror();
 
     tauri::async_runtime::spawn(async move {
         let result = (async {
             let version = loader::resolve_version(
                 &client,
+                &mirror,
                 &data_dir,
                 &mc_version,
                 &loader,
@@ -54,6 +56,7 @@ pub fn install_loader(
                 retry_times,
                 max_concurrent,
                 app.clone(),
+                &mirror,
             )
             .await
         })

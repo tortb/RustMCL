@@ -11,10 +11,12 @@
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-dialog": "^2.7.2",
     "framer-motion": "^12",
     "lucide-react": "^1.33.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "skinview3d": "^3.4.2",
     "zustand": "^5"
   },
   "devDependencies": {

@@ -2,6 +2,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
+use crate::core::mirror::Mirror;
 use crate::error::RmclError;
 
 /// Mojang 版本清单地址
@@ -51,10 +52,11 @@ impl VersionFilter {
 }
 
 /// 拉取清单,失败时按 retry_times 重试
-pub async fn fetch(client: &reqwest::Client, retry_times: u32) -> Result<VersionManifest, RmclError> {
+pub async fn fetch(client: &reqwest::Client, mirror: &Mirror, retry_times: u32) -> Result<VersionManifest, RmclError> {
+    let url = mirror.rewrite(MANIFEST_URL);
     let mut last_err = None;
     for attempt in 0..=retry_times {
-        match client.get(MANIFEST_URL).send().await {
+        match client.get(&url).send().await {
             Ok(resp) => match resp.error_for_status() {
                 Ok(resp) => {
                     let body = resp.text().await?;
@@ -74,6 +76,7 @@ pub async fn fetch(client: &reqwest::Client, retry_times: u32) -> Result<Version
 /// 优先读本地缓存;force_refresh 时强制重新拉取
 pub async fn get_manifest(
     client: &reqwest::Client,
+    mirror: &Mirror,
     cache_path: &Path,
     force_refresh: bool,
     retry_times: u32,
@@ -83,7 +86,7 @@ pub async fn get_manifest(
             return Ok(m);
         }
     }
-    let m = fetch(client, retry_times).await?;
+    let m = fetch(client, mirror, retry_times).await?;
     save_cache(cache_path, &m)?;
     Ok(m)
 }

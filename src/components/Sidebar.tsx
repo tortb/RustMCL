@@ -8,6 +8,8 @@ import {
   Settings,
   ChevronDown,
   LogIn,
+  Server,
+  Image,
 } from "lucide-react";
 import type { PageKey } from "../App";
 import { useAccountStore } from "../stores/account";
@@ -17,6 +19,8 @@ const navItems: { key: PageKey; label: string; icon: React.ElementType }[] = [
   { key: "instances", label: "实例", icon: Box },
   { key: "downloads", label: "下载", icon: Download },
   { key: "mods", label: "Mod", icon: Puzzle },
+  { key: "packs", label: "资源包", icon: Image },
+  { key: "servers", label: "服务器", icon: Server },
   { key: "java", label: "Java", icon: Coffee },
   { key: "settings", label: "设置", icon: Settings },
 ];

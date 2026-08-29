@@ -14,6 +14,7 @@ use crate::core::launcher::args_builder::{build_launch_command, LaunchOptions, L
 use crate::core::launcher::process::launch_process;
 use crate::core::launcher::{extract_natives, native_plan};
 use crate::core::loader;
+use crate::core::mirror::Mirror;
 use crate::core::version::rules::{FeaturesCtx, RuleContext};
 use crate::db::repository::Repository;
 use crate::error::RmclError;
@@ -43,6 +44,7 @@ pub fn launch_version(
     let data_dir = state.data_dir.clone();
     let config_path = state.config_path.clone();
     let retry_times = state.retry_times;
+    let mirror = state.mirror();
     let opts = LaunchOptions {
         username: username.unwrap_or_default(),
         ..Default::default()
@@ -58,6 +60,7 @@ pub fn launch_version(
             None,
             None,
             opts,
+            &mirror,
             retry_times,
             app.clone(),
         )
@@ -67,18 +70,20 @@ pub fn launch_version(
     Ok(())
 }
 
-/// 按实例启动(实例页入口):自动补齐缺失资源,参数取自 instance.toml
-#[tauri::command]
-pub fn launch_instance(
+/// 按实例启动的公共入口(供 launch_instance 与 join_server 复用)。
+/// extra_game_args 追加到游戏参数末尾,用于一键加入服务器(--server/--port)。
+pub(crate) fn spawn_instance_launch(
     app: AppHandle,
     state: State<'_, AppState>,
     instance_id: String,
+    extra_game_args: Vec<String>,
 ) -> Result<(), String> {
     let client = state.client.clone();
     let data_dir = state.data_dir.clone();
     let config_path = state.config_path.clone();
     let retry_times = state.retry_times;
     let max_concurrent = (state.max_concurrent.max(1)) as usize;
+    let mirror = state.mirror();
 
     // 读 DB 实例 + 实例配置(同步操作,在 spawn 前完成)
     let inst = {
@@ -104,6 +109,7 @@ pub fn launch_instance(
         max_memory: icfg.jvm.max_memory,
         width: icfg.game.resolution.width,
         height: icfg.game.resolution.height,
+        extra_game_args,
         ..Default::default()
     };
 
@@ -124,6 +130,7 @@ pub fn launch_instance(
             retry_times,
             max_concurrent,
             app.clone(),
+            &mirror,
         )
         .await
         {
@@ -147,6 +154,7 @@ pub fn launch_instance(
          Some(&loader_version),
          Some(std::path::Path::new(&game_dir)),
          opts,
+        &mirror,
         retry_times,
         app.clone(),
     )
@@ -154,6 +162,16 @@ pub fn launch_instance(
     emit_launch_result(&app, result);
 });
     Ok(())
+}
+
+/// 按实例启动(实例页入口):自动补齐缺失资源,参数取自 instance.toml
+#[tauri::command]
+pub fn launch_instance(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    instance_id: String,
+) -> Result<(), String> {
+    spawn_instance_launch(app, state, instance_id, vec![])
 }
 
 fn emit_launch_result(app: &AppHandle, result: Result<i32, RmclError>) {
@@ -182,12 +200,14 @@ async fn run_launch(
     loader_version: Option<&str>,
     game_dir_override: Option<&Path>,
     opts: LaunchOptions,
+    mirror: &Mirror,
     retry_times: u32,
     app: AppHandle,
 ) -> Result<i32, RmclError> {
     // 1. version.json(vanilla 或 loader 合并结果,均带本地缓存)
     let version = loader::resolve_version(
         &client,
+        mirror,
         data_dir,
         mc_version,
         loader.unwrap_or("vanilla"),

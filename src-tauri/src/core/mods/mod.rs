@@ -1,11 +1,14 @@
 //! Mod 集成:数据来源(Modrinth)与安装逻辑
 
+pub mod curseforge;
+pub mod deps;
 pub mod forge;
 pub mod modrinth;
 
 use std::path::Path;
 
 use crate::core::downloader::{download_one, DownloadItem};
+use crate::core::mirror::Mirror;
 use crate::error::RmclError;
 
 use self::modrinth::ModrinthVersion;
@@ -13,6 +16,7 @@ use self::modrinth::ModrinthVersion;
 /// 下载 mod 到目标目录,返回最终文件名(幂等:同文件已存在则跳过)
 pub async fn install_version(
     client: &reqwest::Client,
+    mirror: &Mirror,
     version: &ModrinthVersion,
     dest_dir: &Path,
     retry_times: u32,
@@ -33,6 +37,6 @@ pub async fn install_version(
         size: file.size,
         dest: dest.clone(),
     };
-    download_one(client, &item, retry_times).await?;
+    download_one(client, mirror, &item, retry_times).await?;
     Ok(final_name)
 }

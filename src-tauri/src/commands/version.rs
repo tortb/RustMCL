@@ -17,6 +17,7 @@ pub async fn list_versions(
         .join("version_manifest_v2.json");
     let manifest = manifest::get_manifest(
         &state.client,
+        &state.mirror(),
         &cache_path,
         force_refresh,
         state.retry_times,

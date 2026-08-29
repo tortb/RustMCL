@@ -10,6 +10,8 @@ pub const TABLE_INSTANCES: &str = "instances";
 pub const TABLE_ACCOUNTS: &str = "accounts";
 pub const TABLE_MODS: &str = "mods";
 pub const TABLE_ASSET_CACHE: &str = "asset_cache";
+pub const TABLE_SERVERS: &str = "servers";
+pub const TABLE_RESOURCE_PACKS: &str = "resource_packs";
 
 /// 加载器类型:vanilla | forge | fabric | quilt
 #[derive(Debug, Clone, Serialize)]
@@ -53,4 +55,42 @@ pub struct AssetCache {
     pub sha1: String,
     pub path: String,
     pub size: i64,
+}
+
+/// 服务器条目(模块 1)
+#[derive(Debug, Clone, Serialize)]
+pub struct ServerEntry {
+    pub id: String,
+    pub name: String,
+    pub address: String,
+    pub port: u16,
+    pub is_favorite: bool,
+    pub icon_base64: Option<String>,
+    pub last_ping_ms: Option<i64>,
+    pub sort_order: i64,
+    pub created_at: i64,
+}
+
+/// 服务器 ping 结果(模块 1.3)
+#[derive(Debug, Clone, Serialize)]
+pub struct ServerStatus {
+    pub id: String,
+    pub motd: String,
+    pub players_online: i64,
+    pub players_max: i64,
+    pub latency_ms: u64,
+    pub favicon: Option<String>,
+    pub ok: bool,
+}
+
+/// 资源包/光影包条目(模块 4)
+#[derive(Debug, Clone, Serialize)]
+pub struct ResourcePackEntry {
+    pub id: String,
+    pub instance_id: String,
+    /// resourcepack | shaderpack
+    pub type_kind: String,
+    pub file_name: String,
+    pub enabled: bool,
+    pub created_at: i64,
 }

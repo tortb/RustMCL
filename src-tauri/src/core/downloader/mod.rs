@@ -13,6 +13,7 @@ use sha1::{Digest, Sha1};
 use tokio::io::AsyncWriteExt;
 use tokio::sync::Semaphore;
 
+use crate::core::mirror::Mirror;
 use crate::error::RmclError;
 
 /// 单个待下载文件
@@ -46,6 +47,7 @@ pub fn sha1_of(path: &Path) -> Result<String, RmclError> {
 /// 校验 SHA1 后原子改名。失败按 retry_times 重试。
 pub async fn download_one(
     client: &reqwest::Client,
+    mirror: &Mirror,
     item: &DownloadItem,
     retry_times: u32,
 ) -> Result<(), RmclError> {
@@ -61,9 +63,10 @@ pub async fn download_one(
         tokio::fs::create_dir_all(parent).await?;
     }
     let tmp = item.dest.with_extension("part");
+    let url = mirror.rewrite(&item.url);
     let mut last_err = None;
     for attempt in 0..=retry_times {
-        match fetch_to_file(client, &item.url, &tmp).await {
+        match fetch_to_file(client, &url, &tmp).await {
             Ok(()) => {
                 // 无 sha1 的 maven 库直接采用,有 sha1 则校验
                 if item.sha1.is_empty() {
@@ -108,6 +111,7 @@ async fn fetch_to_file(client: &reqwest::Client, url: &str, dest: &Path) -> Resu
 /// 并发下载整个列表,每个文件完成后回调一次进度
 pub async fn download_many<F>(
     client: &reqwest::Client,
+    mirror: &Mirror,
     items: Vec<DownloadItem>,
     max_concurrent: usize,
     retry_times: u32,
@@ -127,6 +131,7 @@ where
     let mut handles = Vec::with_capacity(total);
     for item in items {
         let client = client.clone();
+        let mirror = mirror.clone();
         let semaphore = semaphore.clone();
         let on_progress = on_progress.clone();
         let done = done.clone();
@@ -135,7 +140,7 @@ where
                 .acquire()
                 .await
                 .map_err(|_| RmclError::other("并发限制信号量关闭"))?;
-            let result = download_one(&client, &item, retry_times).await;
+            let result = download_one(&client, &mirror, &item, retry_times).await;
             let current = done.fetch_add(1, Ordering::SeqCst) + 1;
             let file = item
                 .dest

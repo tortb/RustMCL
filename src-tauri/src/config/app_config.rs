@@ -11,6 +11,9 @@ pub struct AppConfig {
     pub general: GeneralConfig,
     pub java: JavaConfig,
     pub download: DownloadConfig,
+    /// CurseForge API Key(可选,不硬编码进仓库)
+    #[serde(default)]
+    pub curseforge_api_key: Option<String>,
 }
 
 impl Default for AppConfig {
@@ -19,6 +22,7 @@ impl Default for AppConfig {
             general: GeneralConfig::default(),
             java: JavaConfig::default(),
             download: DownloadConfig::default(),
+            curseforge_api_key: None,
         }
     }
 }
@@ -61,7 +65,11 @@ impl Default for JavaConfig {
 #[serde(default)]
 pub struct DownloadConfig {
     pub max_concurrent: u32,
+    /// 当前使用的镜像源 id:official | bmclapi | mcbbs | custom
     pub mirror: String,
+    /// 当 mirror == "custom" 时生效的自定义镜像基址
+    #[serde(default)]
+    pub mirror_custom_base: Option<String>,
     pub retry_times: u32,
 }
 
@@ -70,6 +78,7 @@ impl Default for DownloadConfig {
         Self {
             max_concurrent: 8,
             mirror: "official".into(),
+            mirror_custom_base: None,
             retry_times: 3,
         }
     }

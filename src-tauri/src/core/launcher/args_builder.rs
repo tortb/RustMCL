@@ -23,6 +23,8 @@ pub struct LaunchOptions {
     pub max_memory: u32,
     pub width: u32,
     pub height: u32,
+    /// 追加到游戏参数末尾(如一键加入服务器的 --server/--port)
+    pub extra_game_args: Vec<String>,
 }
 
 impl Default for LaunchOptions {
@@ -35,6 +37,7 @@ impl Default for LaunchOptions {
             max_memory: 4096,
             width: 1280,
             height: 720,
+            extra_game_args: Vec::new(),
         }
     }
 }
@@ -156,6 +159,9 @@ pub fn build_launch_command(
 
     let mut args = jvm_args;
     args.push(version.main_class.clone());
+    // 追加额外游戏参数(一键加入服务器等),需在登录类参数之后
+    let mut game_args = game_args;
+    game_args.extend(opts.extra_game_args.iter().cloned());
     args.extend(game_args);
 
     Ok(LaunchCommand {

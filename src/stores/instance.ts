@@ -1,9 +1,12 @@
 import { create } from "zustand";
+import { open, save } from "@tauri-apps/plugin-dialog";
 import {
   createInstance,
   deleteInstance,
+  exportModpack,
   getInstance,
   getLatestLoaderVersion,
+  importModpack,
   installForge,
   installLoader,
   launchInstance,
@@ -17,6 +20,8 @@ import type {
   ForgeVersionInfo,
   InstanceDetail,
   InstanceInput,
+  ModpackFinished,
+  ModpackProgress,
   VersionInfo,
 } from "../lib/types";
 
@@ -43,6 +48,11 @@ interface InstanceStore {
   installProgress: DownloadProgress | null;
   installError: string;
 
+  // 整合包导入/导出
+  modpackImportingId: string | null;
+  modpackProgress: ModpackProgress | null;
+  modpackResult: ModpackFinished | null;
+
   loadInstances: () => Promise<void>;
   loadVersions: () => Promise<void>;
   loadForgeVersions: (mcVersion: string) => Promise<void>;
@@ -57,6 +67,10 @@ interface InstanceStore {
   setInstalling: (id: string | null) => void;
   setInstallProgress: (p: DownloadProgress | null) => void;
   setInstallError: (e: string) => void;
+  importPack: (id: string) => Promise<void>;
+  exportPack: (id: string) => Promise<void>;
+  setModpackProgress: (p: ModpackProgress | null) => void;
+  setModpackResult: (r: ModpackFinished | null) => void;
 }
 
 export const useInstanceStore = create<InstanceStore>((set, get) => ({
@@ -77,6 +91,10 @@ export const useInstanceStore = create<InstanceStore>((set, get) => ({
   installingId: null,
   installProgress: null,
   installError: "",
+
+  modpackImportingId: null,
+  modpackProgress: null,
+  modpackResult: null,
 
   loadInstances: async () => {
     set({ loading: true });
@@ -181,4 +199,34 @@ export const useInstanceStore = create<InstanceStore>((set, get) => ({
   setInstalling: (id) => set({ installingId: id }),
   setInstallProgress: (p) => set({ installProgress: p }),
   setInstallError: (e) => set({ installError: e }),
+
+  importPack: async (id) => {
+    const selected = await open({
+      multiple: false,
+      filters: [{ name: "整合包", extensions: ["mrpack", "zip", "jar"] }],
+    });
+    if (!selected || Array.isArray(selected)) return;
+    set({ modpackImportingId: id, modpackProgress: null, modpackResult: null });
+    try {
+      await importModpack(selected, id);
+    } catch (e) {
+      set({
+        modpackResult: { ok: false, error: String(e), installed: [], failures: [], name: "" },
+        modpackImportingId: null,
+      });
+    }
+  },
+
+  exportPack: async (id) => {
+    const selected = await save({ filters: [{ name: "整合包", extensions: ["mrpack"] }] });
+    if (!selected) return;
+    try {
+      await exportModpack(id, selected);
+    } catch {
+      // 导出失败时静默,用户可重试
+    }
+  },
+
+  setModpackProgress: (p) => set({ modpackProgress: p }),
+  setModpackResult: (r) => set({ modpackResult: r, modpackImportingId: null }),
 }));

@@ -6,6 +6,7 @@ use std::path::Path;
 
 use serde_json::Value;
 
+use crate::core::mirror::Mirror;
 use crate::core::version::manifest;
 use crate::core::version::version_json::{
     fetch_version_json, Download, Library, LibraryDownloads, VersionJson,
@@ -40,6 +41,7 @@ pub fn merged_version_id(mc_version: &str, loader: &str, loader_version: &str) -
 /// 解析最终 version.json:vanilla 直接返回原版;fabric/quilt/forge 返回合并结果(带缓存)
 pub async fn resolve_version(
     client: &reqwest::Client,
+    mirror: &Mirror,
     data_dir: &Path,
     mc_version: &str,
     loader: &str,
@@ -53,6 +55,7 @@ pub async fn resolve_version(
         "forge" => {
             return crate::core::mods::forge::resolve_forge_version(
                 client,
+                mirror,
                 data_dir,
                 mc_version,
                 loader_version,
@@ -61,14 +64,14 @@ pub async fn resolve_version(
             .await
         }
         // vanilla:直接读原版 version.json
-        "" | "vanilla" => return fetch_vanilla(client, data_dir, mc_version, retry_times).await,
+        "" | "vanilla" => return fetch_vanilla(client, mirror, data_dir, mc_version, retry_times).await,
         other => {
             return Err(RmclError::other(format!("暂不支持加载器: {other}")));
         }
     };
 
     let lv = if loader_version.trim().is_empty() {
-        resolve_latest_loader(client, &meta, mc_version, retry_times).await?
+        resolve_latest_loader(client, mirror, &meta, mc_version, retry_times).await?
     } else {
         loader_version.trim().to_string()
     };
@@ -82,9 +85,9 @@ pub async fn resolve_version(
         return Ok(v);
     }
 
-    let vanilla = fetch_vanilla(client, data_dir, mc_version, retry_times).await?;
-    let profile = fetch_profile(client, &meta, mc_version, &lv, retry_times).await?;
-    let merged = merge_loader(vanilla, &profile)?;
+    let vanilla = fetch_vanilla(client, mirror, data_dir, mc_version, retry_times).await?;
+    let profile = fetch_profile(client, mirror, &meta, mc_version, &lv, retry_times).await?;
+    let merged = merge_loader(vanilla, &profile, mirror)?;
     if let Some(parent) = merged_cache.parent() {
         std::fs::create_dir_all(parent)?;
     }
@@ -100,12 +103,13 @@ fn load_cached(path: &Path) -> Option<VersionJson> {
 /// 原版 version.json(复用清单 + 版本缓存)
 pub(crate) async fn fetch_vanilla(
     client: &reqwest::Client,
+    mirror: &Mirror,
     data_dir: &Path,
     mc_version: &str,
     retry_times: u32,
 ) -> Result<VersionJson, RmclError> {
     let manifest_cache = data_dir.join("cache").join("version_manifest_v2.json");
-    let manifest = manifest::get_manifest(client, &manifest_cache, false, retry_times).await?;
+    let manifest = manifest::get_manifest(client, mirror, &manifest_cache, false, retry_times).await?;
     let info = manifest
         .versions
         .iter()
@@ -115,12 +119,13 @@ pub(crate) async fn fetch_vanilla(
         .join("cache")
         .join("versions")
         .join(format!("{mc_version}.json"));
-    fetch_version_json(client, &info.url, &vj_cache, retry_times).await
+    fetch_version_json(client, mirror, &info.url, &vj_cache, retry_times).await
 }
 
 /// 供命令层使用:按名称(fabric/quilt)解析最新加载器版本
 pub async fn latest_loader_version(
     client: &reqwest::Client,
+    mirror: &Mirror,
     loader_name: &str,
     mc_version: &str,
     retry_times: u32,
@@ -130,18 +135,19 @@ pub async fn latest_loader_version(
         "quilt" => QUILT,
         other => return Err(RmclError::other(format!("暂不支持加载器: {other}"))),
     };
-    resolve_latest_loader(client, &meta, mc_version, retry_times).await
+    resolve_latest_loader(client, mirror, &meta, mc_version, retry_times).await
 }
 
 /// 拉取加载器版本列表,取第一个可用版本(meta 按新→旧排序)
 async fn resolve_latest_loader(
     client: &reqwest::Client,
+    mirror: &Mirror,
     meta: &LoaderMeta,
     mc_version: &str,
     retry_times: u32,
 ) -> Result<String, RmclError> {
     let url = format!("{}/versions/loader/{mc_version}", meta.base);
-    let body = fetch_body(client, &url, retry_times).await?;
+    let body = fetch_body(client, mirror, &url, retry_times).await?;
     let list: Vec<Value> = serde_json::from_str(&body)?;
     for item in &list {
         if let Some(v) = item
@@ -161,6 +167,7 @@ async fn resolve_latest_loader(
 /// 拉取加载器 profile(json 文本)
 async fn fetch_profile(
     client: &reqwest::Client,
+    mirror: &Mirror,
     meta: &LoaderMeta,
     mc_version: &str,
     loader_version: &str,
@@ -170,18 +177,20 @@ async fn fetch_profile(
         "{}/versions/loader/{mc_version}/{loader_version}/profile/json",
         meta.base
     );
-    let body = fetch_body(client, &url, retry_times).await?;
+    let body = fetch_body(client, mirror, &url, retry_times).await?;
     Ok(serde_json::from_str(&body)?)
 }
 
 async fn fetch_body(
     client: &reqwest::Client,
+    mirror: &Mirror,
     url: &str,
     retry_times: u32,
 ) -> Result<String, RmclError> {
+    let url = mirror.rewrite(url);
     let mut last_err = None;
     for attempt in 0..=retry_times {
-        match client.get(url).send().await {
+        match client.get(&url).send().await {
             Ok(resp) => match resp.error_for_status() {
                 Ok(resp) => match resp.text().await {
                     Ok(body) => return Ok(body),
@@ -203,7 +212,7 @@ async fn fetch_body(
 /// - arguments 的 game/jvm 追加到原版后面
 /// - profile 的 maven 库(仅 name+url,无 sha1)转换后追加到 libraries
 /// - 其余(assetIndex/downloads/javaVersion)沿用原版
-fn merge_loader(mut vanilla: VersionJson, profile: &Value) -> Result<VersionJson, RmclError> {
+fn merge_loader(mut vanilla: VersionJson, profile: &Value, mirror: &Mirror) -> Result<VersionJson, RmclError> {
     if let Some(mc) = profile.get("mainClass").and_then(|v| v.as_str()) {
         vanilla.main_class = mc.to_string();
     }
@@ -229,7 +238,7 @@ fn merge_loader(mut vanilla: VersionJson, profile: &Value) -> Result<VersionJson
         for lib in libs {
             let name = lib.get("name").and_then(|v| v.as_str()).unwrap_or_default();
             let url = lib.get("url").and_then(|v| v.as_str()).unwrap_or_default();
-            if let Some(l) = maven_to_library(name, url) {
+            if let Some(l) = maven_to_library(name, url, mirror) {
                 vanilla.libraries.push(l);
             }
         }
@@ -240,7 +249,7 @@ fn merge_loader(mut vanilla: VersionJson, profile: &Value) -> Result<VersionJson
 
 /// maven 坐标 → 带 downloads 的 Library;sha1/size 未知,下载时跳过校验
 /// name 形如 net.fabricmc:fabric-loader:0.16.9(:classifier 可选)
-fn maven_to_library(name: &str, base_url: &str) -> Option<Library> {
+fn maven_to_library(name: &str, base_url: &str, mirror: &Mirror) -> Option<Library> {
     let parts: Vec<&str> = name.split(':').collect();
     if parts.len() < 3 || parts[1].is_empty() || parts[2].is_empty() {
         return None;
@@ -256,7 +265,7 @@ fn maven_to_library(name: &str, base_url: &str) -> Option<Library> {
         String::new()
     } else {
         let sep = if base_url.ends_with('/') { "" } else { "/" };
-        format!("{base_url}{sep}{path}")
+        mirror.rewrite(&format!("{base_url}{sep}{path}"))
     };
     Some(Library {
         name: name.to_string(),
@@ -325,7 +334,7 @@ mod tests {
     #[test]
     fn merge_replaces_main_class_and_appends_args_and_libs() {
         let profile: Value = serde_json::from_str(PROFILE).unwrap();
-        let merged = merge_loader(vanilla(), &profile).unwrap();
+        let merged = merge_loader(vanilla(), &profile, &Mirror::from_config("official", None)).unwrap();
 
         assert_eq!(
             merged.main_class,
@@ -353,7 +362,7 @@ mod tests {
 
     #[test]
     fn maven_to_library_with_classifier() {
-        let lib = maven_to_library("org.lwjgl:lwjgl:3.3.3:natives-linux", "https://maven/").unwrap();
+        let lib = maven_to_library("org.lwjgl:lwjgl:3.3.3:natives-linux", "https://maven/", &Mirror::from_config("official", None)).unwrap();
         let artifact = lib.downloads.unwrap().artifact.unwrap();
         assert_eq!(
             artifact.path.as_deref(),
@@ -364,6 +373,6 @@ mod tests {
 
     #[test]
     fn invalid_maven_name_returns_none() {
-        assert!(maven_to_library("bad-name", "https://maven/").is_none());
+        assert!(maven_to_library("bad-name", "https://maven/", &Mirror::from_config("official", None)).is_none());
     }
 }

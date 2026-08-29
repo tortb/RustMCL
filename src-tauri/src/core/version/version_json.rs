@@ -9,6 +9,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
+use crate::core::mirror::Mirror;
 use crate::error::RmclError;
 
 use super::rules::Rule;
@@ -183,6 +184,7 @@ pub struct AssetObject {
 /// 拉取 version.json(带本地缓存:cache/versions/<id>.json,缓存原始 JSON 文本)
 pub async fn fetch_version_json(
     client: &reqwest::Client,
+    mirror: &Mirror,
     url: &str,
     cache_path: &Path,
     retry_times: u32,
@@ -190,15 +192,16 @@ pub async fn fetch_version_json(
     if let Some(v) = load_cache(cache_path) {
         return Ok(v);
     }
-    let body = fetch_body(client, url, retry_times).await?;
+    let body = fetch_body(client, mirror, url, retry_times).await?;
     save_cache(cache_path, &body)?;
     Ok(serde_json::from_str(&body)?)
 }
 
-async fn fetch_body(client: &reqwest::Client, url: &str, retry_times: u32) -> Result<String, RmclError> {
+async fn fetch_body(client: &reqwest::Client, mirror: &Mirror, url: &str, retry_times: u32) -> Result<String, RmclError> {
+    let url = mirror.rewrite(url);
     let mut last_err = None;
     for attempt in 0..=retry_times {
-        match client.get(url).send().await {
+        match client.get(&url).send().await {
             Ok(resp) => match resp.error_for_status() {
                 Ok(resp) => match resp.text().await {
                     Ok(body) => return Ok(body),

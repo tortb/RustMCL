@@ -9,6 +9,7 @@ use crate::core::downloader::asset::{asset_index_item, asset_items, load_asset_i
 use crate::core::downloader::library::{client_download_item, library_items, native_items};
 use crate::core::downloader::download_many;
 use crate::core::loader;
+use crate::core::mirror::Mirror;
 use crate::core::version::rules::{FeaturesCtx, RuleContext};
 use crate::core::version::version_json::VersionJson;
 use crate::error::RmclError;
@@ -58,6 +59,7 @@ pub fn download_version(
     let data_dir = state.data_dir.clone();
     let retry_times = state.retry_times;
     let max_concurrent = (state.max_concurrent.max(1)) as usize;
+    let mirror = state.mirror();
 
     tauri::async_runtime::spawn(async move {
         let result = run_download(
@@ -69,6 +71,7 @@ pub fn download_version(
             retry_times,
             max_concurrent,
             app.clone(),
+            &mirror,
         )
         .await;
         let _ = app.emit(
@@ -98,9 +101,11 @@ pub(crate) async fn run_download(
     retry_times: u32,
     max_concurrent: usize,
     app: AppHandle,
+    mirror: &Mirror,
 ) -> Result<(), RmclError> {
     let version = loader::resolve_version(
         &client,
+        mirror,
         data_dir,
         mc_version,
         loader.unwrap_or("vanilla"),
@@ -108,7 +113,7 @@ pub(crate) async fn run_download(
         retry_times,
     )
     .await?;
-    run_download_for_version(&client, data_dir, &version, retry_times, max_concurrent, app).await
+    run_download_for_version(&client, data_dir, &version, retry_times, max_concurrent, app, mirror).await
 }
 
 /// 按已解析的 version 下载 client.jar + libraries + natives + assets(幂等)
@@ -119,6 +124,7 @@ pub(crate) async fn run_download_for_version(
     retry_times: u32,
     max_concurrent: usize,
     app: AppHandle,
+    mirror: &Mirror,
 ) -> Result<(), RmclError> {
     let ctx = RuleContext::current(FeaturesCtx::default());
     let layout = DirLayout::new(data_dir);
@@ -133,6 +139,7 @@ pub(crate) async fn run_download_for_version(
     let app1 = app.clone();
     download_many(
         &client,
+        mirror,
         core_items,
         max_concurrent,
         retry_times,
@@ -161,6 +168,7 @@ pub(crate) async fn run_download_for_version(
     let app2 = app.clone();
     download_many(
         &client,
+        mirror,
         items,
         max_concurrent,
         retry_times,

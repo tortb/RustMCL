@@ -14,6 +14,7 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
+use crate::core::mirror::Mirror;
 use crate::core::version::version_json::VersionJson;
 use crate::error::RmclError;
 
@@ -43,6 +44,7 @@ pub fn forge_work_dir(data_dir: &Path, mc_version: &str, forge_version: &str) ->
 /// 首次会下载 installer jar 到 forge_work 目录(供处理器阶段复用)。
 pub async fn resolve_forge_version(
     client: &reqwest::Client,
+    mirror: &Mirror,
     data_dir: &Path,
     mc_version: &str,
     forge_version: &str,
@@ -62,14 +64,14 @@ pub async fn resolve_forge_version(
     }
 
     let work = forge_work_dir(data_dir, mc_version, forge_version);
-    let jar = installer::download_installer(client, mc_version, forge_version, &work, retry_times).await?;
+    let jar = installer::download_installer(client, mirror, mc_version, forge_version, &work, retry_times).await?;
     let contents = installer::extract_installer(&jar, mc_version, forge_version)?;
     let forge_json = contents
         .version_json
         .as_ref()
         .or(contents.install_profile.as_ref())
         .ok_or_else(|| RmclError::other("Forge installer 缺少 version.json / install_profile.json"))?;
-    let vanilla = crate::core::loader::fetch_vanilla(client, data_dir, mc_version, retry_times).await?;
+    let vanilla = crate::core::loader::fetch_vanilla(client, mirror, data_dir, mc_version, retry_times).await?;
     let mut merged = profile_merge::merge_forge(&vanilla, forge_json)?;
     // 合并后版本 id 取 forge-<mc>-<forge>,保证 client.jar、缓存文件名、launch classpath 一致
     merged.id = merged_id.clone();
@@ -110,7 +112,11 @@ fn load_cached(path: &Path) -> Option<VersionJson> {
 
 /// 从 install_profile.json 提取处理器工具链库(processors 的 classpath/jar 依赖),
 /// 转成下载项(dest 落到 libraries/<path>)。库条目通常自带 downloads.artifact。
-pub fn processor_library_items(contents: &InstallerContents, data_dir: &Path) -> Vec<crate::core::downloader::DownloadItem> {
+pub fn processor_library_items(
+    contents: &InstallerContents,
+    data_dir: &Path,
+    mirror: &Mirror,
+) -> Vec<crate::core::downloader::DownloadItem> {
     let Some(profile) = contents.install_profile.as_ref() else {
         return Vec::new();
     };
@@ -132,7 +138,12 @@ pub fn processor_library_items(contents: &InstallerContents, data_dir: &Path) ->
             } else {
                 libraries_dir.join(path)
             };
-            Some(crate::core::downloader::DownloadItem { url, sha1, size, dest })
+            Some(crate::core::downloader::DownloadItem {
+                url: mirror.rewrite(&url),
+                sha1,
+                size,
+                dest,
+            })
         })
         .collect()
 }
@@ -167,12 +178,14 @@ fn parse_version(v: &str) -> (u32, u32, u32) {
 /// 统一请求并返回文本
 pub(crate) async fn fetch_body(
     client: &reqwest::Client,
+    mirror: &Mirror,
     url: &str,
     retry_times: u32,
 ) -> Result<String, RmclError> {
+    let url = mirror.rewrite(url);
     let mut last_err = None;
     for attempt in 0..=retry_times {
-        match client.get(url).send().await {
+        match client.get(&url).send().await {
             Ok(resp) => match resp.error_for_status() {
                 Ok(resp) => match resp.text().await {
                     Ok(body) => return Ok(body),
@@ -192,17 +205,19 @@ pub(crate) async fn fetch_body(
 /// 下载一个小文件到本地路径(用于 installer jar 等)
 pub(crate) async fn download_to(
     client: &reqwest::Client,
+    mirror: &Mirror,
     url: &str,
     dest: &Path,
     retry_times: u32,
 ) -> Result<(), RmclError> {
+    let url = mirror.rewrite(url);
     if let Some(parent) = dest.parent() {
         std::fs::create_dir_all(parent)?;
     }
     let tmp = dest.with_extension("part");
     let mut last_err = None;
     for attempt in 0..=retry_times {
-        match client.get(url).send().await {
+        match client.get(&url).send().await {
             Ok(resp) => match resp.error_for_status() {
                 Ok(resp) => {
                     let bytes = resp.bytes().await?;
@@ -226,8 +241,10 @@ pub(crate) async fn download_to(
 }
 
 /// 下载产物(maven 坐标),返回本地路径;空 sha1 时仅按存在性判断
+#[allow(dead_code)]
 pub(crate) async fn fetch_maven_file(
     client: &reqwest::Client,
+    mirror: &Mirror,
     url: &str,
     dest: &Path,
     sha1: &str,
@@ -235,7 +252,7 @@ pub(crate) async fn fetch_maven_file(
     retry_times: u32,
 ) -> Result<(), RmclError> {
     let _ = sha1;
-    download_to(client, url, dest, retry_times).await
+    download_to(client, mirror, url, dest, retry_times).await
 }
 
 /// Forge 的下载子项(来自 version.json 的 downloads.classifiers / artifact)
@@ -299,12 +316,13 @@ mod tests {
 
         // 1. 下载 installer 并解压(内存 json + 全量文件到工作目录)
         let work = forge_work_dir(&data_dir, mc, fv);
-        let jar = installer::download_installer(&client, mc, fv, &work, 3).await.unwrap();
+        let mirror = Mirror::from_config("official", None);
+        let jar = installer::download_installer(&client, &mirror, mc, fv, &work, 3).await.unwrap();
         let contents = installer::extract_installer(&jar, mc, fv).unwrap();
         installer::extract_installer_files(&jar, &work).unwrap();
 
         // 2. 合并 version.json(幂等,复用已下载 installer)
-        let version = resolve_forge_version(&client, &data_dir, mc, fv, 3).await.unwrap();
+        let version = resolve_forge_version(&client, &mirror, &data_dir, mc, fv, 3).await.unwrap();
         assert_eq!(version.id, forge_merged_id(mc, fv), "合并版本 id 应为 forge-<mc>-<forge>");
 
         // 3. 下载依赖(client.jar + libraries + natives + 处理器工具链库)
@@ -316,8 +334,8 @@ mod tests {
         let mut items = vec![crate::core::downloader::library::client_download_item(&version, &vdir)];
         items.extend(crate::core::downloader::library::library_items(&version, &ctx, &libs));
         items.extend(crate::core::downloader::library::native_items(&version, &ctx, &libs));
-        items.extend(processor_library_items(&contents, &data_dir));
-        crate::core::downloader::download_many(&client, items, 4, 2, |_| {}).await.unwrap();
+        items.extend(processor_library_items(&contents, &data_dir, &mirror));
+        crate::core::downloader::download_many(&client, &mirror, items, 4, 2, |_| {}).await.unwrap();
 
         // 4. 运行全部 java 处理器
         let java = std::env::var("JAVA").unwrap_or_else(|_| "java".into());

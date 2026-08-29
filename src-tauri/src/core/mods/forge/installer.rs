@@ -4,6 +4,7 @@ use std::path::Path;
 
 use serde_json::Value;
 
+use crate::core::mirror::Mirror;
 use crate::error::RmclError;
 
 use super::{download_to, MAVEN_BASE};
@@ -25,6 +26,7 @@ pub fn installer_url(mc_version: &str, forge_version: &str) -> String {
 /// 若已存在则直接复用(下载采用原子改名,不会残留半成品)。
 pub async fn download_installer(
     client: &reqwest::Client,
+    mirror: &Mirror,
     mc_version: &str,
     forge_version: &str,
     dest_dir: &Path,
@@ -36,7 +38,7 @@ pub async fn download_installer(
         return Ok(dest);
     }
     let url = installer_url(mc_version, forge_version);
-    download_to(client, &url, &dest, retry_times).await?;
+    download_to(client, mirror, &url, &dest, retry_times).await?;
     Ok(dest)
 }
 

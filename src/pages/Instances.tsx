@@ -11,16 +11,26 @@ import {
   Terminal,
   X,
   Box,
+  AlertTriangle,
+  Copy,
+  Package,
+  Upload,
 } from "lucide-react";
 import { useInstanceStore } from "../stores/instance";
+import { analyzeCrashReport, recommendJvm } from "../lib/api";
+import SavePanel from "../components/SavePanel";
 import type {
+  CrashDiagnosis,
   DownloadProgress,
   GameExit,
   GameLog,
   InstanceDetail,
   InstanceInput,
+  JvmRecommendation,
   Loader,
   LoaderInstallFinished,
+  ModpackFinished,
+  ModpackProgress,
 } from "../lib/types";
 
 const ease = [0.32, 0.72, 0, 1] as const;
@@ -36,6 +46,9 @@ export default function Instances() {
   const s = useInstanceStore();
   const [expanded, setExpanded] = useState<string | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
+  const [diagnosis, setDiagnosis] = useState<CrashDiagnosis | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     s.loadInstances();
@@ -43,14 +56,43 @@ export default function Instances() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 新一次启动时清空上一次的崩溃诊断
+  useEffect(() => {
+    if (s.runningId) setDiagnosis(null);
+  }, [s.runningId]);
+
+  const handleCopyLog = async () => {
+    if (!diagnosis?.raw_content) return;
+    try {
+      await navigator.clipboard.writeText(diagnosis.raw_content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setCopied(false);
+    }
+  };
+
   useEffect(() => {
     let unlisteners: UnlistenFn[] = [];
     let mounted = true;
     Promise.all([
       listen<GameLog>("game-log", (e) => s.appendLog(e.payload.line)),
-      listen<GameExit>("game-exit", (e) => {
+      listen<GameExit>("game-exit", async (e) => {
         s.appendLog(`[RustMCL] 游戏进程退出,退出码 ${e.payload.code}`);
+        const instId = useInstanceStore.getState().runningId;
         s.setRunning(null);
+        // 非正常退出:自动分析崩溃日志
+        if (e.payload.code !== 0 && instId) {
+          setAnalyzing(true);
+          try {
+            const d = await analyzeCrashReport(instId);
+            if (mounted) setDiagnosis(d);
+          } catch {
+            if (mounted) setDiagnosis(null);
+          } finally {
+            if (mounted) setAnalyzing(false);
+          }
+        }
       }),
       // 加载器安装进度/结束(仅在有安装任务时响应)
       listen<DownloadProgress>("download-progress", (e) => {
@@ -62,6 +104,16 @@ export default function Instances() {
         if (!e.payload.ok) st.setInstallError(e.payload.error);
         st.setInstalling(null);
         st.setInstallProgress(null);
+      }),
+      // 整合包导入进度/结果
+      listen<ModpackProgress>("modpack-progress", (e) => {
+        useInstanceStore.getState().setModpackProgress(e.payload);
+      }),
+      listen<ModpackFinished>("modpack-finished", (e) => {
+        const st = useInstanceStore.getState();
+        st.setModpackResult(e.payload);
+        if (e.payload.ok) st.loadInstances();
+        else st.setModpackProgress(null);
       }),
     ]).then((un) => {
       if (mounted) unlisteners = un;
@@ -174,6 +226,23 @@ export default function Instances() {
                       </motion.button>
                       <motion.button
                         whileTap={{ scale: 0.95 }}
+                        onClick={() => s.exportPack(inst.id)}
+                        className="rounded-[10px] border border-divider p-2 text-ink-2 transition-colors hover:bg-black/[0.03]"
+                        aria-label="导出整合包"
+                      >
+                        <Package size={14} />
+                      </motion.button>
+                      <motion.button
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => s.importPack(inst.id)}
+                        disabled={s.modpackImportingId !== null}
+                        className="rounded-[10px] border border-divider p-2 text-ink-2 transition-colors hover:bg-black/[0.03] disabled:opacity-40"
+                        aria-label="导入整合包"
+                      >
+                        <Upload size={14} />
+                      </motion.button>
+                      <motion.button
+                        whileTap={{ scale: 0.95 }}
                         onClick={() => s.openEdit(inst)}
                         className="rounded-[10px] border border-divider p-2 text-ink-2 transition-colors hover:bg-black/[0.03]"
                         aria-label="编辑"
@@ -217,6 +286,38 @@ export default function Instances() {
                       </div>
                       {s.installError && (
                         <p className="mt-2 text-[12px] text-red-500">安装失败:{s.installError}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 整合包导入进度 */}
+                  {s.modpackImportingId === inst.id && (
+                    <div className="border-t border-divider px-5 py-3">
+                      <div className="flex items-center justify-between text-[12px]">
+                        <span className="flex items-center gap-1.5 text-ink-2">
+                          <Upload size={12} className="text-accent" />
+                          正在导入整合包...
+                        </span>
+                        {s.modpackProgress && (
+                          <span className="text-ink-3">
+                            {s.modpackProgress.current}/{s.modpackProgress.total}
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-black/[0.06]">
+                        <div
+                          className="h-full rounded-full bg-accent transition-all duration-300"
+                          style={{
+                            width: s.modpackProgress
+                              ? `${Math.min(100, (s.modpackProgress.current / Math.max(1, s.modpackProgress.total)) * 100)}%`
+                              : "8%",
+                          }}
+                        />
+                      </div>
+                      {s.modpackProgress && (
+                        <p className="mt-1 truncate text-[11px] text-ink-3">
+                          {s.modpackProgress.file}
+                        </p>
                       )}
                     </div>
                   )}
@@ -272,6 +373,9 @@ export default function Instances() {
                             </p>
                           </div>
                         </div>
+
+                        {/* 存档 / 备份 / 截图 */}
+                        <SavePanel instanceId={inst.id} />
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -279,6 +383,124 @@ export default function Instances() {
               ))}
             </AnimatePresence>
           </div>
+        )}
+
+        {/* 整合包导入结果 */}
+        {s.modpackResult && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease }}
+            className={`mt-5 rounded-[16px] border bg-white p-4 shadow-card ${
+              s.modpackResult.ok ? "border-green-200" : "border-red-200"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[13px] font-semibold text-ink">
+                {s.modpackResult.ok ? `导入成功:${s.modpackResult.name}` : "导入失败"}
+              </span>
+              <button
+                onClick={() => s.setModpackResult(null)}
+                className="rounded-full p-1 text-ink-3 transition-colors hover:bg-black/[0.05]"
+                aria-label="关闭"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            {s.modpackResult.ok ? (
+              <>
+                <p className="mt-2 text-[12.5px] text-ink-2">
+                  已安装 {s.modpackResult.installed.length} 个文件
+                </p>
+                {s.modpackResult.failures.length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-[12.5px] font-medium text-red-600">以下文件下载失败,可手动补齐:</p>
+                    <ul className="mt-1 list-inside list-disc text-[12px] text-red-500">
+                      {s.modpackResult.failures.map((f, i) => (
+                        <li key={i}>{f}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="mt-2 text-[12.5px] text-red-600">{s.modpackResult.error}</p>
+            )}
+          </motion.div>
+        )}
+
+        {/* 崩溃诊断卡片(游戏异常退出后自动分析) */}
+        {diagnosis && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease }}
+            className="mt-5 overflow-hidden rounded-[16px] border border-amber-200 bg-white shadow-card"
+          >
+            <div className="flex items-center gap-2 border-b border-divider px-4 py-3">
+              <AlertTriangle size={15} className="text-amber-500" />
+              <span className="text-[13px] font-semibold text-ink">崩溃诊断</span>
+              {analyzing && <Loader2 size={13} className="animate-spin text-ink-3" />}
+              <button
+                onClick={() => setDiagnosis(null)}
+                className="ml-auto rounded-full p-1 text-ink-3 transition-colors hover:bg-black/[0.05]"
+                aria-label="关闭诊断"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            {!diagnosis.found ? (
+              <div className="px-5 py-5 text-[13px] text-ink-2">
+                未在游戏目录中发现崩溃报告(crash-reports/)。可尝试再次启动复现。
+              </div>
+            ) : (
+              <div className="px-5 py-4">
+                <p className="text-[13.5px] font-medium text-ink">{diagnosis.summary}</p>
+
+                {diagnosis.matched.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {diagnosis.matched.map((m) => (
+                      <span
+                        key={m}
+                        className="rounded-full bg-amber-50 px-2.5 py-0.5 text-[11.5px] font-medium text-amber-600"
+                      >
+                        {m}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <ul className="mt-3 flex flex-col gap-1.5">
+                  {diagnosis.suggestions.map((sg, i) => (
+                    <li key={i} className="flex gap-2 text-[12.5px] leading-relaxed text-ink-2">
+                      <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-ink-3" />
+                      {sg}
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="mt-4 flex items-center gap-2">
+                  <button
+                    onClick={handleCopyLog}
+                    className="flex items-center gap-1.5 rounded-[10px] border border-divider px-3.5 py-2 text-[12.5px] font-medium text-ink-2 transition-colors hover:bg-black/[0.03]"
+                  >
+                    <Copy size={13} />
+                    {copied ? "已复制" : "复制完整日志"}
+                  </button>
+                  {diagnosis.truncated && (
+                    <span className="text-[11.5px] text-ink-3">日志过长,仅复制前 20 万字符</span>
+                  )}
+                </div>
+
+                {diagnosis.path && (
+                  <p className="mt-2 break-all font-mono text-[11px] leading-relaxed text-ink-3">
+                    {diagnosis.path}
+                  </p>
+                )}
+              </div>
+            )}
+          </motion.div>
         )}
 
         {/* 日志终端(启动实例时显示) */}
@@ -329,6 +551,22 @@ function InstanceModal() {
   const [height, setHeight] = useState(720);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [jvmRec, setJvmRec] = useState<JvmRecommendation | null>(null);
+  const [loadingRec, setLoadingRec] = useState(false);
+
+  const handleApplyRecommend = async () => {
+    setLoadingRec(true);
+    try {
+      const r = await recommendJvm();
+      setJvmRec(r);
+      setMinMemory(r.min_mb);
+      setMaxMemory(r.max_mb);
+    } catch {
+      setJvmRec(null);
+    } finally {
+      setLoadingRec(false);
+    }
+  };
 
   // 打开弹窗时预填(编辑)或重置(新建)
   useEffect(() => {
@@ -524,6 +762,27 @@ function InstanceModal() {
                   />
                 </div>
               </div>
+
+              {/* JVM 自动推荐 */}
+              <div className="flex items-center justify-between rounded-[10px] border border-dashed border-divider px-3.5 py-2.5">
+                <span className="text-[12px] text-ink-3">
+                  推荐:
+                  {jvmRec
+                    ? `${jvmRec.min_mb} - ${jvmRec.max_mb} MB (${jvmRec.tier_label})`
+                    : "按系统内存智能推荐"}
+                </span>
+                <button
+                  onClick={handleApplyRecommend}
+                  disabled={loadingRec}
+                  className="flex items-center gap-1.5 rounded-[8px] bg-black/[0.04] px-2.5 py-1.5 text-[12px] font-medium text-ink-2 transition-colors hover:bg-black/[0.08] disabled:opacity-50"
+                >
+                  {loadingRec && <Loader2 size={12} className="animate-spin" />}
+                  应用推荐
+                </button>
+              </div>
+              {jvmRec?.note && (
+                <p className="text-[11.5px] leading-relaxed text-ink-3">{jvmRec.note}</p>
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <div>

@@ -1,11 +1,20 @@
 pub mod account;
 pub mod config;
+pub mod diagnostics;
 pub mod download;
 pub mod forge;
 pub mod instance;
+pub mod jvm;
 pub mod launch;
 pub mod loader;
+pub mod mirror;
+pub mod modpack;
 pub mod mods;
+pub mod resourcepacks;
+pub mod saves;
+pub mod servers;
+pub mod skins;
+pub mod update;
 pub mod version;
 
 use serde::Serialize;
