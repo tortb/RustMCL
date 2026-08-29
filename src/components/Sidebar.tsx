@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import type { PageKey } from "../App";
 import { useAccountStore } from "../stores/account";
+import logoUrl from "../assets/logo.png";
 
 const navItems: { key: PageKey; label: string; icon: React.ElementType }[] = [
   { key: "home", label: "主页", icon: Home },
@@ -42,12 +43,7 @@ export default function Sidebar({
       <div className="px-5 pt-6 pb-5">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center">
-            <svg viewBox="0 0 32 32" className="h-8 w-8">
-              <rect x="2" y="2" width="28" height="28" rx="4" fill="#7cb342" />
-              <rect x="6" y="6" width="8" height="8" rx="1" fill="#558b2f" opacity="0.6" />
-              <rect x="18" y="10" width="8" height="8" rx="1" fill="#8bc34a" opacity="0.7" />
-              <rect x="10" y="18" width="10" height="8" rx="1" fill="#4e342e" opacity="0.5" />
-            </svg>
+            <img src={logoUrl} alt="RustMCL" className="h-8 w-8 rounded-[6px]" />
           </div>
           <span className="text-[18px] font-bold tracking-tight text-ink">RustMCL</span>
         </div>

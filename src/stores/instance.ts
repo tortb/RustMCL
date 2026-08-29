@@ -28,6 +28,11 @@ import type {
 interface InstanceStore {
   instances: InstanceDetail[];
   loading: boolean;
+  /**
+   * 实例加载失败时的错误信息(用于展示错误态 + 重试);
+   * 为空表示无错误。
+   */
+  error: string;
   versions: VersionInfo[];
   versionsLoading: boolean;
 
@@ -76,6 +81,7 @@ interface InstanceStore {
 export const useInstanceStore = create<InstanceStore>((set, get) => ({
   instances: [],
   loading: false,
+  error: "",
   versions: [],
   versionsLoading: false,
 
@@ -97,13 +103,13 @@ export const useInstanceStore = create<InstanceStore>((set, get) => ({
   modpackResult: null,
 
   loadInstances: async () => {
-    set({ loading: true });
+    set({ loading: true, error: "" });
     try {
       const list = await listInstances();
       const details = await Promise.all(list.map((i) => getInstance(i.id)));
       set({ instances: details.filter((d): d is InstanceDetail => d !== null), loading: false });
-    } catch {
-      set({ loading: false });
+    } catch (e) {
+      set({ loading: false, error: String(e) });
     }
   },
 

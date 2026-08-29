@@ -1,33 +1,20 @@
+import { useEffect } from "react";
 import { motion } from "framer-motion";
-import { Play, HardDrive, Coffee, MoreHorizontal } from "lucide-react";
+import { Play, HardDrive, Coffee, MoreHorizontal, Boxes, AlertTriangle, Pencil } from "lucide-react";
+import { useInstanceStore } from "../stores/instance";
+import type { InstanceDetail, Loader } from "../lib/types";
+import backgroundUrl from "../assets/background.png";
 
-interface InstanceCard {
-  id: string;
-  name: string;
-  loader: string;
-  mods: number;
-  size: string;
-  java: string;
-}
+const ease = [0.32, 0.72, 0, 1] as const;
 
-const mockInstances: InstanceCard[] = [
-  {
-    id: "1",
-    name: "1.21.8 Fabric",
-    loader: "Fabric",
-    mods: 12,
-    size: "2.3 GB",
-    java: "Java 21",
-  },
-  {
-    id: "2",
-    name: "1.21.8 Vanilla",
-    loader: "Vanilla",
-    mods: 0,
-    size: "1.1 GB",
-    java: "Java 21",
-  },
-];
+const loaderLabels: Record<Loader, string> = {
+  vanilla: "原版",
+  forge: "Forge",
+  fabric: "Fabric",
+  quilt: "Quilt",
+};
+
+const fmtMem = (mb: number) => (mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${mb} MB`);
 
 function GrassBlock({ size = 40 }: { size?: number }) {
   return (
@@ -42,9 +29,33 @@ function GrassBlock({ size = 40 }: { size?: number }) {
   );
 }
 
+function SkeletonCard() {
+  return (
+    <div className="flex animate-pulse items-center rounded-[14px] bg-white px-5 py-4 shadow-card">
+      <div className="h-11 w-11 rounded-[6px] bg-gray-200" />
+      <div className="ml-4 flex-1">
+        <div className="h-4 w-40 rounded bg-gray-200" />
+        <div className="mt-2 h-3 w-20 rounded bg-gray-200" />
+      </div>
+      <div className="flex items-center gap-6">
+        <div className="h-4 w-16 rounded bg-gray-200" />
+        <div className="h-4 w-24 rounded bg-gray-200" />
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
-  const latestVersion = "1.21.8";
-  const latestLoader = "Fabric";
+  const s = useInstanceStore();
+
+  useEffect(() => {
+    s.loadInstances();
+    s.loadVersions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const latestVersion = s.versions[0]?.id ?? "1.21";
+  const latestLoader = "原版";
 
   return (
     <div className="flex-1 overflow-y-auto bg-[#f3f4f6]">
@@ -52,34 +63,14 @@ export default function Home() {
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
+        transition={{ duration: 0.4, ease }}
         className="relative mx-6 mt-6 overflow-hidden rounded-[16px] bg-white shadow-card"
         style={{ height: 220 }}
       >
-        {/* Background landscape */}
         <div className="absolute inset-0">
-          <svg viewBox="0 0 800 220" className="h-full w-full" preserveAspectRatio="xMidYMid slice">
-            {/* Sky */}
-            <rect width="800" height="220" fill="#b3d9f2" />
-            {/* Clouds */}
-            <rect x="100" y="30" width="80" height="20" rx="10" fill="white" opacity="0.8" />
-            <rect x="130" y="20" width="50" height="20" rx="10" fill="white" opacity="0.8" />
-            <rect x="500" y="40" width="60" height="16" rx="8" fill="white" opacity="0.7" />
-            <rect x="650" y="25" width="70" height="18" rx="9" fill="white" opacity="0.75" />
-            {/* Hills */}
-            <rect x="0" y="120" width="800" height="100" fill="#7cb342" />
-            <rect x="0" y="140" width="800" height="80" fill="#689f38" />
-            <rect x="0" y="160" width="800" height="60" fill="#558b2f" />
-            {/* Tree */}
-            <rect x="580" y="60" width="40" height="80" rx="4" fill="#4e342e" />
-            <rect x="550" y="20" width="100" height="60" rx="8" fill="#388e3c" />
-            <rect x="560" y="10" width="80" height="40" rx="6" fill="#43a047" />
-            {/* Ground blocks */}
-            <rect x="0" y="180" width="800" height="40" fill="#5d4037" />
-          </svg>
+          <img src={backgroundUrl} alt="" className="h-full w-full object-cover" />
         </div>
 
-        {/* Gradient overlay */}
         <div
           className="absolute inset-0"
           style={{
@@ -88,7 +79,6 @@ export default function Home() {
           }}
         />
 
-        {/* Content */}
         <div className="relative z-10 flex h-full flex-col justify-center px-10">
           <h1 className="text-[32px] font-bold tracking-tight text-ink">
             Minecraft {latestVersion}
@@ -113,68 +103,110 @@ export default function Home() {
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1, duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
+        transition={{ delay: 0.1, duration: 0.4, ease }}
         className="px-6 pt-8 pb-10"
       >
         <h2 className="mb-4 text-[16px] font-bold text-ink">最近实例</h2>
 
-        <div className="flex flex-col gap-3">
-          {mockInstances.map((inst, i) => (
-            <motion.div
-              key={inst.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{
-                delay: 0.15 + i * 0.06,
-                duration: 0.3,
-                ease: [0.32, 0.72, 0, 1],
-              }}
-              className="flex items-center rounded-[14px] bg-white px-5 py-4 shadow-card transition-shadow duration-200 hover:shadow-card-hover"
+        {/* 加载态 */}
+        {s.loading && (
+          <div className="flex flex-col gap-3">
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </div>
+        )}
+
+        {/* 错误态 */}
+        {!s.loading && s.error && (
+          <div className="flex flex-col items-center gap-3 rounded-[14px] border border-red-100 bg-red-50/60 px-6 py-8 text-center">
+            <AlertTriangle size={22} className="text-red-500" />
+            <p className="text-[13.5px] leading-relaxed text-red-600">{s.error}</p>
+            <button
+              onClick={() => s.loadInstances()}
+              className="mt-1 rounded-[10px] bg-accent px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-accent-hover"
             >
-              <GrassBlock size={44} />
+              重试
+            </button>
+          </div>
+        )}
 
-              <div className="ml-4 flex flex-1 flex-col">
-                <span className="text-[15px] font-semibold text-ink">
-                  {inst.name}
-                </span>
-                <span
-                  className={`mt-1 inline-flex w-fit items-center rounded-[6px] px-2 py-0.5 text-[11.5px] font-medium ${
-                    inst.mods > 0
-                      ? "bg-[#f1f8e9] text-[#558b2f]"
-                      : "bg-gray-100 text-ink-3"
-                  }`}
-                >
-                  {inst.mods} 个 Mod
-                </span>
-              </div>
+        {/* 空态 */}
+        {!s.loading && !s.error && s.instances.length === 0 && (
+          <div className="flex flex-col items-center gap-3 rounded-[14px] border border-dashed border-divider px-6 py-10 text-center">
+            <Boxes size={26} className="text-ink-3" />
+            <p className="text-[13.5px] leading-relaxed text-ink-2">
+              还没有任何实例,去「实例」页创建你的第一个版本吧。
+            </p>
+          </div>
+        )}
 
-              <div className="flex items-center gap-6 text-[13px] text-ink-2">
-                <span className="flex items-center gap-1.5">
-                  <HardDrive size={15} strokeWidth={1.8} />
-                  {inst.size}
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Coffee size={15} strokeWidth={1.8} />
-                  {inst.java}
-                </span>
-              </div>
+        {/* 数据态 */}
+        {!s.loading && !s.error && s.instances.length > 0 && (
+          <div className="flex flex-col gap-3">
+            {s.instances.map((inst, i) => (
+              <InstanceRow key={inst.id} inst={inst} index={i} />
+            ))}
+          </div>
+        )}
 
-              <div className="ml-6 flex items-center gap-2">
-                <button className="flex h-9 w-9 items-center justify-center rounded-full border border-divider text-ink-2 transition-colors hover:bg-gray-50 hover:text-ink">
-                  <Play size={14} fill="currentColor" strokeWidth={0} />
-                </button>
-                <button className="flex h-9 w-9 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-gray-50 hover:text-ink-2">
-                  <MoreHorizontal size={16} />
-                </button>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-
-        <p className="mt-4 text-center text-[12.5px] text-ink-3">
-          共 {mockInstances.length} 个实例
-        </p>
+        {!s.loading && !s.error && s.instances.length > 0 && (
+          <p className="mt-4 text-center text-[12.5px] text-ink-3">共 {s.instances.length} 个实例</p>
+        )}
       </motion.div>
     </div>
+  );
+}
+
+function InstanceRow({ inst, index }: { inst: InstanceDetail; index: number }) {
+  const loader = inst.loader && inst.loader !== "vanilla" ? inst.loader : null;
+  const memory = inst.config.jvm.max_memory;
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.15 + index * 0.06, duration: 0.3, ease }}
+      className="flex items-center rounded-[14px] bg-white px-5 py-4 shadow-card transition-shadow duration-200 hover:shadow-card-hover"
+    >
+      <GrassBlock size={44} />
+
+      <div className="ml-4 flex flex-1 flex-col">
+        <span className="text-[15px] font-semibold text-ink">{inst.name}</span>
+        <span
+          className={`mt-1 inline-flex w-fit items-center rounded-[6px] px-2 py-0.5 text-[11.5px] font-medium ${
+            loader ? "bg-[#f1f8e9] text-[#558b2f]" : "bg-gray-100 text-ink-3"
+          }`}
+        >
+          {inst.mc_version}
+          {loader ? ` · ${loaderLabels[loader as Loader] ?? loader}` : " 原版"}
+        </span>
+      </div>
+
+      <div className="flex items-center gap-6 text-[13px] text-ink-2">
+        <span className="flex items-center gap-1.5">
+          <HardDrive size={15} strokeWidth={1.8} />
+          {fmtMem(memory)}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <Coffee size={15} strokeWidth={1.8} />
+          Java 21
+        </span>
+      </div>
+
+      <div className="ml-6 flex items-center gap-2">
+        <button
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-divider text-ink-2 transition-colors hover:bg-gray-50 hover:text-ink"
+          aria-label="编辑实例"
+        >
+          <Pencil size={14} />
+        </button>
+        <button
+          className="flex h-9 w-9 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-gray-50 hover:text-ink-2"
+          aria-label="更多"
+        >
+          <MoreHorizontal size={16} />
+        </button>
+      </div>
+    </motion.div>
   );
 }
