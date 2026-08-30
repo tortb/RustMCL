@@ -20,7 +20,7 @@ use crate::db::repository::Repository;
 use crate::error::RmclError;
 use crate::AppState;
 
-use super::download::{run_download, DirLayout};
+use super::download::{run_download, DirLayout, DownloadFinishedEvent};
 
 #[derive(Clone, serde::Serialize)]
 pub struct GameLogEvent {
@@ -158,6 +158,20 @@ pub(crate) fn spawn_instance_launch(
             let _ = app.emit("game-exit", GameExitEvent { code: -1 });
             return;
         }
+        // 资源补齐完成:通知前端切换进度条 → 启动阶段
+        let _ = app.emit(
+            "game-log",
+            GameLogEvent {
+                line: "[RustMCL] 资源检查完成,正在启动游戏...".into(),
+            },
+        );
+        let _ = app.emit(
+            "download-finished",
+            DownloadFinishedEvent {
+                ok: true,
+                error: String::new(),
+            },
+        );
         // 2. 启动:游戏目录使用实例专属目录(保证 mods/存档隔离)
     let game_dir = inst.game_dir.clone();
     let result = run_launch(

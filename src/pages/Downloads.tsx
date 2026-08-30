@@ -29,9 +29,12 @@ export default function Downloads() {
           file: e.payload.file,
         }),
       ),
-      listen<DownloadFinished>("download-finished", (e) =>
-        s.setDownloadFinished(e.payload.ok, e.payload.error),
-      ),
+      // 仅当确实是下载页发起下载时才响应,避免实例启动路径的 download-finished 误改状态
+      listen<DownloadFinished>("download-finished", (e) => {
+        if (useDownloadsStore.getState().dlState === "downloading") {
+          s.setDownloadFinished(e.payload.ok, e.payload.error);
+        }
+      }),
       listen<GameLog>("game-log", (e) => s.appendLog(e.payload.line)),
       listen<GameExit>("game-exit", (e) => {
         s.appendLog(`[RustMCL] 游戏进程退出,退出码 ${e.payload.code}`);

@@ -47,6 +47,8 @@ interface InstanceStore {
 
   // 启动状态
   runningId: string | null;
+  /** 启动时自动下载资源的阶段进度(用于实例卡片进度条) */
+  launchProgress: DownloadProgress | null;
   logs: string[];
 
   // 加载器安装状态
@@ -70,6 +72,7 @@ interface InstanceStore {
   launch: (id: string) => Promise<void>;
   appendLog: (line: string) => void;
   setRunning: (id: string | null) => void;
+  setLaunchProgress: (p: DownloadProgress | null) => void;
   setInstalling: (id: string | null) => void;
   setInstallProgress: (p: DownloadProgress | null) => void;
   setInstallError: (e: string) => void;
@@ -93,6 +96,7 @@ export const useInstanceStore = create<InstanceStore>((set, get) => ({
   editing: null,
 
   runningId: null,
+  launchProgress: null,
   logs: [],
 
   installingId: null,
@@ -196,7 +200,7 @@ export const useInstanceStore = create<InstanceStore>((set, get) => ({
       useAccountStore.getState().openLogin();
       return;
     }
-    set({ runningId: id, logs: [] });
+    set({ runningId: id, logs: [], launchProgress: null });
     get().appendLog(`[RustMCL] 正在启动实例 ${id.slice(0, 8)} ...`);
     try {
       await launchInstance(id);
@@ -208,6 +212,7 @@ export const useInstanceStore = create<InstanceStore>((set, get) => ({
 
   appendLog: (line) => set((s) => ({ logs: [...s.logs.slice(-499), line] })),
   setRunning: (id) => set({ runningId: id }),
+  setLaunchProgress: (p) => set({ launchProgress: p }),
   setInstalling: (id) => set({ installingId: id }),
   setInstallProgress: (p) => set({ installProgress: p }),
   setInstallError: (e) => set({ installError: e }),

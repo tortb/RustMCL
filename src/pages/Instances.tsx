@@ -22,6 +22,7 @@ import { analyzeCrashReport, recommendJvm } from "../lib/api";
 import SavePanel from "../components/SavePanel";
 import type {
   CrashDiagnosis,
+  DownloadFinished,
   DownloadProgress,
   GameExit,
   GameLog,
@@ -82,6 +83,7 @@ export default function Instances() {
         s.appendLog(`[RustMCL] 游戏进程退出,退出码 ${e.payload.code}`);
         const instId = useInstanceStore.getState().runningId;
         s.setRunning(null);
+        useInstanceStore.getState().setLaunchProgress(null);
         // 非正常退出:自动分析崩溃日志
         if (e.payload.code !== 0 && instId) {
           setAnalyzing(true);
@@ -95,10 +97,16 @@ export default function Instances() {
           }
         }
       }),
-      // 加载器安装进度/结束(仅在有安装任务时响应)
+      // 加载器安装/启动时资源下载进度。区分:安装(installingId)与启动(runningId)两个来源
       listen<DownloadProgress>("download-progress", (e) => {
         const st = useInstanceStore.getState();
         if (st.installingId) st.setInstallProgress(e.payload);
+        else if (st.runningId) st.setLaunchProgress(e.payload);
+      }),
+      // 启动时资源下载完成:切回"启动中"状态(隐藏下载进度条)
+      listen<DownloadFinished>("download-finished", () => {
+        const st = useInstanceStore.getState();
+        if (st.runningId) st.setLaunchProgress(null);
       }),
       listen<LoaderInstallFinished>("loader-install-finished", (e) => {
         const st = useInstanceStore.getState();
@@ -288,6 +296,29 @@ export default function Instances() {
                       {s.installError && (
                         <p className="mt-2 text-[12px] text-red-500">安装失败:{s.installError}</p>
                       )}
+                    </div>
+                  )}
+
+                  {/* 启动时自动下载资源进度(首次启动需下载完整客户端资源) */}
+                  {s.runningId === inst.id && s.launchProgress && (
+                    <div className="border-t border-divider px-5 py-3">
+                      <div className="flex items-center justify-between text-[12px]">
+                        <span className="flex items-center gap-1.5 text-ink-2">
+                          <Loader2 size={12} className="animate-spin text-accent" />
+                          正在下载资源...
+                        </span>
+                        <span className="text-ink-3">
+                          {s.launchProgress.current}/{s.launchProgress.total}
+                        </span>
+                      </div>
+                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-black/[0.06]">
+                        <div
+                          className="h-full rounded-full bg-accent transition-all duration-300"
+                          style={{
+                            width: `${Math.min(100, (s.launchProgress.current / Math.max(1, s.launchProgress.total)) * 100)}%`,
+                          }}
+                        />
+                      </div>
                     </div>
                   )}
 
