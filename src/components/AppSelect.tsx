@@ -54,7 +54,7 @@ export function AppSelect<V extends string | number>({
     <Listbox value={value ?? ("" as V)} onChange={onChange} disabled={disabled}>
       <ListboxButton
         ref={btnRef}
-        className={`flex items-center justify-between gap-3 rounded-[10px] border border-divider bg-white px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/30 disabled:opacity-50 ${className}`}
+        className={`flex items-center justify-between gap-3 rounded-[10px] border border-divider bg-card px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/30 disabled:opacity-50 ${className}`}
       >
         <span className={`truncate text-left ${empty ? "text-ink-3" : ""}`}>{shown}</span>
         <ChevronDown size={16} className="shrink-0 text-ink-3" />
@@ -63,7 +63,7 @@ export function AppSelect<V extends string | number>({
         anchor={`bottom ${anchor}`}
         transition
         style={{ width }}
-        className="z-50 rounded-[12px] border border-black/[0.06] bg-white/90 p-1 shadow-[0_12px_40px_rgba(0,0,0,0.14)] backdrop-blur-xl outline-none transition duration-150 ease-[cubic-bezier(0.32,0.72,0,1)] data-[closed]:scale-[0.98] data-[closed]:opacity-0 data-[open]:scale-100 data-[open]:opacity-100"
+        className="z-50 rounded-[12px] border border-black/[0.06] bg-card/90 p-1 shadow-[0_12px_40px_rgba(0,0,0,0.14)] backdrop-blur-xl outline-none transition duration-150 ease-[cubic-bezier(0.32,0.72,0,1)] data-[closed]:scale-[0.98] data-[closed]:opacity-0 data-[open]:scale-100 data-[open]:opacity-100"
       >
         {placeholder !== undefined && (
           <ListboxOption
@@ -80,7 +80,7 @@ export function AppSelect<V extends string | number>({
             value={o.value}
             className={({ active }) =>
               `flex cursor-pointer select-none items-center justify-between gap-3 rounded-[8px] px-3 py-2 text-[13.5px] transition-colors duration-100 ${
-                active ? "bg-black/[0.06] text-ink" : "text-ink-2"
+                active ? "bg-hover text-ink" : "text-ink-2"
               }`
             }
           >

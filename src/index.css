@@ -18,6 +18,52 @@
   --rmcl-badge-bg: #f1f8e9;
   --rmcl-badge-text: #558b2f;
   --rmcl-hero-overlay: linear-gradient(90deg, rgba(243,244,246,0.95) 0%, rgba(243,244,246,0.7) 40%, transparent 70%);
+  --rmcl-danger-50: #fef2f2;
+  --rmcl-danger-500: #ef4444;
+  --rmcl-danger-600: #dc2626;
+  --rmcl-success-50: #f0fdf4;
+  --rmcl-success-600: #16a34a;
+  --rmcl-warning-50: #fffbeb;
+  --rmcl-warning-500: #f59e0b;
+  --rmcl-warning-600: #d97706;
+  --rmcl-warning-700: #b45309;
+  --rmcl-hover: rgba(0, 0, 0, 0.04);
+  --rmcl-subtle: rgba(0, 0, 0, 0.02);
+  --rmcl-on-accent: #ffffff;
+  --rmcl-terminal-bg: #1a1a1a;
+  --rmcl-terminal-text: #d4d4d4;
+  --rmcl-terminal-accent: #7cb342;
+  --rmcl-scroll-thumb: rgba(0, 0, 0, 0.12);
+}
+
+/* 深色主题:覆盖设计变量;token utility 经 @theme inline 引用这些变量,随之整体换肤 */
+.dark {
+  --rmcl-bg: #18181b;
+  --rmcl-sidebar: rgba(24, 24, 27, 0.82);
+  --rmcl-card: #232327;
+  --rmcl-text: #ececec;
+  --rmcl-text-2: #a1a1aa;
+  --rmcl-text-3: #71717a;
+  --rmcl-divider: rgba(255, 255, 255, 0.08);
+  --rmcl-accent: #8bc34a;
+  --rmcl-accent-hover: #7cb342;
+  --rmcl-nav-active: rgba(139, 195, 74, 0.16);
+  --rmcl-badge-bg: rgba(139, 195, 74, 0.14);
+  --rmcl-badge-text: #8bc34a;
+  --rmcl-hero-overlay: linear-gradient(90deg, rgba(24,24,27,0.95) 0%, rgba(24,24,27,0.7) 40%, transparent 70%);
+  --rmcl-danger-50: rgba(239, 68, 68, 0.14);
+  --rmcl-danger-500: #f87171;
+  --rmcl-danger-600: #f87171;
+  --rmcl-success-50: rgba(34, 197, 94, 0.14);
+  --rmcl-success-600: #4ade80;
+  --rmcl-warning-50: rgba(245, 158, 11, 0.14);
+  --rmcl-warning-500: #fbbf24;
+  --rmcl-warning-600: #f59e0b;
+  --rmcl-warning-700: #f59e0b;
+  --rmcl-hover: rgba(255, 255, 255, 0.06);
+  --rmcl-subtle: rgba(255, 255, 255, 0.04);
+  --rmcl-terminal-accent: #8bc34a;
+  --rmcl-scroll-thumb: rgba(255, 255, 255, 0.16);
 }
 
 @theme inline {
@@ -33,6 +79,21 @@
   --color-badge-bg: var(--rmcl-badge-bg);
   --color-badge-text: var(--rmcl-badge-text);
   --color-divider: var(--rmcl-divider);
+  --color-danger-50: var(--rmcl-danger-50);
+  --color-danger-500: var(--rmcl-danger-500);
+  --color-danger-600: var(--rmcl-danger-600);
+  --color-success-50: var(--rmcl-success-50);
+  --color-success-600: var(--rmcl-success-600);
+  --color-warning-50: var(--rmcl-warning-50);
+  --color-warning-500: var(--rmcl-warning-500);
+  --color-warning-600: var(--rmcl-warning-600);
+  --color-warning-700: var(--rmcl-warning-700);
+  --color-hover: var(--rmcl-hover);
+  --color-subtle: var(--rmcl-subtle);
+  --color-on-accent: var(--rmcl-on-accent);
+  --color-terminal-bg: var(--rmcl-terminal-bg);
+  --color-terminal-text: var(--rmcl-terminal-text);
+  --color-terminal-accent: var(--rmcl-terminal-accent);
 }
 
 @theme {
@@ -67,6 +128,6 @@ body {
   width: 6px;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.12);
+  background: var(--rmcl-scroll-thumb);
   border-radius: 3px;
 }

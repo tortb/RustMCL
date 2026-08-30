@@ -52,8 +52,8 @@ export default function SavePanel({ instanceId }: { instanceId: string }) {
             onClick={() => setTab(t.key)}
             className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12px] font-medium transition-colors ${
               tab === t.key
-                ? "bg-accent text-white"
-                : "border border-divider text-ink-2 hover:bg-black/[0.03]"
+                ? "bg-accent text-on-accent"
+                : "border border-divider text-ink-2 hover:bg-hover"
             }`}
           >
             <t.icon size={12} />
@@ -64,12 +64,12 @@ export default function SavePanel({ instanceId }: { instanceId: string }) {
       </div>
 
       {s.message && (
-        <p className="mt-3 rounded-[10px] bg-green-50 px-3.5 py-2.5 text-[12px] text-green-600">
+        <p className="mt-3 rounded-[10px] bg-success-50 px-3.5 py-2.5 text-[12px] text-success-600">
           {s.message}
         </p>
       )}
       {s.error && (
-        <p className="mt-3 rounded-[10px] bg-red-50 px-3.5 py-2.5 text-[12px] text-red-600">
+        <p className="mt-3 rounded-[10px] bg-danger-50 px-3.5 py-2.5 text-[12px] text-danger-600">
           {s.error}
         </p>
       )}
@@ -94,7 +94,7 @@ export default function SavePanel({ instanceId }: { instanceId: string }) {
                 </div>
                 <button
                   onClick={() => s.backup(sv.name)}
-                  className="flex shrink-0 items-center gap-1 rounded-[8px] bg-accent px-2.5 py-1.5 text-[11.5px] font-medium text-white transition-colors hover:bg-accent-hover"
+                  className="flex shrink-0 items-center gap-1 rounded-[8px] bg-accent px-2.5 py-1.5 text-[11.5px] font-medium text-on-accent transition-colors hover:bg-accent-hover"
                 >
                   <Archive size={12} />
                   备份
@@ -103,7 +103,7 @@ export default function SavePanel({ instanceId }: { instanceId: string }) {
                   onClick={() => {
                     if (confirm(`确定删除存档「${sv.name}」吗?`)) s.removeSave(sv.name);
                   }}
-                  className="shrink-0 rounded-[8px] border border-divider p-1.5 text-ink-3 transition-colors hover:bg-red-50 hover:text-red-500"
+                  className="shrink-0 rounded-[8px] border border-divider p-1.5 text-ink-3 transition-colors hover:bg-danger-50 hover:text-danger-500"
                   aria-label="删除存档"
                 >
                   <Trash2 size={13} />
@@ -141,7 +141,7 @@ export default function SavePanel({ instanceId }: { instanceId: string }) {
                     const target = restoreTarget.trim() || bk.name;
                     if (confirm(`将备份恢复为「${target}」?`)) s.restore(bk.name, target);
                   }}
-                  className="flex shrink-0 items-center gap-1 rounded-[8px] border border-divider px-2.5 py-1.5 text-[11.5px] font-medium text-ink-2 transition-colors hover:bg-black/[0.03]"
+                  className="flex shrink-0 items-center gap-1 rounded-[8px] border border-divider px-2.5 py-1.5 text-[11.5px] font-medium text-ink-2 transition-colors hover:bg-hover"
                 >
                   <RotateCcw size={12} />
                   恢复
@@ -172,7 +172,7 @@ export default function SavePanel({ instanceId }: { instanceId: string }) {
                 {visibleCount < s.screenshots.length && (
                   <button
                     onClick={() => setVisibleCount((v) => v + 48)}
-                    className="mt-2 flex items-center justify-center gap-1.5 rounded-[10px] border border-divider px-3.5 py-2 text-[12.5px] font-medium text-ink-2 transition-colors hover:bg-black/[0.03]"
+                    className="mt-2 flex items-center justify-center gap-1.5 rounded-[10px] border border-divider px-3.5 py-2 text-[12.5px] font-medium text-ink-2 transition-colors hover:bg-hover"
                   >
                     <Camera size={13} />
                     加载更多
@@ -193,17 +193,17 @@ export default function SavePanel({ instanceId }: { instanceId: string }) {
               className="max-h-[88vh] rounded-[12px] object-contain shadow-2xl"
             />
             <div className="mt-3 flex items-center justify-center gap-3">
-              <span className="break-all text-[12px] text-white/70">{preview.name}</span>
+              <span className="break-all text-[12px] text-on-accent/70">{preview.name}</span>
               <button
                 onClick={() => s.removeScreenshot(preview.name)}
-                className="flex items-center gap-1.5 rounded-[10px] border border-white/20 px-3.5 py-2 text-[12.5px] font-medium text-white transition-colors hover:bg-red-500 hover:border-red-500"
+                className="flex items-center gap-1.5 rounded-[10px] border border-white/20 px-3.5 py-2 text-[12.5px] font-medium text-on-accent transition-colors hover:bg-danger-500 hover:border-danger-500"
               >
                 <Trash2 size={13} />
                 删除
               </button>
               <button
                 onClick={() => setPreview(null)}
-                className="flex items-center gap-1.5 rounded-[10px] border border-white/20 px-3.5 py-2 text-[12.5px] font-medium text-white transition-colors hover:bg-white/10"
+                className="flex items-center gap-1.5 rounded-[10px] border border-white/20 px-3.5 py-2 text-[12.5px] font-medium text-on-accent transition-colors hover:bg-card/10"
               >
                 <X size={13} />
                 关闭
@@ -244,7 +244,7 @@ function ShotThumb({
   }, [instanceId, name]);
 
   return (
-    <div className="group relative aspect-video overflow-hidden rounded-[10px] border border-divider bg-black/[0.03]">
+    <div className="group relative aspect-video overflow-hidden rounded-[10px] border border-divider bg-hover">
       {src ? (
         <button
           onClick={() => onOpen(src)}
@@ -259,7 +259,7 @@ function ShotThumb({
       )}
       <button
         onClick={onDelete}
-        className="absolute right-1.5 top-1.5 rounded-[8px] bg-black/40 p-1.5 text-white opacity-0 transition-opacity hover:bg-red-500 group-hover:opacity-100"
+        className="absolute right-1.5 top-1.5 rounded-[8px] bg-black/40 p-1.5 text-on-accent opacity-0 transition-opacity hover:bg-danger-500 group-hover:opacity-100"
         aria-label="删除截图"
       >
         <Trash2 size={12} />

@@ -160,7 +160,7 @@ export default function Instances() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#f3f4f6] px-6 py-8">
+    <div className="flex-1 overflow-y-auto bg-bg px-6 py-8">
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -175,7 +175,7 @@ export default function Instances() {
           <motion.button
             whileTap={{ scale: 0.97 }}
             onClick={s.openCreate}
-            className="flex items-center gap-2 rounded-[12px] bg-accent px-4 py-2.5 text-[13.5px] font-semibold text-white transition-colors hover:bg-accent-hover"
+            className="flex items-center gap-2 rounded-[12px] bg-accent px-4 py-2.5 text-[13.5px] font-semibold text-on-accent transition-colors hover:bg-accent-hover"
           >
             <Plus size={16} strokeWidth={2.4} />
             新建实例
@@ -188,7 +188,7 @@ export default function Instances() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.15, duration: 0.3 }}
-            className="mt-8 flex flex-col items-center gap-3 rounded-[16px] bg-white py-14 shadow-card"
+            className="mt-8 flex flex-col items-center gap-3 rounded-[16px] bg-card py-14 shadow-card"
           >
             <Box size={28} className="text-ink-3" strokeWidth={1.5} />
             <p className="text-[13.5px] text-ink-3">还没有实例,点击右上角创建一个</p>
@@ -204,7 +204,7 @@ export default function Instances() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.97 }}
                   transition={{ delay: 0.04 * i, duration: 0.3, ease }}
-                  className="overflow-hidden rounded-[16px] bg-white shadow-card"
+                  className="overflow-hidden rounded-[16px] bg-card shadow-card"
                 >
                   {/* 卡片头部 */}
                   <div className="flex items-center gap-4 px-5 py-4">
@@ -212,7 +212,7 @@ export default function Instances() {
                       onClick={() => setExpanded(expanded === inst.id ? null : inst.id)}
                       className="flex flex-1 items-center gap-3 text-left"
                     >
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-[#e8f5e9] text-accent">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-nav-active text-accent">
                         <Box size={19} strokeWidth={1.8} />
                       </div>
                       <div className="flex-1">
@@ -238,7 +238,7 @@ export default function Instances() {
                         whileTap={{ scale: 0.95 }}
                         onClick={() => s.launch(inst.id)}
                         disabled={s.runningId !== null}
-                        className="flex items-center gap-1.5 rounded-[10px] bg-accent px-3.5 py-2 text-[12.5px] font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-40"
+                        className="flex items-center gap-1.5 rounded-[10px] bg-accent px-3.5 py-2 text-[12.5px] font-semibold text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-40"
                       >
                         {s.runningId === inst.id ? (
                           <Loader2 size={14} className="animate-spin" />
@@ -250,7 +250,7 @@ export default function Instances() {
                       <motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={() => s.exportPack(inst.id)}
-                        className="rounded-[10px] border border-divider p-2 text-ink-2 transition-colors hover:bg-black/[0.03]"
+                        className="rounded-[10px] border border-divider p-2 text-ink-2 transition-colors hover:bg-hover"
                         aria-label="导出整合包"
                       >
                         <Package size={14} />
@@ -259,7 +259,7 @@ export default function Instances() {
                         whileTap={{ scale: 0.95 }}
                         onClick={() => s.importPack(inst.id)}
                         disabled={s.modpackImportingId !== null}
-                        className="rounded-[10px] border border-divider p-2 text-ink-2 transition-colors hover:bg-black/[0.03] disabled:opacity-40"
+                        className="rounded-[10px] border border-divider p-2 text-ink-2 transition-colors hover:bg-hover disabled:opacity-40"
                         aria-label="导入整合包"
                       >
                         <Upload size={14} />
@@ -267,7 +267,7 @@ export default function Instances() {
                       <motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={() => s.openEdit(inst)}
-                        className="rounded-[10px] border border-divider p-2 text-ink-2 transition-colors hover:bg-black/[0.03]"
+                        className="rounded-[10px] border border-divider p-2 text-ink-2 transition-colors hover:bg-hover"
                         aria-label="编辑"
                       >
                         <Pencil size={14} />
@@ -275,7 +275,7 @@ export default function Instances() {
                       <motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={() => handleDelete(inst)}
-                        className="rounded-[10px] border border-divider p-2 text-ink-3 transition-colors hover:bg-red-50 hover:text-red-500"
+                        className="rounded-[10px] border border-divider p-2 text-ink-3 transition-colors hover:bg-danger-50 hover:text-danger-500"
                         aria-label="删除"
                       >
                         <Trash2 size={14} />
@@ -297,7 +297,7 @@ export default function Instances() {
                           </span>
                         )}
                       </div>
-                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-black/[0.06]">
+                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-hover">
                         <div
                           className="h-full rounded-full bg-accent transition-all duration-300"
                           style={{
@@ -308,7 +308,7 @@ export default function Instances() {
                         />
                       </div>
                       {s.installError && (
-                        <p className="mt-2 text-[12px] text-red-500">安装失败:{s.installError}</p>
+                        <p className="mt-2 text-[12px] text-danger-500">安装失败:{s.installError}</p>
                       )}
                     </div>
                   )}
@@ -325,7 +325,7 @@ export default function Instances() {
                           {s.launchProgress.current}/{s.launchProgress.total}
                         </span>
                       </div>
-                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-black/[0.06]">
+                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-hover">
                         <div
                           className="h-full rounded-full bg-accent transition-all duration-300"
                           style={{
@@ -350,7 +350,7 @@ export default function Instances() {
                           </span>
                         )}
                       </div>
-                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-black/[0.06]">
+                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-hover">
                         <div
                           className="h-full rounded-full bg-accent transition-all duration-300"
                           style={{
@@ -437,8 +437,8 @@ export default function Instances() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease }}
-            className={`mt-5 rounded-[16px] border bg-white p-4 shadow-card ${
-              s.modpackResult.ok ? "border-green-200" : "border-red-200"
+            className={`mt-5 rounded-[16px] border bg-card p-4 shadow-card ${
+              s.modpackResult.ok ? "border-success-50" : "border-danger-50"
             }`}
           >
             <div className="flex items-center justify-between">
@@ -447,7 +447,7 @@ export default function Instances() {
               </span>
               <button
                 onClick={() => s.setModpackResult(null)}
-                className="rounded-full p-1 text-ink-3 transition-colors hover:bg-black/[0.05]"
+                className="rounded-full p-1 text-ink-3 transition-colors hover:bg-hover"
                 aria-label="关闭"
               >
                 <X size={14} />
@@ -460,8 +460,8 @@ export default function Instances() {
                 </p>
                 {s.modpackResult.failures.length > 0 && (
                   <div className="mt-2">
-                    <p className="text-[12.5px] font-medium text-red-600">以下文件下载失败,可手动补齐:</p>
-                    <ul className="mt-1 list-inside list-disc text-[12px] text-red-500">
+                    <p className="text-[12.5px] font-medium text-danger-600">以下文件下载失败,可手动补齐:</p>
+                    <ul className="mt-1 list-inside list-disc text-[12px] text-danger-500">
                       {s.modpackResult.failures.map((f, i) => (
                         <li key={i}>{f}</li>
                       ))}
@@ -470,7 +470,7 @@ export default function Instances() {
                 )}
               </>
             ) : (
-              <p className="mt-2 text-[12.5px] text-red-600">{s.modpackResult.error}</p>
+              <p className="mt-2 text-[12.5px] text-danger-600">{s.modpackResult.error}</p>
             )}
           </motion.div>
         )}
@@ -481,15 +481,15 @@ export default function Instances() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease }}
-            className="mt-5 overflow-hidden rounded-[16px] border border-amber-200 bg-white shadow-card"
+            className="mt-5 overflow-hidden rounded-[16px] border border-warning-50 bg-card shadow-card"
           >
             <div className="flex items-center gap-2 border-b border-divider px-4 py-3">
-              <AlertTriangle size={15} className="text-amber-500" />
+              <AlertTriangle size={15} className="text-warning-500" />
               <span className="text-[13px] font-semibold text-ink">崩溃诊断</span>
               {analyzing && <Loader2 size={13} className="animate-spin text-ink-3" />}
               <button
                 onClick={() => setDiagnosis(null)}
-                className="ml-auto rounded-full p-1 text-ink-3 transition-colors hover:bg-black/[0.05]"
+                className="ml-auto rounded-full p-1 text-ink-3 transition-colors hover:bg-hover"
                 aria-label="关闭诊断"
               >
                 <X size={14} />
@@ -509,7 +509,7 @@ export default function Instances() {
                     {diagnosis.matched.map((m) => (
                       <span
                         key={m}
-                        className="rounded-full bg-amber-50 px-2.5 py-0.5 text-[11.5px] font-medium text-amber-600"
+                        className="rounded-full bg-warning-50 px-2.5 py-0.5 text-[11.5px] font-medium text-warning-600"
                       >
                         {m}
                       </span>
@@ -529,7 +529,7 @@ export default function Instances() {
                 <div className="mt-4 flex items-center gap-2">
                   <button
                     onClick={handleCopyLog}
-                    className="flex items-center gap-1.5 rounded-[10px] border border-divider px-3.5 py-2 text-[12.5px] font-medium text-ink-2 transition-colors hover:bg-black/[0.03]"
+                    className="flex items-center gap-1.5 rounded-[10px] border border-divider px-3.5 py-2 text-[12.5px] font-medium text-ink-2 transition-colors hover:bg-hover"
                   >
                     <Copy size={13} />
                     {copied ? "已复制" : "复制完整日志"}
@@ -555,19 +555,19 @@ export default function Instances() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease }}
-            className="mt-5 overflow-hidden rounded-[16px] bg-[#1a1a1a] shadow-card"
+            className="mt-5 overflow-hidden rounded-[16px] bg-terminal-bg shadow-card"
           >
             <div className="flex items-center gap-2 border-b border-white/[0.06] px-4 py-2.5">
-              <Terminal size={14} className="text-white/40" />
-              <span className="text-[12px] font-medium text-white/50">运行日志</span>
-              <span className="ml-auto text-[11px] text-white/30">{s.logs.length} 行</span>
+              <Terminal size={14} className="text-on-accent/40" />
+              <span className="text-[12px] font-medium text-on-accent/50">运行日志</span>
+              <span className="ml-auto text-[11px] text-on-accent/30">{s.logs.length} 行</span>
             </div>
             <div
               ref={logRef}
-              className="h-56 overflow-y-auto px-4 py-3 font-mono text-[12px] leading-relaxed text-[#d4d4d4]"
+              className="h-56 overflow-y-auto px-4 py-3 font-mono text-[12px] leading-relaxed text-terminal-text"
             >
               {s.logs.map((line, i) => (
-                <p key={i} className={line.startsWith("[RustMCL]") ? "text-[#7cb342]" : ""}>
+                <p key={i} className={line.startsWith("[RustMCL]") ? "text-terminal-accent" : ""}>
                   {line || "\u00a0"}
                 </p>
               ))}
@@ -697,7 +697,7 @@ function InstanceModal() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 8 }}
             transition={{ duration: 0.28, ease }}
-            className="w-[440px] rounded-[20px] bg-white p-7 shadow-[0_24px_64px_rgba(0,0,0,0.16)]"
+            className="w-[440px] rounded-[20px] bg-card p-7 shadow-[0_24px_64px_rgba(0,0,0,0.16)]"
           >
             <div className="flex items-center justify-between">
               <h2 className="text-[18px] font-bold tracking-tight text-ink">
@@ -705,7 +705,7 @@ function InstanceModal() {
               </h2>
               <button
                 onClick={handleClose}
-                className="rounded-full p-1.5 text-ink-3 transition-colors hover:bg-black/[0.05]"
+                className="rounded-full p-1.5 text-ink-3 transition-colors hover:bg-hover"
                 aria-label="关闭"
               >
                 <X size={16} />
@@ -732,7 +732,7 @@ function InstanceModal() {
                         {cp.current}/{cp.total} · {cpPct}%
                       </span>
                     </div>
-                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-black/[0.06]">
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-hover">
                       <div
                         className="h-full rounded-full bg-accent transition-all duration-300"
                         style={{ width: `${cpPct}%` }}
@@ -741,7 +741,7 @@ function InstanceModal() {
                   </div>
                 )}
                 {s.createError && (
-                  <p className="rounded-[10px] bg-red-50 px-3.5 py-2.5 text-[12.5px] text-red-600">
+                  <p className="rounded-[10px] bg-danger-50 px-3.5 py-2.5 text-[12.5px] text-danger-600">
                     下载失败:{s.createError}
                   </p>
                 )}
@@ -757,7 +757,7 @@ function InstanceModal() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="我的生存"
-                  className="mt-1.5 w-full rounded-[10px] border border-divider bg-white px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
+                  className="mt-1.5 w-full rounded-[10px] border border-divider bg-card px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
                 />
               </div>
 
@@ -830,7 +830,7 @@ function InstanceModal() {
                     type="number"
                     value={minMemory}
                     onChange={(e) => setMinMemory(Number(e.target.value) || 0)}
-                    className="mt-1.5 w-full rounded-[10px] border border-divider bg-white px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
+                    className="mt-1.5 w-full rounded-[10px] border border-divider bg-card px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
                   />
                 </div>
                 <div>
@@ -839,7 +839,7 @@ function InstanceModal() {
                     type="number"
                     value={maxMemory}
                     onChange={(e) => setMaxMemory(Number(e.target.value) || 0)}
-                    className="mt-1.5 w-full rounded-[10px] border border-divider bg-white px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
+                    className="mt-1.5 w-full rounded-[10px] border border-divider bg-card px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
                   />
                 </div>
               </div>
@@ -855,7 +855,7 @@ function InstanceModal() {
                 <button
                   onClick={handleApplyRecommend}
                   disabled={loadingRec}
-                  className="flex items-center gap-1.5 rounded-[8px] bg-black/[0.04] px-2.5 py-1.5 text-[12px] font-medium text-ink-2 transition-colors hover:bg-black/[0.08] disabled:opacity-50"
+                  className="flex items-center gap-1.5 rounded-[8px] bg-hover px-2.5 py-1.5 text-[12px] font-medium text-ink-2 transition-colors hover:bg-hover disabled:opacity-50"
                 >
                   {loadingRec && <Loader2 size={12} className="animate-spin" />}
                   应用推荐
@@ -872,7 +872,7 @@ function InstanceModal() {
                     type="number"
                     value={width}
                     onChange={(e) => setWidth(Number(e.target.value) || 0)}
-                    className="mt-1.5 w-full rounded-[10px] border border-divider bg-white px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
+                    className="mt-1.5 w-full rounded-[10px] border border-divider bg-card px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
                   />
                 </div>
                 <div>
@@ -881,13 +881,13 @@ function InstanceModal() {
                     type="number"
                     value={height}
                     onChange={(e) => setHeight(Number(e.target.value) || 0)}
-                    className="mt-1.5 w-full rounded-[10px] border border-divider bg-white px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
+                    className="mt-1.5 w-full rounded-[10px] border border-divider bg-card px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
                   />
                 </div>
               </div>
 
               {error && (
-                <p className="rounded-[10px] bg-red-50 px-3.5 py-2.5 text-[12.5px] text-red-600">
+                <p className="rounded-[10px] bg-danger-50 px-3.5 py-2.5 text-[12.5px] text-danger-600">
                   {error}
                 </p>
               )}
@@ -898,7 +898,7 @@ function InstanceModal() {
               {creating ? (
                 <button
                   onClick={() => s.creatingId && s.cancelCreate(s.creatingId)}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-[12px] border border-divider py-2.5 text-[13.5px] font-medium text-ink-2 transition-colors hover:bg-black/[0.03]"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-[12px] border border-divider py-2.5 text-[13.5px] font-medium text-ink-2 transition-colors hover:bg-hover"
                 >
                   取消并清理
                 </button>
@@ -907,14 +907,14 @@ function InstanceModal() {
                   <button
                     onClick={submit}
                     disabled={saving}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-[12px] bg-accent py-2.5 text-[13.5px] font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
+                    className="flex flex-1 items-center justify-center gap-2 rounded-[12px] bg-accent py-2.5 text-[13.5px] font-semibold text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-50"
                   >
                     {saving && <Loader2 size={14} className="animate-spin" />}
                     {editing ? "保存修改" : "创建实例"}
                   </button>
                   <button
                     onClick={handleClose}
-                    className="flex-1 rounded-[12px] border border-divider py-2.5 text-[13.5px] font-medium text-ink-2 transition-colors hover:bg-black/[0.03]"
+                    className="flex-1 rounded-[12px] border border-divider py-2.5 text-[13.5px] font-medium text-ink-2 transition-colors hover:bg-hover"
                   >
                     取消
                   </button>

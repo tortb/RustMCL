@@ -48,7 +48,7 @@ export default function Mods() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#f3f4f6] px-6 py-8">
+    <div className="flex-1 overflow-y-auto bg-bg px-6 py-8">
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -88,8 +88,8 @@ export default function Mods() {
               onClick={() => s.setSource(t.key)}
               className={`rounded-full px-4 py-1.5 text-[12.5px] font-medium transition-colors ${
                 s.source === t.key
-                  ? "bg-accent text-white"
-                  : "border border-divider text-ink-2 hover:bg-black/[0.03]"
+                  ? "bg-accent text-on-accent"
+                  : "border border-divider text-ink-2 hover:bg-hover"
               }`}
             >
               {t.label}
@@ -107,13 +107,13 @@ export default function Mods() {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
             placeholder="搜索 Mod,如 Sodium、Fabric API..."
-            className="flex-1 rounded-[12px] border border-divider bg-white px-4 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
+            className="flex-1 rounded-[12px] border border-divider bg-card px-4 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
           />
           <motion.button
             whileTap={{ scale: 0.97 }}
             onClick={handleSearch}
             disabled={s.searching || !s.selectedInstanceId}
-            className="flex items-center gap-2 rounded-[12px] bg-accent px-4 py-2.5 text-[13.5px] font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-40"
+            className="flex items-center gap-2 rounded-[12px] bg-accent px-4 py-2.5 text-[13.5px] font-semibold text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-40"
           >
             {s.searching ? <Loader2 size={15} className="animate-spin" /> : <Search size={15} />}
             搜索
@@ -165,7 +165,7 @@ function SectionTitle({ title }: { title: string }) {
 
 function EmptyHint({ text }: { text: string }) {
   return (
-    <div className="mt-3 flex flex-col items-center gap-2 rounded-[16px] bg-white py-10 shadow-card">
+    <div className="mt-3 flex flex-col items-center gap-2 rounded-[16px] bg-card py-10 shadow-card">
       <Package size={24} className="text-ink-3" strokeWidth={1.5} />
       <p className="text-[13px] text-ink-3">{text}</p>
     </div>
@@ -181,7 +181,7 @@ function SearchCard({ hit, index }: { hit: ModSearchResult; index: number }) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.97 }}
       transition={{ delay: 0.03 * index, duration: 0.3, ease }}
-      className="flex items-center gap-4 rounded-[16px] bg-white px-4 py-3.5 shadow-card"
+      className="flex items-center gap-4 rounded-[16px] bg-card px-4 py-3.5 shadow-card"
     >
       <ModIcon hit={hit} />
       <div className="min-w-0 flex-1">
@@ -204,7 +204,7 @@ function SearchCard({ hit, index }: { hit: ModSearchResult; index: number }) {
       <motion.button
         whileTap={{ scale: 0.95 }}
         onClick={() => s.openVersions(hit)}
-        className="shrink-0 rounded-[10px] bg-accent px-3.5 py-2 text-[12.5px] font-semibold text-white transition-colors hover:bg-accent-hover"
+        className="shrink-0 rounded-[10px] bg-accent px-3.5 py-2 text-[12.5px] font-semibold text-on-accent transition-colors hover:bg-accent-hover"
       >
         安装
       </motion.button>
@@ -214,7 +214,7 @@ function SearchCard({ hit, index }: { hit: ModSearchResult; index: number }) {
 
 function ModIcon({ hit }: { hit: ModSearchResult }) {
   return (
-    <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[12px] bg-[#e8f5e9]">
+    <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[12px] bg-nav-active">
       {hit.icon_url ? (
         <img src={hit.icon_url} alt="" className="h-full w-full object-cover" draggable={false} />
       ) : (
@@ -233,7 +233,7 @@ function InstalledCard({ mod, index }: { mod: ModEntry; index: number }) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.97 }}
       transition={{ delay: 0.03 * index, duration: 0.3, ease }}
-      className="flex items-center gap-4 rounded-[16px] bg-white px-4 py-3 shadow-card"
+      className="flex items-center gap-4 rounded-[16px] bg-card px-4 py-3 shadow-card"
     >
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-badge-bg">
         <Puzzle size={18} className="text-badge-text" strokeWidth={1.8} />
@@ -246,12 +246,12 @@ function InstalledCard({ mod, index }: { mod: ModEntry; index: number }) {
       <button
         onClick={() => s.toggle(mod, !mod.enabled)}
         className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${
-          mod.enabled ? "bg-accent" : "bg-black/[0.12]"
+          mod.enabled ? "bg-accent" : "bg-hover"
         }`}
         aria-label={mod.enabled ? "禁用" : "启用"}
       >
         <span
-          className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+          className={`absolute top-0.5 h-5 w-5 rounded-full bg-card shadow transition-all ${
             mod.enabled ? "left-[18px]" : "left-0.5"
           }`}
         />
@@ -260,7 +260,7 @@ function InstalledCard({ mod, index }: { mod: ModEntry; index: number }) {
         onClick={() => {
           if (confirm(`确定删除 mod「${mod.file_name}」吗?`)) s.remove(mod);
         }}
-        className="shrink-0 rounded-[10px] border border-divider p-2 text-ink-3 transition-colors hover:bg-red-50 hover:text-red-500"
+        className="shrink-0 rounded-[10px] border border-divider p-2 text-ink-3 transition-colors hover:bg-danger-50 hover:text-danger-500"
         aria-label="删除"
       >
         <Trash2 size={14} />
@@ -288,7 +288,7 @@ function VersionModal() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 8 }}
             transition={{ duration: 0.28, ease }}
-            className="w-[460px] rounded-[20px] bg-white p-7 shadow-[0_24px_64px_rgba(0,0,0,0.16)]"
+            className="w-[460px] rounded-[20px] bg-card p-7 shadow-[0_24px_64px_rgba(0,0,0,0.16)]"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -298,7 +298,7 @@ function VersionModal() {
               <button
                 onClick={s.closeVersions}
                 disabled={s.installing}
-                className="rounded-full p-1.5 text-ink-3 transition-colors hover:bg-black/[0.05]"
+                className="rounded-full p-1.5 text-ink-3 transition-colors hover:bg-hover"
                 aria-label="关闭"
               >
                 <X size={16} />
@@ -311,11 +311,11 @@ function VersionModal() {
 
             {/* CurseForge 禁止第三方分发提示 */}
             {isCf && hit.allow_mod_distribution === false && (
-              <div className="mt-3 rounded-[10px] border border-amber-200 bg-amber-50 px-3.5 py-2.5">
-                <p className="text-[12px] font-medium text-amber-600">
+              <div className="mt-3 rounded-[10px] border border-warning-50 bg-warning-50 px-3.5 py-2.5">
+                <p className="text-[12px] font-medium text-warning-600">
                   此 mod 的作者禁止第三方启动器自动分发
                 </p>
-                <p className="mt-0.5 text-[12px] text-amber-700">
+                <p className="mt-0.5 text-[12px] text-warning-700">
                   请前往 CurseForge 页面手动下载 jar 后放入 mods 目录。
                 </p>
               </div>
@@ -323,20 +323,20 @@ function VersionModal() {
 
             {/* 依赖检查横幅(非阻断式) */}
             {s.depResult && !isCf && (
-              <div className="mt-3 rounded-[10px] border border-amber-200 bg-amber-50 px-3.5 py-2.5">
+              <div className="mt-3 rounded-[10px] border border-warning-50 bg-warning-50 px-3.5 py-2.5">
                 {s.depResult.conflicts.map((c, i) => (
-                  <p key={i} className="text-[12px] font-medium text-amber-600">
+                  <p key={i} className="text-[12px] font-medium text-warning-600">
                     冲突:{c}
                   </p>
                 ))}
                 {s.depResult.missing_required.length > 0 && (
                   <div className="mt-1">
-                    <p className="text-[12px] font-medium text-amber-600">
+                    <p className="text-[12px] font-medium text-warning-600">
                       缺少 {s.depResult.missing_required.length} 个必需依赖:
                     </p>
                     <div className="mt-1 flex flex-col gap-1">
                       {s.depResult.missing_required.map((dep, i) => (
-                        <div key={i} className="flex items-center justify-between text-[12px] text-amber-700">
+                        <div key={i} className="flex items-center justify-between text-[12px] text-warning-700">
                           <span className="truncate">
                             {dep.file_name || dep.project_id}
                           </span>
@@ -344,7 +344,7 @@ function VersionModal() {
                             <button
                               onClick={() => s.installDep(dep.version_id)}
                               disabled={s.installing}
-                              className="ml-2 shrink-0 rounded-[6px] bg-amber-500 px-2 py-1 text-[11px] font-medium text-white transition-colors hover:bg-amber-600 disabled:opacity-50"
+                              className="ml-2 shrink-0 rounded-[6px] bg-warning-500 px-2 py-1 text-[11px] font-medium text-on-accent transition-colors hover:bg-warning-600 disabled:opacity-50"
                             >
                               自动安装
                             </button>
@@ -355,7 +355,7 @@ function VersionModal() {
                   </div>
                 )}
                 {s.depResult.ok && (
-                  <p className="text-[12px] text-green-600">依赖检查通过,可放心安装</p>
+                  <p className="text-[12px] text-success-600">依赖检查通过,可放心安装</p>
                 )}
               </div>
             )}
@@ -430,7 +430,7 @@ function VersionRow({ version, index }: { version: ModrinthVersion; index: numbe
       </div>
       <button
         onClick={() => s.checkDeps(version.id)}
-        className="shrink-0 rounded-[8px] border border-divider px-2 py-1 text-[11.5px] text-ink-3 transition-colors hover:text-amber-600"
+        className="shrink-0 rounded-[8px] border border-divider px-2 py-1 text-[11.5px] text-ink-3 transition-colors hover:text-warning-600"
       >
         依赖
       </button>
@@ -438,7 +438,7 @@ function VersionRow({ version, index }: { version: ModrinthVersion; index: numbe
         whileTap={{ scale: 0.95 }}
         onClick={() => s.install(version)}
         disabled={s.installing}
-        className="shrink-0 rounded-[10px] bg-accent px-3 py-1.5 text-[12px] font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
+        className="shrink-0 rounded-[10px] bg-accent px-3 py-1.5 text-[12px] font-semibold text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-50"
       >
         {s.installing ? <Loader2 size={12} className="animate-spin" /> : "安装"}
       </motion.button>
@@ -463,7 +463,7 @@ function CfFileRow({ file, index }: { file: CurseForgeFile; index: number }) {
         whileTap={{ scale: 0.95 }}
         onClick={() => s.installCfFile(file)}
         disabled={s.installing}
-        className="shrink-0 rounded-[10px] bg-accent px-3 py-1.5 text-[12px] font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
+        className="shrink-0 rounded-[10px] bg-accent px-3 py-1.5 text-[12px] font-semibold text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-50"
       >
         {s.installing ? <Loader2 size={12} className="animate-spin" /> : "安装"}
       </motion.button>

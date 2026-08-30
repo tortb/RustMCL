@@ -19,10 +19,10 @@ import type { Instance, ServerEntry, ServerStatus } from "../lib/types";
 const ease = [0.32, 0.72, 0, 1] as const;
 
 function latencyColor(ms: number | null | undefined): string {
-  if (ms === null || ms === undefined || ms < 0) return "text-ink-3 bg-black/[0.05]";
-  if (ms < 80) return "text-green-600 bg-green-50";
-  if (ms < 150) return "text-yellow-600 bg-yellow-50";
-  return "text-red-500 bg-red-50";
+  if (ms === null || ms === undefined || ms < 0) return "text-ink-3 bg-hover";
+  if (ms < 80) return "text-success-600 bg-success-50";
+  if (ms < 150) return "text-warning-600 bg-warning-50";
+  return "text-danger-500 bg-danger-50";
 }
 
 function latencyLabel(ms: number | null | undefined): string {
@@ -37,7 +37,7 @@ function ServerFavicon({ status }: { status?: ServerStatus | null }) {
     return <img src={favicon} alt="" className="h-9 w-9 rounded-md object-contain" />;
   }
   return (
-    <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[#e8f5e9] text-accent">
+    <div className="flex h-9 w-9 items-center justify-center rounded-md bg-nav-active text-accent">
       <ServerIcon size={17} strokeWidth={1.8} />
     </div>
   );
@@ -102,7 +102,7 @@ export default function Servers() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#f3f4f6] px-6 py-8">
+    <div className="flex-1 overflow-y-auto bg-bg px-6 py-8">
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -118,7 +118,7 @@ export default function Servers() {
             <motion.button
               whileTap={{ scale: 0.96 }}
               onClick={handleImportDat}
-              className="flex items-center gap-1.5 rounded-[10px] border border-divider px-3.5 py-2 text-[12.5px] font-medium text-ink-2 transition-colors hover:bg-black/[0.03]"
+              className="flex items-center gap-1.5 rounded-[10px] border border-divider px-3.5 py-2 text-[12.5px] font-medium text-ink-2 transition-colors hover:bg-hover"
             >
               <FileUp size={13} />
               导入
@@ -126,7 +126,7 @@ export default function Servers() {
             <motion.button
               whileTap={{ scale: 0.96 }}
               onClick={handlePingAll}
-              className="flex items-center gap-1.5 rounded-[10px] border border-divider px-3.5 py-2 text-[12.5px] font-medium text-ink-2 transition-colors hover:bg-black/[0.03]"
+              className="flex items-center gap-1.5 rounded-[10px] border border-divider px-3.5 py-2 text-[12.5px] font-medium text-ink-2 transition-colors hover:bg-hover"
             >
               <RefreshCw size={13} />
               全部测速
@@ -134,7 +134,7 @@ export default function Servers() {
             <motion.button
               whileTap={{ scale: 0.96 }}
               onClick={() => setShowAdd(true)}
-              className="flex items-center gap-2 rounded-[12px] bg-accent px-4 py-2.5 text-[13.5px] font-semibold text-white transition-colors hover:bg-accent-hover"
+              className="flex items-center gap-2 rounded-[12px] bg-accent px-4 py-2.5 text-[13.5px] font-semibold text-on-accent transition-colors hover:bg-accent-hover"
             >
               <Plus size={16} strokeWidth={2.4} />
               添加服务器
@@ -143,13 +143,13 @@ export default function Servers() {
         </div>
 
         {s.error && (
-          <p className="mt-4 rounded-[10px] bg-red-50 px-3.5 py-2.5 text-[12.5px] text-red-600">
+          <p className="mt-4 rounded-[10px] bg-danger-50 px-3.5 py-2.5 text-[12.5px] text-danger-600">
             {s.error}
           </p>
         )}
 
         {importMsg && (
-          <p className="mt-4 rounded-[10px] bg-black/[0.02] px-3.5 py-2.5 text-[12.5px] text-ink-2">
+          <p className="mt-4 rounded-[10px] bg-hover px-3.5 py-2.5 text-[12.5px] text-ink-2">
             {importMsg}
           </p>
         )}
@@ -159,7 +159,7 @@ export default function Servers() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.15, duration: 0.3 }}
-            className="mt-8 flex flex-col items-center gap-3 rounded-[16px] bg-white py-14 shadow-card"
+            className="mt-8 flex flex-col items-center gap-3 rounded-[16px] bg-card py-14 shadow-card"
           >
             <ServerIcon size={28} className="text-ink-3" strokeWidth={1.5} />
             <p className="text-[13.5px] text-ink-3">还没有服务器,点击右上角添加一个</p>
@@ -181,16 +181,16 @@ export default function Servers() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.05 * i, duration: 0.3, ease }}
-                  className="flex cursor-grab items-center gap-4 rounded-[16px] bg-white px-5 py-4 shadow-card active:cursor-grabbing"
+                  className="flex cursor-grab items-center gap-4 rounded-[16px] bg-card px-5 py-4 shadow-card active:cursor-grabbing"
                 >
                   <button
                     onClick={() => s.toggleFavorite(sv.id, !sv.is_favorite)}
-                    className="shrink-0 text-ink-3 transition-colors hover:text-yellow-500"
+                    className="shrink-0 text-ink-3 transition-colors hover:text-warning-500"
                     aria-label="收藏"
                   >
                     <Star
                       size={18}
-                      className={sv.is_favorite ? "fill-yellow-400 text-yellow-400" : ""}
+                      className={sv.is_favorite ? "fill-yellow-400 text-warning-500" : ""}
                     />
                   </button>
 
@@ -227,7 +227,7 @@ export default function Servers() {
 
                   <button
                     onClick={() => handlePing(sv.id)}
-                    className="shrink-0 rounded-[10px] border border-divider p-2 text-ink-2 transition-colors hover:bg-black/[0.03]"
+                    className="shrink-0 rounded-[10px] border border-divider p-2 text-ink-2 transition-colors hover:bg-hover"
                     aria-label="测速"
                   >
                     {s.pingingId === sv.id ? (
@@ -240,7 +240,7 @@ export default function Servers() {
                   <motion.button
                     whileTap={{ scale: 0.95 }}
                     onClick={() => openJoin(sv)}
-                    className="flex shrink-0 items-center gap-1.5 rounded-[10px] bg-accent px-3.5 py-2 text-[12.5px] font-semibold text-white transition-colors hover:bg-accent-hover"
+                    className="flex shrink-0 items-center gap-1.5 rounded-[10px] bg-accent px-3.5 py-2 text-[12.5px] font-semibold text-on-accent transition-colors hover:bg-accent-hover"
                   >
                     <Play size={13} fill="white" strokeWidth={0} />
                     加入
@@ -249,7 +249,7 @@ export default function Servers() {
                   <motion.button
                     whileTap={{ scale: 0.95 }}
                     onClick={() => s.remove(sv.id)}
-                    className="shrink-0 rounded-[10px] border border-divider p-2 text-ink-3 transition-colors hover:bg-red-50 hover:text-red-500"
+                    className="shrink-0 rounded-[10px] border border-divider p-2 text-ink-3 transition-colors hover:bg-danger-50 hover:text-danger-500"
                     aria-label="删除"
                   >
                     <Trash2 size={14} />
@@ -273,7 +273,7 @@ export default function Servers() {
               <button
                 key={inst.id}
                 onClick={() => doJoin(inst.id)}
-                className="flex items-center justify-between rounded-[10px] border border-divider px-3.5 py-2.5 text-left transition-colors hover:bg-black/[0.03]"
+                className="flex items-center justify-between rounded-[10px] border border-divider px-3.5 py-2.5 text-left transition-colors hover:bg-hover"
               >
                 <span className="text-[13px] font-medium text-ink">{inst.name}</span>
                 <span className="text-[11.5px] text-ink-3">MC {inst.mc_version}</span>
@@ -322,7 +322,7 @@ function AddServerModal({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="我的生存服"
-            className="mt-1.5 w-full rounded-[10px] border border-divider bg-white px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
+            className="mt-1.5 w-full rounded-[10px] border border-divider bg-card px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
           />
         </div>
         <div>
@@ -331,7 +331,7 @@ function AddServerModal({
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             placeholder="play.example.com"
-            className="mt-1.5 w-full rounded-[10px] border border-divider bg-white px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
+            className="mt-1.5 w-full rounded-[10px] border border-divider bg-card px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
           />
         </div>
         <div>
@@ -340,13 +340,13 @@ function AddServerModal({
             type="number"
             value={port}
             onChange={(e) => setPort(Number(e.target.value) || 25565)}
-            className="mt-1.5 w-full rounded-[10px] border border-divider bg-white px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
+            className="mt-1.5 w-full rounded-[10px] border border-divider bg-card px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
           />
         </div>
         <button
           onClick={submit}
           disabled={saving || !address.trim()}
-          className="flex items-center justify-center gap-2 rounded-[12px] bg-accent py-2.5 text-[13.5px] font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
+          className="flex items-center justify-center gap-2 rounded-[12px] bg-accent py-2.5 text-[13.5px] font-semibold text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-50"
         >
           {saving && <Loader2 size={14} className="animate-spin" />}
           保存
@@ -375,13 +375,13 @@ function AnimatePresenceWrap({
         initial={{ opacity: 0, scale: 0.95, y: 8 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.28, ease }}
-        className="w-[420px] rounded-[20px] bg-white p-6 shadow-[0_24px_64px_rgba(0,0,0,0.16)]"
+        className="w-[420px] rounded-[20px] bg-card p-6 shadow-[0_24px_64px_rgba(0,0,0,0.16)]"
       >
         <div className="flex items-center justify-between">
           <h2 className="text-[17px] font-bold tracking-tight text-ink">{title}</h2>
           <button
             onClick={onClose}
-            className="rounded-full p-1.5 text-ink-3 transition-colors hover:bg-black/[0.05]"
+            className="rounded-full p-1.5 text-ink-3 transition-colors hover:bg-hover"
             aria-label="关闭"
           >
             <X size={16} />

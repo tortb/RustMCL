@@ -34,7 +34,7 @@ export default function Packs() {
   }, []);
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#f3f4f6] px-6 py-8">
+    <div className="flex-1 overflow-y-auto bg-bg px-6 py-8">
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -66,8 +66,8 @@ export default function Packs() {
               onClick={() => s.setType(t)}
               className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-[12.5px] font-medium transition-colors ${
                 s.type === t
-                  ? "bg-accent text-white"
-                  : "border border-divider text-ink-2 hover:bg-black/[0.03]"
+                  ? "bg-accent text-on-accent"
+                  : "border border-divider text-ink-2 hover:bg-hover"
               }`}
             >
               {t === "resourcepack" ? <Image size={13} /> : <Sun size={13} />}
@@ -76,7 +76,7 @@ export default function Packs() {
           ))}
           <button
             onClick={() => s.scan()}
-            className="ml-auto flex items-center gap-1.5 rounded-[10px] border border-divider px-3.5 py-1.5 text-[12px] text-ink-2 transition-colors hover:bg-black/[0.03]"
+            className="ml-auto flex items-center gap-1.5 rounded-[10px] border border-divider px-3.5 py-1.5 text-[12px] text-ink-2 transition-colors hover:bg-hover"
           >
             <RefreshCw size={13} />
             重新扫描
@@ -85,9 +85,9 @@ export default function Packs() {
 
         {/* 光影依赖提示 */}
         {s.type === "shaderpack" && s.shaderSupport && !s.shaderSupport.supported && (
-          <div className="mt-4 rounded-[10px] border border-amber-200 bg-amber-50 px-3.5 py-2.5">
-            <p className="text-[12px] font-medium text-amber-600">可能无法显示光影</p>
-            <p className="mt-0.5 text-[12px] text-amber-700">{s.shaderSupport.message}</p>
+          <div className="mt-4 rounded-[10px] border border-warning-50 bg-warning-50 px-3.5 py-2.5">
+            <p className="text-[12px] font-medium text-warning-600">可能无法显示光影</p>
+            <p className="mt-0.5 text-[12px] text-warning-700">{s.shaderSupport.message}</p>
           </div>
         )}
 
@@ -98,13 +98,13 @@ export default function Packs() {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && s.search()}
             placeholder={`搜索 ${typeLabels[s.type]}(Modrinth)...`}
-            className="flex-1 rounded-[12px] border border-divider bg-white px-4 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
+            className="flex-1 rounded-[12px] border border-divider bg-card px-4 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
           />
           <motion.button
             whileTap={{ scale: 0.97 }}
             onClick={() => s.search()}
             disabled={s.searching}
-            className="flex items-center gap-2 rounded-[12px] bg-accent px-4 py-2.5 text-[13.5px] font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-40"
+            className="flex items-center gap-2 rounded-[12px] bg-accent px-4 py-2.5 text-[13.5px] font-semibold text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-40"
           >
             {s.searching ? <Loader2 size={15} className="animate-spin" /> : <Search size={15} />}
             搜索
@@ -125,9 +125,9 @@ export default function Packs() {
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.03 * i, duration: 0.25, ease }}
-                className="flex items-center gap-3 rounded-[14px] bg-white px-4 py-3 shadow-card"
+                className="flex items-center gap-3 rounded-[14px] bg-card px-4 py-3 shadow-card"
               >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[12px] bg-[#e8f5e9]">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[12px] bg-nav-active">
                   {hit.icon_url ? (
                     <img src={hit.icon_url} alt="" className="h-full w-full object-cover" />
                   ) : (
@@ -142,7 +142,7 @@ export default function Packs() {
                   whileTap={{ scale: 0.97 }}
                   onClick={() => s.openVersions(hit)}
                   disabled={s.installing}
-                  className="flex shrink-0 items-center gap-1.5 rounded-[10px] bg-accent px-3 py-1.5 text-[12px] font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-40"
+                  className="flex shrink-0 items-center gap-1.5 rounded-[10px] bg-accent px-3 py-1.5 text-[12px] font-semibold text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-40"
                 >
                   <Plus size={14} strokeWidth={2.4} />
                   添加
@@ -158,7 +158,7 @@ export default function Packs() {
             已安装 {typeLabels[s.type]}({s.packs.length})
           </h2>
           {s.packs.length === 0 && !s.loading ? (
-            <div className="mt-3 flex flex-col items-center gap-2 rounded-[16px] bg-white py-10 shadow-card">
+            <div className="mt-3 flex flex-col items-center gap-2 rounded-[16px] bg-card py-10 shadow-card">
               <Package size={24} className="text-ink-3" strokeWidth={1.5} />
               <p className="text-[13px] text-ink-3">
                 目录中没有 {typeLabels[s.type]},可以放到实例的 {s.type === "shaderpack" ? "shaderpacks" : "resourcepacks"} 目录
@@ -176,7 +176,7 @@ export default function Packs() {
                     exit={{ opacity: 0, scale: 0.97 }}
                     transition={{ delay: 0.03 * i, duration: 0.25, ease }}
                     className={`flex items-center gap-3 rounded-[12px] border px-3.5 py-2.5 ${
-                      pack.enabled ? "border-divider bg-white" : "border-dashed border-ink-3/40 bg-black/[0.02] opacity-70"
+                      pack.enabled ? "border-divider bg-card" : "border-dashed border-ink-3/40 bg-hover opacity-70"
                     }`}
                   >
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-badge-bg">
@@ -188,19 +188,19 @@ export default function Packs() {
                     <button
                       onClick={() => s.toggle(pack)}
                       className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${
-                        pack.enabled ? "bg-accent" : "bg-black/[0.12]"
+                        pack.enabled ? "bg-accent" : "bg-hover"
                       }`}
                       aria-label={pack.enabled ? "禁用" : "启用"}
                     >
                       <span
-                        className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+                        className={`absolute top-0.5 h-5 w-5 rounded-full bg-card shadow transition-all ${
                           pack.enabled ? "left-[18px]" : "left-0.5"
                         }`}
                       />
                     </button>
                     <button
                       onClick={() => s.remove(pack)}
-                      className="shrink-0 rounded-[8px] border border-divider p-1.5 text-ink-3 transition-colors hover:bg-red-50 hover:text-red-500"
+                      className="shrink-0 rounded-[8px] border border-divider p-1.5 text-ink-3 transition-colors hover:bg-danger-50 hover:text-danger-500"
                       aria-label="删除"
                     >
                       <Trash2 size={13} />
@@ -229,7 +229,7 @@ export default function Packs() {
                 exit={{ opacity: 0, scale: 0.95, y: 8 }}
                 transition={{ duration: 0.28, ease }}
                 onClick={(e) => e.stopPropagation()}
-                className="w-[440px] rounded-[20px] bg-white p-6 shadow-[0_24px_64px_rgba(0,0,0,0.16)]"
+                className="w-[440px] rounded-[20px] bg-card p-6 shadow-[0_24px_64px_rgba(0,0,0,0.16)]"
               >
                 <div className="flex items-center justify-between">
                   <div>
@@ -242,7 +242,7 @@ export default function Packs() {
                   </div>
                   <button
                     onClick={s.closeVersions}
-                    className="rounded-full p-1.5 text-ink-3 transition-colors hover:bg-black/[0.05]"
+                    className="rounded-full p-1.5 text-ink-3 transition-colors hover:bg-hover"
                     aria-label="关闭"
                   >
                     <X size={16} />
@@ -265,7 +265,7 @@ export default function Packs() {
                           key={v.id}
                           onClick={() => s.install(v)}
                           disabled={s.installing}
-                          className="flex items-center gap-3 rounded-[12px] border border-divider px-3.5 py-3 text-left transition-colors hover:bg-black/[0.03] disabled:opacity-50"
+                          className="flex items-center gap-3 rounded-[12px] border border-divider px-3.5 py-3 text-left transition-colors hover:bg-hover disabled:opacity-50"
                         >
                           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-badge-bg">
                             {s.installing ? (
@@ -291,7 +291,7 @@ export default function Packs() {
                 </div>
 
                 {s.installError && (
-                  <p className="mt-3 rounded-[10px] bg-red-50 px-3.5 py-2.5 text-[12.5px] text-red-600">
+                  <p className="mt-3 rounded-[10px] bg-danger-50 px-3.5 py-2.5 text-[12.5px] text-danger-600">
                     安装失败:{s.installError}
                   </p>
                 )}

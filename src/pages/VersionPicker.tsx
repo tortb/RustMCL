@@ -72,7 +72,7 @@ export default function VersionPicker() {
         </div>
         <button
           onClick={() => load(true)}
-          className="rounded-btn bg-accent px-4 py-2 text-[13px] font-medium text-white shadow-card transition-transform duration-100 active:scale-[0.97]"
+          className="rounded-btn bg-accent px-4 py-2 text-[13px] font-medium text-on-accent shadow-card transition-transform duration-100 active:scale-[0.97]"
         >
           刷新
         </button>
@@ -92,7 +92,7 @@ export default function VersionPicker() {
               onClick={() => setFilter(f.key)}
               className={`rounded-[8px] px-3.5 py-1.5 text-[13px] transition-colors duration-150 ${
                 filter === f.key
-                  ? "bg-accent font-medium text-white"
+                  ? "bg-accent font-medium text-on-accent"
                   : "text-ink-2 hover:text-ink"
               }`}
             >
@@ -116,7 +116,7 @@ export default function VersionPicker() {
           </div>
         ) : error ? (
           <div className="rounded-card bg-card p-6 text-center shadow-card">
-            <p className="text-[13.5px] text-red-500">{error}</p>
+            <p className="text-[13.5px] text-danger-500">{error}</p>
           </div>
         ) : filtered.length === 0 ? (
           <div className="rounded-card bg-card p-6 text-center shadow-card">

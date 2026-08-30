@@ -61,7 +61,7 @@ export default function Downloads() {
   const pct = s.progress ? Math.round((s.progress.current / s.progress.total) * 100) : 0;
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#f3f4f6] px-6 py-8">
+    <div className="flex-1 overflow-y-auto bg-bg px-6 py-8">
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -76,7 +76,7 @@ export default function Downloads() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.06, duration: 0.35, ease }}
-          className="mt-6 rounded-[16px] bg-white p-6 shadow-card"
+          className="mt-6 rounded-[16px] bg-card p-6 shadow-card"
         >
           <label className="text-[13px] font-medium text-ink-2">Minecraft 版本</label>
           <div className="mt-2 flex items-center gap-3">
@@ -92,7 +92,7 @@ export default function Downloads() {
               whileTap={{ scale: 0.97 }}
               onClick={s.startDownload}
               disabled={downloading || s.runState === "running"}
-              className="flex items-center gap-2 rounded-[12px] bg-accent px-5 py-2.5 text-[14px] font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
+              className="flex items-center gap-2 rounded-[12px] bg-accent px-5 py-2.5 text-[14px] font-semibold text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-50"
             >
               {downloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} strokeWidth={2.2} />}
               {downloading ? "下载中" : "下载资源"}
@@ -110,7 +110,7 @@ export default function Downloads() {
                   {s.progress.current}/{s.progress.total} · {pct}%
                 </span>
               </div>
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-black/[0.06]">
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-hover">
                 <motion.div
                   className="h-full rounded-full bg-accent"
                   animate={{ width: `${pct}%` }}
@@ -127,7 +127,7 @@ export default function Downloads() {
             </div>
           )}
           {s.dlState === "error" && (
-            <div className="mt-4 flex items-start gap-2 rounded-[10px] bg-red-50 px-3.5 py-2.5 text-[13px] text-red-600">
+            <div className="mt-4 flex items-start gap-2 rounded-[10px] bg-danger-50 px-3.5 py-2.5 text-[13px] text-danger-600">
               <XCircle size={16} className="mt-0.5 shrink-0" />
               <span className="break-all">{s.dlError}</span>
             </div>
@@ -139,7 +139,7 @@ export default function Downloads() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.12, duration: 0.35, ease }}
-          className="mt-4 rounded-[16px] bg-white p-6 shadow-card"
+          className="mt-4 rounded-[16px] bg-card p-6 shadow-card"
         >
           <div className="flex items-center justify-between">
             <div>
@@ -152,7 +152,7 @@ export default function Downloads() {
               whileTap={{ scale: 0.97 }}
               onClick={s.startLaunch}
               disabled={s.dlState !== "done" || s.runState === "running"}
-              className="flex items-center gap-2 rounded-[12px] bg-accent px-5 py-2.5 text-[14px] font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-40"
+              className="flex items-center gap-2 rounded-[12px] bg-accent px-5 py-2.5 text-[14px] font-semibold text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-40"
             >
               {s.runState === "running" ? (
                 <Loader2 size={16} className="animate-spin" />
@@ -174,19 +174,19 @@ export default function Downloads() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.18, duration: 0.35, ease }}
-          className="mt-4 overflow-hidden rounded-[16px] bg-[#1a1a1a] shadow-card"
+          className="mt-4 overflow-hidden rounded-[16px] bg-terminal-bg shadow-card"
         >
           <div className="flex items-center gap-2 border-b border-white/[0.06] px-4 py-2.5">
-            <Terminal size={14} className="text-white/40" />
-            <span className="text-[12px] font-medium text-white/50">游戏日志</span>
-            <span className="ml-auto text-[11px] text-white/30">{s.logs.length} 行</span>
+            <Terminal size={14} className="text-on-accent/40" />
+            <span className="text-[12px] font-medium text-on-accent/50">游戏日志</span>
+            <span className="ml-auto text-[11px] text-on-accent/30">{s.logs.length} 行</span>
           </div>
-          <div ref={logRef} className="h-64 overflow-y-auto px-4 py-3 font-mono text-[12px] leading-relaxed text-[#d4d4d4]">
+          <div ref={logRef} className="h-64 overflow-y-auto px-4 py-3 font-mono text-[12px] leading-relaxed text-terminal-text">
             {s.logs.length === 0 ? (
-              <p className="text-white/25">暂无日志,启动后在此显示游戏输出…</p>
+              <p className="text-on-accent/25">暂无日志,启动后在此显示游戏输出…</p>
             ) : (
               s.logs.map((line, i) => (
-                <p key={i} className={line.startsWith("[RustMCL]") ? "text-[#7cb342]" : ""}>
+                <p key={i} className={line.startsWith("[RustMCL]") ? "text-terminal-accent" : ""}>
                   {line || "\u00a0"}
                 </p>
               ))
