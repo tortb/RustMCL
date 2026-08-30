@@ -31,8 +31,23 @@ pub fn detect_java() -> Result<Option<String>, String> {
     Ok(version)
 }
 
+/// 返回"实际用于启动"的 Java 版本:按应用配置解析 java 路径
+/// (auto_detect 走 PATH,否则用 default_java_path),再执行 `-version` 解析版本号。
+#[tauri::command]
+pub fn get_java_version(state: State<'_, AppState>) -> Result<Option<String>, String> {
+    let cfg = AppConfig::load_or_create(&state.config_path).map_err(|e| e.to_string())?;
+    let java_path = cfg.java_path();
+    let output = std::process::Command::new(&java_path)
+        .arg("-version")
+        .output()
+        .map_err(|e| format!("无法执行 {java_path} -version: {e}"))?;
+    // java -version 输出到 stderr
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    Ok(extract_version(&stderr))
+}
+
 /// 从 `-version` 输出中提取引号内的版本号
-fn extract_version(out: &str) -> Option<String> {
+pub(crate) fn extract_version(out: &str) -> Option<String> {
     let first = out.lines().next()?;
     let start = first.find('"')? + 1;
     let end = first[start..].find('"')? + start;

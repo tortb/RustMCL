@@ -229,6 +229,11 @@ export function detectJava(): Promise<string | null> {
   return invoke<string | null>("detect_java");
 }
 
+/** 返回实际用于启动的 Java 版本(按应用配置解析 java 路径后检测) */
+export function getJavaVersion(): Promise<string | null> {
+  return invoke<string | null>("get_java_version");
+}
+
 // ---------- 下载镜像 ----------
 
 /** 列出可用镜像源(官方 / BMCLAPI / MCBBS / 自定义) */

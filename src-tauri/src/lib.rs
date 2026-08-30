@@ -134,6 +134,7 @@ pub fn run() {
             commands::config::get_app_config,
             commands::config::update_app_config,
             commands::config::detect_java,
+            commands::config::get_java_version,
             commands::mirror::list_mirrors,
             commands::mirror::test_mirror_speed,
             commands::mirror::test_all_mirror_speed,
