@@ -2,6 +2,8 @@ import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { Play, HardDrive, Coffee, MoreHorizontal, Boxes, AlertTriangle, Pencil } from "lucide-react";
 import { useInstanceStore } from "../stores/instance";
+import { useAccountStore } from "../stores/account";
+import type { PageKey } from "../App";
 import type { InstanceDetail, Loader } from "../lib/types";
 import backgroundUrl from "../assets/background.png";
 
@@ -45,7 +47,7 @@ function SkeletonCard() {
   );
 }
 
-export default function Home() {
+export default function Home({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
   const s = useInstanceStore();
 
   useEffect(() => {
@@ -56,6 +58,23 @@ export default function Home() {
 
   const latestVersion = s.versions[0]?.id ?? "1.21";
   const latestLoader = "原版";
+
+  // 英雄区"启动":有实例则启动最近的一个(走登录门禁),否则跳转到实例页
+  const handleHeroLaunch = () => {
+    const first = s.instances[0];
+    if (!first) {
+      onNavigate("instances");
+      return;
+    }
+    // 未登录:先引导登录,不发起实际启动
+    if (!useAccountStore.getState().active) {
+      useAccountStore.getState().openLogin();
+      return;
+    }
+    s.launch(first.id);
+    // 跳转到实例页,让用户看到资源下载进度与运行日志(Home 不渲染这些反馈)
+    onNavigate("instances");
+  };
 
   return (
     <div className="flex-1 overflow-y-auto bg-[#f3f4f6]">
@@ -90,6 +109,7 @@ export default function Home() {
             {latestLoader}
           </div>
           <button
+            onClick={handleHeroLaunch}
             className="mt-6 flex items-center gap-2 rounded-[12px] bg-[#7cb342] px-7 py-3 text-[15px] font-semibold text-white shadow-lg transition-all duration-150 hover:bg-[#689f38] active:scale-[0.97]"
             style={{ boxShadow: "0 4px 14px rgba(124,179,66,0.35)" }}
           >
@@ -145,7 +165,7 @@ export default function Home() {
         {!s.loading && !s.error && s.instances.length > 0 && (
           <div className="flex flex-col gap-3">
             {s.instances.map((inst, i) => (
-              <InstanceRow key={inst.id} inst={inst} index={i} />
+              <InstanceRow key={inst.id} inst={inst} index={i} onNavigate={onNavigate} />
             ))}
           </div>
         )}
@@ -158,7 +178,15 @@ export default function Home() {
   );
 }
 
-function InstanceRow({ inst, index }: { inst: InstanceDetail; index: number }) {
+function InstanceRow({
+  inst,
+  index,
+  onNavigate,
+}: {
+  inst: InstanceDetail;
+  index: number;
+  onNavigate: (p: PageKey) => void;
+}) {
   const loader = inst.loader && inst.loader !== "vanilla" ? inst.loader : null;
   const memory = inst.config.jvm.max_memory;
   return (
@@ -195,12 +223,14 @@ function InstanceRow({ inst, index }: { inst: InstanceDetail; index: number }) {
 
       <div className="ml-6 flex items-center gap-2">
         <button
+          onClick={() => onNavigate("instances")}
           className="flex h-9 w-9 items-center justify-center rounded-full border border-divider text-ink-2 transition-colors hover:bg-gray-50 hover:text-ink"
           aria-label="编辑实例"
         >
           <Pencil size={14} />
         </button>
         <button
+          onClick={() => onNavigate("instances")}
           className="flex h-9 w-9 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-gray-50 hover:text-ink-2"
           aria-label="更多"
         >

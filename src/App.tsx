@@ -95,7 +95,7 @@ export default function App() {
             transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
             className="flex h-full flex-1"
           >
-            {page === "home" && <Home />}
+            {page === "home" && <Home onNavigate={setPage} />}
             {page === "instances" && <Instances />}
             {page === "downloads" && <Downloads />}
             {page === "mods" && <Mods />}

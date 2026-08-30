@@ -78,6 +78,21 @@ pub(crate) fn spawn_instance_launch(
     instance_id: String,
     extra_game_args: Vec<String>,
 ) -> Result<(), String> {
+    // 登录门禁:没有激活账号(微软或离线)时阻止启动,避免用空账号拉起游戏进程。
+    // 应在 spawn 之前校验,否则后台任务会先走一遍资源下载才报"没账号",体验差。
+    {
+        let conn = state
+            .db
+            .lock()
+            .map_err(|e| format!("数据库锁获取失败: {e}"))?;
+        if Repository::get_active_account(&conn)
+            .map_err(|e| e.to_string())?
+            .is_none()
+        {
+            return Err("未登录账号,无法启动游戏。请先在左下角登录(微软或离线账号)".into());
+        }
+    }
+
     let client = state.client.clone();
     let data_dir = state.data_dir.clone();
     let config_path = state.config_path.clone();

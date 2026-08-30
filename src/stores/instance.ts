@@ -24,6 +24,7 @@ import type {
   ModpackProgress,
   VersionInfo,
 } from "../lib/types";
+import { useAccountStore } from "./account";
 
 interface InstanceStore {
   instances: InstanceDetail[];
@@ -190,6 +191,11 @@ export const useInstanceStore = create<InstanceStore>((set, get) => ({
 
   launch: async (id) => {
     if (get().runningId) return;
+    // 登录门禁:未登录时不发起实际启动,改为弹出登录引导(选择微软或离线账号)
+    if (!useAccountStore.getState().active) {
+      useAccountStore.getState().openLogin();
+      return;
+    }
     set({ runningId: id, logs: [] });
     get().appendLog(`[RustMCL] 正在启动实例 ${id.slice(0, 8)} ...`);
     try {
