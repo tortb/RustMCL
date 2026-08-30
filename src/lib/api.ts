@@ -99,6 +99,16 @@ export function launchInstance(id: string): Promise<void> {
   return invoke("launch_instance", { instanceId: id });
 }
 
+/** 创建实例时预下载该版本共享原版资源,进度走 download-progress,结束走 download-finished */
+export function prepareInstance(id: string): Promise<void> {
+  return invoke("prepare_instance", { instanceId: id });
+}
+
+/** 取消创建实例时的资源下载并清理 .part 残留 */
+export function cancelInstanceDownload(id: string): Promise<void> {
+  return invoke("cancel_instance_download", { instanceId: id });
+}
+
 /** 查询指定 MC 版本可用的最新加载器版本(fabric/quilt) */
 export function getLatestLoaderVersion(
   mcVersion: string,

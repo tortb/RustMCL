@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import {
+  cancelInstanceDownload,
   createInstance,
   deleteInstance,
   exportModpack,
@@ -13,9 +14,11 @@ import {
   listForgeVersions,
   listInstances,
   listVersions,
+  prepareInstance,
   updateInstance,
 } from "../lib/api";
 import type {
+  DownloadFinished,
   DownloadProgress,
   ForgeVersionInfo,
   InstanceDetail,
@@ -56,6 +59,11 @@ interface InstanceStore {
   installProgress: DownloadProgress | null;
   installError: string;
 
+  // 创建实例时的资源预下载(创建弹窗内进度)
+  creatingId: string | null;
+  createProgress: DownloadProgress | null;
+  createError: string;
+
   // 整合包导入/导出
   modpackImportingId: string | null;
   modpackProgress: ModpackProgress | null;
@@ -68,11 +76,15 @@ interface InstanceStore {
   openEdit: (inst: InstanceDetail) => void;
   closeModal: () => void;
   save: (input: InstanceInput) => Promise<void>;
+  createAndPrepare: (input: InstanceInput) => Promise<void>;
+  cancelCreate: (id: string) => Promise<void>;
+  handleCreateFinished: (e: DownloadFinished) => Promise<void>;
   remove: (id: string) => Promise<void>;
   launch: (id: string) => Promise<void>;
   appendLog: (line: string) => void;
   setRunning: (id: string | null) => void;
   setLaunchProgress: (p: DownloadProgress | null) => void;
+  setCreateProgress: (p: DownloadProgress | null) => void;
   setInstalling: (id: string | null) => void;
   setInstallProgress: (p: DownloadProgress | null) => void;
   setInstallError: (e: string) => void;
@@ -102,6 +114,10 @@ export const useInstanceStore = create<InstanceStore>((set, get) => ({
   installingId: null,
   installProgress: null,
   installError: "",
+
+  creatingId: null,
+  createProgress: null,
+  createError: "",
 
   modpackImportingId: null,
   modpackProgress: null,
@@ -149,42 +165,81 @@ export const useInstanceStore = create<InstanceStore>((set, get) => ({
 
   save: async (input) => {
     const editing = get().editing;
-    let detail: InstanceDetail;
     if (editing) {
-      detail = await updateInstance(editing.id, input);
-    } else {
-      // 创建:loader 非 vanilla 且未指定版本时自动解析最新加载器版本
-      const isModded = input.loader !== undefined && input.loader !== "vanilla";
-      const loaderVersion =
-        isModded && !input.loader_version && input.mc_version
-          ? await getLatestLoaderVersion(input.mc_version, input.loader!)
-          : (input.loader_version ?? "");
-      detail = await createInstance({
-        ...input,
-        loader_version: loaderVersion || undefined,
-      });
+      await updateInstance(editing.id, input);
+      await get().loadInstances();
+      set({ modalOpen: false, editing: null });
+      return;
     }
-    await get().loadInstances();
-    set({ modalOpen: false, editing: null });
+    // 创建:走"创建 + 资源预下载"流程,弹窗经 progress 事件驱动,由 download-finished 收尾
+    await get().createAndPrepare(input);
+  },
 
-    // 非原版实例:后台安装加载器并展示进度(Fabric/Quilt 走 meta,Forge 走 installer+处理器)
+  createAndPrepare: async (input) => {
+    // loader 非 vanilla 且未指定版本时自动解析最新加载器版本
+    const isModded = input.loader !== undefined && input.loader !== "vanilla";
+    const loaderVersion =
+      isModded && !input.loader_version && input.mc_version
+        ? await getLatestLoaderVersion(input.mc_version, input.loader!)
+        : (input.loader_version ?? "");
+    const detail = await createInstance({
+      ...input,
+      loader_version: loaderVersion || undefined,
+    });
+    await get().loadInstances();
+    set({ creatingId: detail.id, createProgress: null, createError: "" });
+
+    // 非原版实例:后台安装加载器并展示进度(卡片 installingId)
     const meta = detail.config.meta;
     if (meta.loader === "fabric" || meta.loader === "quilt") {
       set({ installingId: detail.id, installProgress: null, installError: "" });
-      try {
-        await installLoader(meta.mc_version, meta.loader, meta.loader_version || "");
-      } catch (e) {
+      installLoader(meta.mc_version, meta.loader, meta.loader_version || "").catch((e) => {
         set({ installError: String(e) });
         set({ installingId: null, installProgress: null });
-      }
+      });
     } else if (meta.loader === "forge") {
       set({ installingId: detail.id, installProgress: null, installError: "" });
-      try {
-        await installForge(meta.mc_version, meta.loader_version || "");
-      } catch (e) {
+      installForge(meta.mc_version, meta.loader_version || "").catch((e) => {
         set({ installError: String(e) });
         set({ installingId: null, installProgress: null });
-      }
+      });
+    }
+
+    // 触发资源预下载(命令立即返回,后台执行,进度走 download-progress,结束走 download-finished)
+    try {
+      await prepareInstance(detail.id);
+    } catch (e) {
+      get().handleCreateFinished({ ok: false, error: String(e), cancelled: false });
+    }
+  },
+
+  cancelCreate: async (id) => {
+    try {
+      await cancelInstanceDownload(id);
+    } catch {
+      // ignore
+    }
+    try {
+      await deleteInstance(id);
+    } catch {
+      // ignore
+    }
+    await get().loadInstances();
+    set({ creatingId: null, createProgress: null, createError: "", modalOpen: false, editing: null });
+  },
+
+  handleCreateFinished: async (e) => {
+    const id = get().creatingId;
+    if (!id) return;
+    if (e.ok) {
+      await get().loadInstances();
+      set({ creatingId: null, createProgress: null, createError: "", modalOpen: false, editing: null });
+    } else if (e.cancelled) {
+      // 实例已在 cancelCreate 中删除,仅清状态
+      set({ creatingId: null, createProgress: null, createError: "", modalOpen: false, editing: null });
+    } else {
+      // 失败:保留弹窗展示错误,用户可重试或关闭(关闭走 cancelCreate 清理)
+      set({ createError: e.error });
     }
   },
 
@@ -213,6 +268,7 @@ export const useInstanceStore = create<InstanceStore>((set, get) => ({
   appendLog: (line) => set((s) => ({ logs: [...s.logs.slice(-499), line] })),
   setRunning: (id) => set({ runningId: id }),
   setLaunchProgress: (p) => set({ launchProgress: p }),
+  setCreateProgress: (p) => set({ createProgress: p }),
   setInstalling: (id) => set({ installingId: id }),
   setInstallProgress: (p) => set({ installProgress: p }),
   setInstallError: (e) => set({ installError: e }),

@@ -6,6 +6,7 @@
 use tauri::{AppHandle, Emitter, State};
 
 use crate::core::loader;
+use crate::error::RmclError;
 use crate::AppState;
 
 use super::download::{run_download_for_version, DownloadFinishedEvent};
@@ -57,6 +58,7 @@ pub fn install_loader(
                 max_concurrent,
                 app.clone(),
                 &mirror,
+                None,
             )
             .await
         })
@@ -68,10 +70,12 @@ pub fn install_loader(
                 Ok(()) => DownloadFinishedEvent {
                     ok: true,
                     error: String::new(),
+                    cancelled: false,
                 },
                 Err(e) => DownloadFinishedEvent {
                     ok: false,
                     error: e.to_string(),
+                    cancelled: matches!(e, RmclError::Cancelled),
                 },
             },
         );

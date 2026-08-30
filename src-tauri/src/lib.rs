@@ -4,8 +4,10 @@ mod core;
 mod db;
 mod error;
 
+use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::Mutex;
+use std::sync::atomic::AtomicBool;
+use std::sync::{Arc, Mutex};
 
 pub use error::RmclError;
 
@@ -19,6 +21,8 @@ pub struct AppState {
     pub max_concurrent: u32,
     /// 当前生效的下载镜像(可在设置页切换)
     pub mirror: Mutex<crate::core::mirror::Mirror>,
+    /// 创建实例时资源下载的取消令牌(instance_id → flag);取消时置位以中止下载
+    pub cancel_tokens: Mutex<HashMap<String, Arc<AtomicBool>>>,
 }
 
 impl AppState {
@@ -93,6 +97,7 @@ pub fn run() {
                 &app_config.download.mirror,
                 app_config.download.mirror_custom_base.as_deref(),
             )),
+            cancel_tokens: Mutex::new(HashMap::new()),
         })
         .invoke_handler(tauri::generate_handler![
             commands::get_app_info,
@@ -105,6 +110,8 @@ pub fn run() {
             commands::account::logout_account,
             commands::version::list_versions,
             commands::download::download_version,
+            commands::download::prepare_instance,
+            commands::download::cancel_instance_download,
             commands::launch::launch_version,
             commands::launch::launch_instance,
             commands::instance::create_instance,

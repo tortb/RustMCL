@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 import {
   Home,
   Box,
-  Download,
   Puzzle,
   Coffee,
   Settings,
@@ -21,7 +20,6 @@ import logoUrl from "../assets/logo.png";
 const navItems: { key: PageKey; label: string; icon: React.ElementType }[] = [
   { key: "home", label: "主页", icon: Home },
   { key: "instances", label: "实例", icon: Box },
-  { key: "downloads", label: "下载", icon: Download },
   { key: "mods", label: "Mod", icon: Puzzle },
   { key: "packs", label: "资源包", icon: Image },
   { key: "servers", label: "服务器", icon: Server },

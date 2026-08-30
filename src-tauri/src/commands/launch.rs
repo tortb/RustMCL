@@ -146,6 +146,7 @@ pub(crate) fn spawn_instance_launch(
             max_concurrent,
             app.clone(),
             &mirror,
+            None,
         )
         .await
         {
@@ -170,6 +171,7 @@ pub(crate) fn spawn_instance_launch(
             DownloadFinishedEvent {
                 ok: true,
                 error: String::new(),
+                cancelled: false,
             },
         );
         // 2. 启动:游戏目录使用实例专属目录(保证 mods/存档隔离)

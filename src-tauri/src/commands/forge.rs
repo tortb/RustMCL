@@ -64,10 +64,12 @@ pub fn install_forge(
                 Ok(()) => DownloadFinishedEvent {
                     ok: true,
                     error: String::new(),
+                    cancelled: false,
                 },
                 Err(e) => DownloadFinishedEvent {
                     ok: false,
                     error: e.to_string(),
+                    cancelled: matches!(e, RmclError::Cancelled),
                 },
             },
         );
@@ -103,7 +105,7 @@ async fn install_forge_inner(
     };
 
     // 2. 下载合并版本的全部依赖(client.jar + libraries + natives + assets),供 processors 使用
-    run_download_for_version(&client, data_dir, &version, retry_times, max_concurrent, app.clone(), mirror).await?;
+    run_download_for_version(&client, data_dir, &version, retry_times, max_concurrent, app.clone(), mirror, None).await?;
 
     // 3. 旧版无需二进制补丁处理器,直接完成
     if is_legacy(mc_version) {
@@ -126,6 +128,7 @@ async fn install_forge_inner(
             items,
             max_concurrent,
             retry_times,
+            None,
             move |p| {
                 let _ = app2.emit(
                     "download-progress",

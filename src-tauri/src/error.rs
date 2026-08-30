@@ -19,6 +19,9 @@ pub enum RmclError {
     Json(#[from] serde_json::Error),
     #[error("压缩包错误: {0}")]
     Zip(#[from] zip::result::ZipError),
+    /// 用户主动中止的下载(非网络/校验失败),用于区分"取消"与"失败"
+    #[error("下载已取消")]
+    Cancelled,
     #[error("{0}")]
     Other(String),
 }

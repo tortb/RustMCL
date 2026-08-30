@@ -83,6 +83,8 @@ export interface DownloadProgress {
 export interface DownloadFinished {
   ok: boolean;
   error: string;
+  /** 是否为用户主动取消(区别于失败);创建实例流程据此清理 */
+  cancelled?: boolean;
 }
 
 export interface LoaderInstallFinished {

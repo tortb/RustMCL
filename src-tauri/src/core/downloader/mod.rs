@@ -5,7 +5,7 @@ pub mod asset;
 pub mod library;
 
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
 
 use futures_util::StreamExt;
@@ -116,13 +116,15 @@ async fn fetch_to_file(client: &reqwest::Client, url: &str, dest: &Path) -> Resu
     Ok(())
 }
 
-/// 并发下载整个列表,每个文件完成后回调一次进度;返回整体统计(缓存命中/实际下载)
+/// 并发下载整个列表,每个文件完成后回调一次进度;返回整体统计(缓存命中/实际下载)。
+/// `cancel` 提供取消令牌(为 None 时行为与旧版一致):每个文件开始前检查,已置位则返回 `Cancelled`。
 pub async fn download_many<F>(
     client: &reqwest::Client,
     mirror: &Mirror,
     items: Vec<DownloadItem>,
     max_concurrent: usize,
     retry_times: u32,
+    cancel: Option<Arc<AtomicBool>>,
     on_progress: F,
 ) -> Result<DownloadStats, RmclError>
 where
@@ -147,7 +149,12 @@ where
         let done = done.clone();
         let cached = cached.clone();
         let downloaded = downloaded.clone();
+        let cancel = cancel.clone();
         handles.push(tokio::spawn(async move {
+            // 取消优先检查:已置位则跳过后续所有文件,尽快中止
+            if cancel.as_ref().map_or(false, |c| c.load(Ordering::SeqCst)) {
+                return Err(RmclError::Cancelled);
+            }
             let _permit = semaphore
                 .acquire()
                 .await

@@ -97,16 +97,18 @@ export default function Instances() {
           }
         }
       }),
-      // 加载器安装/启动时资源下载进度。区分:安装(installingId)与启动(runningId)两个来源
+      // 创建实例/加载器安装/启动时资源下载进度。区分三个来源:创建(creatingId)/安装(installingId)/启动(runningId)
       listen<DownloadProgress>("download-progress", (e) => {
         const st = useInstanceStore.getState();
-        if (st.installingId) st.setInstallProgress(e.payload);
+        if (st.creatingId) st.setCreateProgress(e.payload);
+        else if (st.installingId) st.setInstallProgress(e.payload);
         else if (st.runningId) st.setLaunchProgress(e.payload);
       }),
-      // 启动时资源下载完成:切回"启动中"状态(隐藏下载进度条)
-      listen<DownloadFinished>("download-finished", () => {
+      // 资源下载完成:启动路径隐藏进度条;创建实例路径据此收尾(成功关窗 / 取消清理 / 失败提示)
+      listen<DownloadFinished>("download-finished", (e) => {
         const st = useInstanceStore.getState();
         if (st.runningId) st.setLaunchProgress(null);
+        if (st.creatingId) st.handleCreateFinished(e.payload);
       }),
       listen<LoaderInstallFinished>("loader-install-finished", (e) => {
         const st = useInstanceStore.getState();
@@ -598,6 +600,13 @@ function InstanceModal() {
   const [jvmRec, setJvmRec] = useState<JvmRecommendation | null>(null);
   const [loadingRec, setLoadingRec] = useState(false);
 
+  // 创建实例时的资源预下载进度(弹窗内展示;创建中关闭按钮 = 取消并清理)
+  const creating = !!s.creatingId;
+  const cp = s.createProgress;
+  const cpPct = cp && cp.total > 0 ? Math.round((cp.current / cp.total) * 100) : 0;
+  const handleClose = () =>
+    creating && s.creatingId ? s.cancelCreate(s.creatingId) : s.closeModal();
+
   const handleApplyRecommend = async () => {
     setLoadingRec(true);
     try {
@@ -695,7 +704,7 @@ function InstanceModal() {
                 {editing ? "编辑实例" : "新建实例"}
               </h2>
               <button
-                onClick={s.closeModal}
+                onClick={handleClose}
                 className="rounded-full p-1.5 text-ink-3 transition-colors hover:bg-black/[0.05]"
                 aria-label="关闭"
               >
@@ -703,7 +712,45 @@ function InstanceModal() {
               </button>
             </div>
 
-            <div className="mt-5 flex flex-col gap-4">
+            {creating ? (
+              <div className="mt-5 flex flex-col gap-4">
+                {/* 创建实例:资源预下载进度,关闭 = 取消并清理 */}
+                <div className="flex items-center gap-2 text-[14px] font-semibold text-ink">
+                  <Loader2 size={16} className="animate-spin text-accent" />
+                  正在准备实例资源…
+                </div>
+                <p className="text-[12.5px] text-ink-3">
+                  下载该版本的共享资源(client / 库 / 资源文件),完成后即可启动
+                </p>
+                {cp && (
+                  <div>
+                    <div className="flex items-baseline justify-between gap-3 text-[12.5px] text-ink-2">
+                      <span className="truncate">
+                        {cp.phase === "core" ? "核心文件" : "资源文件"} · {cp.file}
+                      </span>
+                      <span className="ml-3 shrink-0 font-mono">
+                        {cp.current}/{cp.total} · {cpPct}%
+                      </span>
+                    </div>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-black/[0.06]">
+                      <div
+                        className="h-full rounded-full bg-accent transition-all duration-300"
+                        style={{ width: `${cpPct}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+                {s.createError && (
+                  <p className="rounded-[10px] bg-red-50 px-3.5 py-2.5 text-[12.5px] text-red-600">
+                    下载失败:{s.createError}
+                  </p>
+                )}
+                <p className="text-[11.5px] text-ink-3">
+                  关闭将取消下载并清理临时文件,已创建但未就绪的实例记录会被删除。
+                </p>
+              </div>
+            ) : (
+              <div className="mt-5 flex flex-col gap-4">
               <div>
                 <label className="text-[12.5px] font-medium text-ink-2">实例名称</label>
                 <input
@@ -844,23 +891,35 @@ function InstanceModal() {
                   {error}
                 </p>
               )}
-            </div>
+              </div>
+            )}
 
             <div className="mt-6 flex gap-3">
-              <button
-                onClick={submit}
-                disabled={saving}
-                className="flex flex-1 items-center justify-center gap-2 rounded-[12px] bg-accent py-2.5 text-[13.5px] font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
-              >
-                {saving && <Loader2 size={14} className="animate-spin" />}
-                {editing ? "保存修改" : "创建实例"}
-              </button>
-              <button
-                onClick={s.closeModal}
-                className="flex-1 rounded-[12px] border border-divider py-2.5 text-[13.5px] font-medium text-ink-2 transition-colors hover:bg-black/[0.03]"
-              >
-                取消
-              </button>
+              {creating ? (
+                <button
+                  onClick={() => s.creatingId && s.cancelCreate(s.creatingId)}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-[12px] border border-divider py-2.5 text-[13.5px] font-medium text-ink-2 transition-colors hover:bg-black/[0.03]"
+                >
+                  取消并清理
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={submit}
+                    disabled={saving}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-[12px] bg-accent py-2.5 text-[13.5px] font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
+                  >
+                    {saving && <Loader2 size={14} className="animate-spin" />}
+                    {editing ? "保存修改" : "创建实例"}
+                  </button>
+                  <button
+                    onClick={handleClose}
+                    className="flex-1 rounded-[12px] border border-divider py-2.5 text-[13.5px] font-medium text-ink-2 transition-colors hover:bg-black/[0.03]"
+                  >
+                    取消
+                  </button>
+                </>
+              )}
             </div>
           </motion.div>
         </motion.div>

@@ -335,7 +335,7 @@ mod tests {
         items.extend(crate::core::downloader::library::library_items(&version, &ctx, &libs));
         items.extend(crate::core::downloader::library::native_items(&version, &ctx, &libs));
         items.extend(processor_library_items(&contents, &data_dir, &mirror));
-        crate::core::downloader::download_many(&client, &mirror, items, 4, 2, |_| {}).await.unwrap();
+        crate::core::downloader::download_many(&client, &mirror, items, 4, 2, None, |_| {}).await.unwrap();
 
         // 4. 运行全部 java 处理器
         let java = std::env::var("JAVA").unwrap_or_else(|_| "java".into());
