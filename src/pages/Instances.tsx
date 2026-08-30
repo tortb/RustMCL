@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "framer-motion";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import {
@@ -37,14 +38,18 @@ import type {
 
 const ease = [0.32, 0.72, 0, 1] as const;
 
-const loaderLabels: Record<Loader, string> = {
-  vanilla: "原版",
+const LOADERS: Loader[] = ["vanilla", "forge", "fabric", "quilt"];
+const loaderLabels: Partial<Record<Loader, string>> = {
   forge: "Forge",
   fabric: "Fabric",
   quilt: "Quilt",
 };
 
+const loaderLabel = (l: Loader, t: (key: string) => string): string =>
+  l === "vanilla" ? t("common.vanilla") : loaderLabels[l] ?? l;
+
 export default function Instances() {
+  const { t } = useTranslation();
   const s = useInstanceStore();
   const [expanded, setExpanded] = useState<string | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
@@ -80,7 +85,7 @@ export default function Instances() {
     Promise.all([
       listen<GameLog>("game-log", (e) => s.appendLog(e.payload.line)),
       listen<GameExit>("game-exit", async (e) => {
-        s.appendLog(`[RustMCL] 游戏进程退出,退出码 ${e.payload.code}`);
+        s.appendLog(`[RustMCL] ${t("instances.logExit", { code: e.payload.code })}`);
         const instId = useInstanceStore.getState().runningId;
         s.setRunning(null);
         useInstanceStore.getState().setLaunchProgress(null);
@@ -147,13 +152,11 @@ export default function Instances() {
   const handleDelete = async (inst: InstanceDetail) => {
     // 运行中的实例禁止删除:游戏进程正占用实例目录,删除会导致运行异常
     if (s.runningId === inst.id) {
-      alert("该实例正在运行中,请先停止游戏后再删除。");
+      alert(t("instances.runningDeleteBlocked"));
       return;
     }
     if (
-      confirm(
-        `确定删除实例「${inst.name}」吗?\n\n此操作不可撤销,将删除该实例的数据库记录与全部目录(含 mod / 配置 / 存档)。`,
-      )
+      confirm(t("instances.deleteConfirm", { name: inst.name }))
     ) {
       await s.remove(inst.id);
     }
@@ -169,8 +172,8 @@ export default function Instances() {
       >
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-[24px] font-bold tracking-tight text-ink">实例</h1>
-            <p className="mt-1 text-[13px] text-ink-3">管理你的游戏实例,每个实例独立配置</p>
+            <h1 className="text-[24px] font-bold tracking-tight text-ink">{t("instances.title")}</h1>
+            <p className="mt-1 text-[13px] text-ink-3">{t("instances.subtitle")}</p>
           </div>
           <motion.button
             whileTap={{ scale: 0.97 }}
@@ -178,7 +181,7 @@ export default function Instances() {
             className="flex items-center gap-2 rounded-[12px] bg-accent px-4 py-2.5 text-[13.5px] font-semibold text-on-accent transition-colors hover:bg-accent-hover"
           >
             <Plus size={16} strokeWidth={2.4} />
-            新建实例
+            {t("instances.create")}
           </motion.button>
         </div>
 
@@ -191,7 +194,7 @@ export default function Instances() {
             className="mt-8 flex flex-col items-center gap-3 rounded-[16px] bg-card py-14 shadow-card"
           >
             <Box size={28} className="text-ink-3" strokeWidth={1.5} />
-            <p className="text-[13.5px] text-ink-3">还没有实例,点击右上角创建一个</p>
+            <p className="text-[13.5px] text-ink-3">{t("instances.empty")}</p>
           </motion.div>
         ) : (
           <div className="mt-6 flex flex-col gap-3">
@@ -219,7 +222,7 @@ export default function Instances() {
                         <div className="flex items-center gap-2">
                           <span className="text-[14.5px] font-semibold text-ink">{inst.name}</span>
                           <span className="rounded-full bg-badge-bg px-2 py-0.5 text-[11px] font-medium text-badge-text">
-                            {loaderLabels[(inst.loader ?? "vanilla") as Loader]}
+                            {loaderLabel((inst.loader ?? "vanilla") as Loader, t)}
                           </span>
                         </div>
                         <p className="mt-0.5 text-[12.5px] text-ink-3">
@@ -245,13 +248,13 @@ export default function Instances() {
                         ) : (
                           <Play size={13} fill="white" strokeWidth={0} />
                         )}
-                        {s.runningId === inst.id ? "启动中" : "启动"}
+                        {s.runningId === inst.id ? t("instances.launching") : t("common.start")}
                       </motion.button>
                       <motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={() => s.exportPack(inst.id)}
                         className="rounded-[10px] border border-divider p-2 text-ink-2 transition-colors hover:bg-hover"
-                        aria-label="导出整合包"
+                        aria-label={t("instances.exportPack")}
                       >
                         <Package size={14} />
                       </motion.button>
@@ -260,7 +263,7 @@ export default function Instances() {
                         onClick={() => s.importPack(inst.id)}
                         disabled={s.modpackImportingId !== null}
                         className="rounded-[10px] border border-divider p-2 text-ink-2 transition-colors hover:bg-hover disabled:opacity-40"
-                        aria-label="导入整合包"
+                        aria-label={t("instances.importPack")}
                       >
                         <Upload size={14} />
                       </motion.button>
@@ -268,7 +271,7 @@ export default function Instances() {
                         whileTap={{ scale: 0.95 }}
                         onClick={() => s.openEdit(inst)}
                         className="rounded-[10px] border border-divider p-2 text-ink-2 transition-colors hover:bg-hover"
-                        aria-label="编辑"
+                        aria-label={t("instances.edit")}
                       >
                         <Pencil size={14} />
                       </motion.button>
@@ -276,7 +279,7 @@ export default function Instances() {
                         whileTap={{ scale: 0.95 }}
                         onClick={() => handleDelete(inst)}
                         className="rounded-[10px] border border-divider p-2 text-ink-3 transition-colors hover:bg-danger-50 hover:text-danger-500"
-                        aria-label="删除"
+                        aria-label={t("instances.delete")}
                       >
                         <Trash2 size={14} />
                       </motion.button>
@@ -289,7 +292,9 @@ export default function Instances() {
                       <div className="flex items-center justify-between text-[12px]">
                         <span className="flex items-center gap-1.5 text-ink-2">
                           <Loader2 size={12} className="animate-spin text-accent" />
-                          正在安装 {loaderLabels[(inst.config.meta.loader ?? "vanilla") as Loader]}...
+                          {t("instances.installingLoader", {
+                            loader: loaderLabel((inst.config.meta.loader ?? "vanilla") as Loader, t),
+                          })}
                         </span>
                         {s.installProgress && (
                           <span className="text-ink-3">
@@ -308,7 +313,7 @@ export default function Instances() {
                         />
                       </div>
                       {s.installError && (
-                        <p className="mt-2 text-[12px] text-danger-500">安装失败:{s.installError}</p>
+                        <p className="mt-2 text-[12px] text-danger-500">{t("instances.installFailed", { error: s.installError })}</p>
                       )}
                     </div>
                   )}
@@ -319,7 +324,7 @@ export default function Instances() {
                       <div className="flex items-center justify-between text-[12px]">
                         <span className="flex items-center gap-1.5 text-ink-2">
                           <Loader2 size={12} className="animate-spin text-accent" />
-                          正在下载资源...
+                          {t("instances.downloadingResources")}
                         </span>
                         <span className="text-ink-3">
                           {s.launchProgress.current}/{s.launchProgress.total}
@@ -342,7 +347,7 @@ export default function Instances() {
                       <div className="flex items-center justify-between text-[12px]">
                         <span className="flex items-center gap-1.5 text-ink-2">
                           <Upload size={12} className="text-accent" />
-                          正在导入整合包...
+                          {t("instances.importingPack")}
                         </span>
                         {s.modpackProgress && (
                           <span className="text-ink-3">
@@ -381,39 +386,39 @@ export default function Instances() {
                       >
                         <div className="grid grid-cols-3 gap-4 border-t border-divider px-5 py-4 text-[12.5px]">
                           <div>
-                            <p className="text-ink-3">启动器</p>
+                            <p className="text-ink-3">{t("instances.launcher")}</p>
                             <p className="mt-1 font-medium text-ink">
-                              {loaderLabels[(inst.config.meta.loader ?? "vanilla") as Loader]}{" "}
+                              {loaderLabel((inst.config.meta.loader ?? "vanilla") as Loader, t)}{" "}
                               {inst.config.meta.loader_version}
                             </p>
                           </div>
                           <div>
-                            <p className="text-ink-3">游戏目录</p>
+                            <p className="text-ink-3">{t("instances.gameDir")}</p>
                             <p className="mt-1 break-all font-mono text-[11.5px] text-ink-2">
                               {inst.game_dir}
                             </p>
                           </div>
                           <div>
-                            <p className="text-ink-3">内存</p>
+                            <p className="text-ink-3">{t("instances.memory")}</p>
                             <p className="mt-1 font-medium text-ink">
                               {inst.config.jvm.min_memory} - {inst.config.jvm.max_memory} MB
                             </p>
                           </div>
                           <div>
-                            <p className="text-ink-3">分辨率</p>
+                            <p className="text-ink-3">{t("instances.resolution")}</p>
                             <p className="mt-1 font-medium text-ink">
                               {inst.config.game.resolution.width} ×{" "}
                               {inst.config.game.resolution.height}
                             </p>
                           </div>
                           <div>
-                            <p className="text-ink-3">全屏</p>
+                            <p className="text-ink-3">{t("instances.fullscreen")}</p>
                             <p className="mt-1 font-medium text-ink">
-                              {inst.config.game.fullscreen ? "是" : "否"}
+                              {inst.config.game.fullscreen ? t("common.yes") : t("common.no")}
                             </p>
                           </div>
                           <div>
-                            <p className="text-ink-3">创建时间</p>
+                            <p className="text-ink-3">{t("instances.createdAt")}</p>
                             <p className="mt-1 font-medium text-ink">
                               {new Date(inst.created_at * 1000).toLocaleDateString("zh-CN")}
                             </p>
@@ -443,12 +448,12 @@ export default function Instances() {
           >
             <div className="flex items-center justify-between">
               <span className="text-[13px] font-semibold text-ink">
-                {s.modpackResult.ok ? `导入成功:${s.modpackResult.name}` : "导入失败"}
+                {s.modpackResult.ok ? t("instances.importSuccess", { name: s.modpackResult.name }) : t("instances.importFailed")}
               </span>
               <button
                 onClick={() => s.setModpackResult(null)}
                 className="rounded-full p-1 text-ink-3 transition-colors hover:bg-hover"
-                aria-label="关闭"
+                aria-label={t("common.close")}
               >
                 <X size={14} />
               </button>
@@ -456,11 +461,11 @@ export default function Instances() {
             {s.modpackResult.ok ? (
               <>
                 <p className="mt-2 text-[12.5px] text-ink-2">
-                  已安装 {s.modpackResult.installed.length} 个文件
+                  {t("instances.installedCount", { count: s.modpackResult.installed.length })}
                 </p>
                 {s.modpackResult.failures.length > 0 && (
                   <div className="mt-2">
-                    <p className="text-[12.5px] font-medium text-danger-600">以下文件下载失败,可手动补齐:</p>
+                    <p className="text-[12.5px] font-medium text-danger-600">{t("instances.filesFailedToDownload")}</p>
                     <ul className="mt-1 list-inside list-disc text-[12px] text-danger-500">
                       {s.modpackResult.failures.map((f, i) => (
                         <li key={i}>{f}</li>
@@ -485,12 +490,12 @@ export default function Instances() {
           >
             <div className="flex items-center gap-2 border-b border-divider px-4 py-3">
               <AlertTriangle size={15} className="text-warning-500" />
-              <span className="text-[13px] font-semibold text-ink">崩溃诊断</span>
+              <span className="text-[13px] font-semibold text-ink">{t("instances.crashDiagnosis")}</span>
               {analyzing && <Loader2 size={13} className="animate-spin text-ink-3" />}
               <button
                 onClick={() => setDiagnosis(null)}
                 className="ml-auto rounded-full p-1 text-ink-3 transition-colors hover:bg-hover"
-                aria-label="关闭诊断"
+                aria-label={t("instances.closeDiagnosis")}
               >
                 <X size={14} />
               </button>
@@ -498,7 +503,7 @@ export default function Instances() {
 
             {!diagnosis.found ? (
               <div className="px-5 py-5 text-[13px] text-ink-2">
-                未在游戏目录中发现崩溃报告(crash-reports/)。可尝试再次启动复现。
+                {t("instances.crashNotFound")}
               </div>
             ) : (
               <div className="px-5 py-4">
@@ -532,10 +537,10 @@ export default function Instances() {
                     className="flex items-center gap-1.5 rounded-[10px] border border-divider px-3.5 py-2 text-[12.5px] font-medium text-ink-2 transition-colors hover:bg-hover"
                   >
                     <Copy size={13} />
-                    {copied ? "已复制" : "复制完整日志"}
+                    {copied ? t("instances.copied") : t("instances.copyLog")}
                   </button>
                   {diagnosis.truncated && (
-                    <span className="text-[11.5px] text-ink-3">日志过长,仅复制前 20 万字符</span>
+                    <span className="text-[11.5px] text-ink-3">{t("instances.logTruncated")}</span>
                   )}
                 </div>
 
@@ -559,8 +564,8 @@ export default function Instances() {
           >
             <div className="flex items-center gap-2 border-b border-white/[0.06] px-4 py-2.5">
               <Terminal size={14} className="text-on-accent/40" />
-              <span className="text-[12px] font-medium text-on-accent/50">运行日志</span>
-              <span className="ml-auto text-[11px] text-on-accent/30">{s.logs.length} 行</span>
+              <span className="text-[12px] font-medium text-on-accent/50">{t("instances.runLog")}</span>
+              <span className="ml-auto text-[11px] text-on-accent/30">{t("instances.logLines", { count: s.logs.length })}</span>
             </div>
             <div
               ref={logRef}
@@ -583,6 +588,7 @@ export default function Instances() {
 }
 
 function InstanceModal() {
+  const { t } = useTranslation();
   const s = useInstanceStore();
   const editing = s.editing;
 
@@ -649,15 +655,15 @@ function InstanceModal() {
 
   const submit = async () => {
     if (!name.trim()) {
-      setError("请填写实例名称");
+      setError(t("instances.errorNameRequired"));
       return;
     }
     if (!editing && !mcVersion) {
-      setError("请选择 Minecraft 版本");
+      setError(t("instances.errorMinecraftRequired"));
       return;
     }
     if (loader === "forge" && !forgeVersion) {
-      setError("请选择 Forge 版本");
+      setError(t("instances.errorForgeRequired"));
       return;
     }
     setSaving(true);
@@ -701,12 +707,12 @@ function InstanceModal() {
           >
             <div className="flex items-center justify-between">
               <h2 className="text-[18px] font-bold tracking-tight text-ink">
-                {editing ? "编辑实例" : "新建实例"}
+                {editing ? t("instances.editInstance") : t("instances.createInstance")}
               </h2>
               <button
                 onClick={handleClose}
                 className="rounded-full p-1.5 text-ink-3 transition-colors hover:bg-hover"
-                aria-label="关闭"
+                aria-label={t("common.close")}
               >
                 <X size={16} />
               </button>
@@ -717,16 +723,16 @@ function InstanceModal() {
                 {/* 创建实例:资源预下载进度,关闭 = 取消并清理 */}
                 <div className="flex items-center gap-2 text-[14px] font-semibold text-ink">
                   <Loader2 size={16} className="animate-spin text-accent" />
-                  正在准备实例资源…
+                  {t("instances.preparingResources")}
                 </div>
                 <p className="text-[12.5px] text-ink-3">
-                  下载该版本的共享资源(client / 库 / 资源文件),完成后即可启动
+                  {t("instances.preparingResourcesHint")}
                 </p>
                 {cp && (
                   <div>
                     <div className="flex items-baseline justify-between gap-3 text-[12.5px] text-ink-2">
                       <span className="truncate">
-                        {cp.phase === "core" ? "核心文件" : "资源文件"} · {cp.file}
+                        {cp.phase === "core" ? t("instances.coreFile") : t("instances.resourceFile")} · {cp.file}
                       </span>
                       <span className="ml-3 shrink-0 font-mono">
                         {cp.current}/{cp.total} · {cpPct}%
@@ -742,32 +748,32 @@ function InstanceModal() {
                 )}
                 {s.createError && (
                   <p className="rounded-[10px] bg-danger-50 px-3.5 py-2.5 text-[12.5px] text-danger-600">
-                    下载失败:{s.createError}
+                    {t("instances.downloadFailed", { error: s.createError })}
                   </p>
                 )}
                 <p className="text-[11.5px] text-ink-3">
-                  关闭将取消下载并清理临时文件,已创建但未就绪的实例记录会被删除。
+                  {t("instances.closeCancelHint")}
                 </p>
               </div>
             ) : (
               <div className="mt-5 flex flex-col gap-4">
               <div>
-                <label className="text-[12.5px] font-medium text-ink-2">实例名称</label>
+                <label className="text-[12.5px] font-medium text-ink-2">{t("instances.instanceName")}</label>
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="我的生存"
+                  placeholder={t("instances.namePlaceholder")}
                   className="mt-1.5 w-full rounded-[10px] border border-divider bg-card px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
                 />
               </div>
 
               {!editing && (
                 <div>
-                  <label className="text-[12.5px] font-medium text-ink-2">Minecraft 版本</label>
+                  <label className="text-[12.5px] font-medium text-ink-2">{t("instances.minecraftVersion")}</label>
                   <AppSelect
                     value={mcVersion}
                     onChange={(v) => setMcVersion(v)}
-                    placeholder="选择版本"
+                    placeholder={t("instances.selectVersion")}
                     className="mt-1.5 w-full"
                     options={s.versions.map((v) => ({ value: v.id, label: v.id }))}
                   />
@@ -775,19 +781,19 @@ function InstanceModal() {
               )}
 
               <div>
-                <label className="text-[12.5px] font-medium text-ink-2">加载器</label>
+                <label className="text-[12.5px] font-medium text-ink-2">{t("instances.loader")}</label>
                 <AppSelect
                   value={loader}
                   onChange={(v) => setLoader(v as Loader)}
                   className="mt-1.5 w-full"
-                  options={(Object.keys(loaderLabels) as Loader[]).map((l) => ({
+                  options={LOADERS.map((l) => ({
                     value: l,
-                    label: loaderLabels[l],
+                    label: loaderLabel(l, t),
                   }))}
                 />
                 {loader !== "vanilla" && loader !== "forge" && (
                   <p className="mt-1.5 text-[11.5px] text-ink-3">
-                    将自动安装最新版 {loaderLabels[loader]} 并下载对应资源
+                    {t("instances.autoInstallHint", { loader: loaderLabel(loader, t) })}
                   </p>
                 )}
               </div>
@@ -795,8 +801,8 @@ function InstanceModal() {
               {loader === "forge" && (
                 <div>
                   <label className="text-[12.5px] font-medium text-ink-2">
-                    Forge 版本
-                    {!mcVersion && <span className="ml-1 text-ink-3">(先选择 MC 版本)</span>}
+                    {t("instances.forgeVersion")}
+                    {!mcVersion && <span className="ml-1 text-ink-3">{t("instances.selectMcFirst")}</span>}
                   </label>
                   <AppSelect
                     value={forgeVersion}
@@ -804,20 +810,20 @@ function InstanceModal() {
                     disabled={!mcVersion || s.forgeVersionsLoading}
                     placeholder={
                       s.forgeVersionsLoading
-                        ? "加载中..."
+                        ? t("common.loading")
                         : s.forgeVersions.length === 0
-                          ? "该版本暂无 Forge"
-                          : "选择版本"
+                          ? t("instances.noForgeForVersion")
+                          : t("instances.selectVersion")
                     }
                     className="mt-1.5 w-full"
                     options={s.forgeVersions.map((fv) => ({
                       value: fv.version,
-                      label: `${fv.version}${fv.is_recommended ? " (推荐)" : fv.is_latest ? " (最新)" : ""}`,
+                      label: `${fv.version}${fv.is_recommended ? ` ${t("instances.recommended")}` : fv.is_latest ? ` ${t("instances.latest")}` : ""}`,
                     }))}
                   />
                   {mcVersion && s.forgeVersions.length > 0 && (
                     <p className="mt-1.5 text-[11.5px] text-ink-3">
-                      安装过程将执行 Forge 处理器,耗时较长请耐心等待
+                      {t("instances.forgeInstallHint")}
                     </p>
                   )}
                 </div>
@@ -825,7 +831,7 @@ function InstanceModal() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[12.5px] font-medium text-ink-2">最小内存 (MB)</label>
+                  <label className="text-[12.5px] font-medium text-ink-2">{t("instances.minMemory")}</label>
                   <input
                     type="number"
                     value={minMemory}
@@ -834,7 +840,7 @@ function InstanceModal() {
                   />
                 </div>
                 <div>
-                  <label className="text-[12.5px] font-medium text-ink-2">最大内存 (MB)</label>
+                  <label className="text-[12.5px] font-medium text-ink-2">{t("instances.maxMemory")}</label>
                   <input
                     type="number"
                     value={maxMemory}
@@ -847,10 +853,10 @@ function InstanceModal() {
               {/* JVM 自动推荐 */}
               <div className="flex items-center justify-between rounded-[10px] border border-dashed border-divider px-3.5 py-2.5">
                 <span className="text-[12px] text-ink-3">
-                  推荐:
+                  {t("instances.recommend")}
                   {jvmRec
                     ? `${jvmRec.min_mb} - ${jvmRec.max_mb} MB (${jvmRec.tier_label})`
-                    : "按系统内存智能推荐"}
+                    : t("instances.recommendAuto")}
                 </span>
                 <button
                   onClick={handleApplyRecommend}
@@ -858,7 +864,7 @@ function InstanceModal() {
                   className="flex items-center gap-1.5 rounded-[8px] bg-hover px-2.5 py-1.5 text-[12px] font-medium text-ink-2 transition-colors hover:bg-hover disabled:opacity-50"
                 >
                   {loadingRec && <Loader2 size={12} className="animate-spin" />}
-                  应用推荐
+                  {t("instances.applyRecommend")}
                 </button>
               </div>
               {jvmRec?.note && (
@@ -867,7 +873,7 @@ function InstanceModal() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[12.5px] font-medium text-ink-2">宽度</label>
+                  <label className="text-[12.5px] font-medium text-ink-2">{t("instances.width")}</label>
                   <input
                     type="number"
                     value={width}
@@ -876,7 +882,7 @@ function InstanceModal() {
                   />
                 </div>
                 <div>
-                  <label className="text-[12.5px] font-medium text-ink-2">高度</label>
+                  <label className="text-[12.5px] font-medium text-ink-2">{t("instances.height")}</label>
                   <input
                     type="number"
                     value={height}
@@ -900,7 +906,7 @@ function InstanceModal() {
                   onClick={() => s.creatingId && s.cancelCreate(s.creatingId)}
                   className="flex flex-1 items-center justify-center gap-2 rounded-[12px] border border-divider py-2.5 text-[13.5px] font-medium text-ink-2 transition-colors hover:bg-hover"
                 >
-                  取消并清理
+                  {t("instances.cancelAndCleanup")}
                 </button>
               ) : (
                 <>
@@ -910,13 +916,13 @@ function InstanceModal() {
                     className="flex flex-1 items-center justify-center gap-2 rounded-[12px] bg-accent py-2.5 text-[13.5px] font-semibold text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-50"
                   >
                     {saving && <Loader2 size={14} className="animate-spin" />}
-                    {editing ? "保存修改" : "创建实例"}
+                    {editing ? t("instances.saveChanges") : t("instances.createInstance")}
                   </button>
                   <button
                     onClick={handleClose}
                     className="flex-1 rounded-[12px] border border-divider py-2.5 text-[13.5px] font-medium text-ink-2 transition-colors hover:bg-hover"
                   >
-                    取消
+                    {t("common.cancel")}
                   </button>
                 </>
               )}

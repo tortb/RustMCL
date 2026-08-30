@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { motion, Reorder } from "framer-motion";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
@@ -25,8 +26,8 @@ function latencyColor(ms: number | null | undefined): string {
   return "text-danger-500 bg-danger-50";
 }
 
-function latencyLabel(ms: number | null | undefined): string {
-  if (ms === null || ms === undefined || ms < 0) return "离线";
+function latencyLabel(ms: number | null | undefined, t: (key: string) => string): string {
+  if (ms === null || ms === undefined || ms < 0) return t("servers.offline");
   return `${ms}ms`;
 }
 
@@ -44,6 +45,7 @@ function ServerFavicon({ status }: { status?: ServerStatus | null }) {
 }
 
 export default function Servers() {
+  const { t } = useTranslation();
   const s = useServerStore();
   const [statusMap, setStatusMap] = useState<Record<string, ServerStatus>>({});
   const [showAdd, setShowAdd] = useState(false);
@@ -88,13 +90,13 @@ export default function Servers() {
   const handleImportDat = async () => {
     const selected = await open({
       multiple: false,
-      filters: [{ name: "服务器列表", extensions: ["dat"] }],
+      filters: [{ name: t("servers.importFilterName"), extensions: ["dat"] }],
     });
     if (!selected || Array.isArray(selected)) return;
     setImportMsg("");
     try {
       const imported = await importServers(selected);
-      setImportMsg(`已从 servers.dat 导入 ${imported.length} 台服务器`);
+      setImportMsg(t("servers.importSuccess", { count: imported.length }));
       await s.load();
     } catch (e) {
       setImportMsg(String(e));
@@ -111,8 +113,8 @@ export default function Servers() {
       >
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-[24px] font-bold tracking-tight text-ink">服务器</h1>
-            <p className="mt-1 text-[13px] text-ink-3">添加常用的多人游戏服务器,一键加入</p>
+            <h1 className="text-[24px] font-bold tracking-tight text-ink">{t("servers.title")}</h1>
+            <p className="mt-1 text-[13px] text-ink-3">{t("servers.subtitle")}</p>
           </div>
           <div className="flex items-center gap-2">
             <motion.button
@@ -121,7 +123,7 @@ export default function Servers() {
               className="flex items-center gap-1.5 rounded-[10px] border border-divider px-3.5 py-2 text-[12.5px] font-medium text-ink-2 transition-colors hover:bg-hover"
             >
               <FileUp size={13} />
-              导入
+              {t("servers.import")}
             </motion.button>
             <motion.button
               whileTap={{ scale: 0.96 }}
@@ -129,7 +131,7 @@ export default function Servers() {
               className="flex items-center gap-1.5 rounded-[10px] border border-divider px-3.5 py-2 text-[12.5px] font-medium text-ink-2 transition-colors hover:bg-hover"
             >
               <RefreshCw size={13} />
-              全部测速
+              {t("servers.pingAll")}
             </motion.button>
             <motion.button
               whileTap={{ scale: 0.96 }}
@@ -137,7 +139,7 @@ export default function Servers() {
               className="flex items-center gap-2 rounded-[12px] bg-accent px-4 py-2.5 text-[13.5px] font-semibold text-on-accent transition-colors hover:bg-accent-hover"
             >
               <Plus size={16} strokeWidth={2.4} />
-              添加服务器
+              {t("servers.addServer")}
             </motion.button>
           </div>
         </div>
@@ -162,7 +164,7 @@ export default function Servers() {
             className="mt-8 flex flex-col items-center gap-3 rounded-[16px] bg-card py-14 shadow-card"
           >
             <ServerIcon size={28} className="text-ink-3" strokeWidth={1.5} />
-            <p className="text-[13.5px] text-ink-3">还没有服务器,点击右上角添加一个</p>
+            <p className="text-[13.5px] text-ink-3">{t("servers.empty")}</p>
           </motion.div>
         ) : (
           <Reorder.Group
@@ -186,7 +188,7 @@ export default function Servers() {
                   <button
                     onClick={() => s.toggleFavorite(sv.id, !sv.is_favorite)}
                     className="shrink-0 text-ink-3 transition-colors hover:text-warning-500"
-                    aria-label="收藏"
+                    aria-label={t("servers.favorite")}
                   >
                     <Star
                       size={18}
@@ -208,10 +210,13 @@ export default function Servers() {
                     {pinged && (
                       <div className="mt-0.5 flex items-center gap-2">
                         <p className="truncate text-[12.5px] text-ink-2">
-                          {st!.motd || "服务器无 MOTD"}
+                          {st!.motd || t("servers.noMOTD")}
                         </p>
                         <span className="shrink-0 text-[11.5px] text-ink-3">
-                          {st!.players_online}/{st!.players_max} 人
+                          {t("servers.players", {
+                            online: st!.players_online,
+                            max: st!.players_max,
+                          })}
                         </span>
                       </div>
                     )}
@@ -222,13 +227,13 @@ export default function Servers() {
                       pinged ? st!.latency_ms : null,
                     )}`}
                   >
-                    {s.pingingId === sv.id ? "测速中" : latencyLabel(pinged ? st!.latency_ms : null)}
+                    {s.pingingId === sv.id ? t("servers.pinging") : latencyLabel(pinged ? st!.latency_ms : null, t)}
                   </span>
 
                   <button
                     onClick={() => handlePing(sv.id)}
                     className="shrink-0 rounded-[10px] border border-divider p-2 text-ink-2 transition-colors hover:bg-hover"
-                    aria-label="测速"
+                    aria-label={t("servers.ping")}
                   >
                     {s.pingingId === sv.id ? (
                       <Loader2 size={14} className="animate-spin" />
@@ -243,14 +248,14 @@ export default function Servers() {
                     className="flex shrink-0 items-center gap-1.5 rounded-[10px] bg-accent px-3.5 py-2 text-[12.5px] font-semibold text-on-accent transition-colors hover:bg-accent-hover"
                   >
                     <Play size={13} fill="white" strokeWidth={0} />
-                    加入
+                    {t("servers.join")}
                   </motion.button>
 
                   <motion.button
                     whileTap={{ scale: 0.95 }}
                     onClick={() => s.remove(sv.id)}
                     className="shrink-0 rounded-[10px] border border-divider p-2 text-ink-3 transition-colors hover:bg-danger-50 hover:text-danger-500"
-                    aria-label="删除"
+                    aria-label={t("servers.delete")}
                   >
                     <Trash2 size={14} />
                   </motion.button>
@@ -264,9 +269,9 @@ export default function Servers() {
       <AddServerModal open={showAdd} onClose={() => setShowAdd(false)} onSaved={() => s.load()} />
 
       {/* 加入实例选择 */}
-      <AnimatePresenceWrap show={joinServer !== null} onClose={() => setJoinServer(null)} title="选择要启动的实例">
+      <AnimatePresenceWrap show={joinServer !== null} onClose={() => setJoinServer(null)} title={t("servers.chooseInstance")}>
         {instances.length === 0 ? (
-          <p className="py-4 text-[13px] text-ink-3">还没有可用的实例,请先在实例页创建一个</p>
+          <p className="py-4 text-[13px] text-ink-3">{t("servers.noInstance")}</p>
         ) : (
           <div className="flex flex-col gap-2">
             {instances.map((inst) => (
@@ -295,6 +300,7 @@ function AddServerModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t } = useTranslation();
   const s = useServerStore();
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
@@ -314,19 +320,19 @@ function AddServerModal({
   };
 
   return (
-    <AnimatePresenceWrap show={open} onClose={onClose} title="添加服务器">
+    <AnimatePresenceWrap show={open} onClose={onClose} title={t("servers.addServer")}>
       <div className="flex flex-col gap-4">
         <div>
-          <label className="text-[12.5px] font-medium text-ink-2">名称(可选)</label>
+          <label className="text-[12.5px] font-medium text-ink-2">{t("servers.nameLabel")}</label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="我的生存服"
+            placeholder={t("servers.namePlaceholder")}
             className="mt-1.5 w-full rounded-[10px] border border-divider bg-card px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
           />
         </div>
         <div>
-          <label className="text-[12.5px] font-medium text-ink-2">服务器地址</label>
+          <label className="text-[12.5px] font-medium text-ink-2">{t("servers.addressLabel")}</label>
           <input
             value={address}
             onChange={(e) => setAddress(e.target.value)}
@@ -335,7 +341,7 @@ function AddServerModal({
           />
         </div>
         <div>
-          <label className="text-[12.5px] font-medium text-ink-2">端口</label>
+          <label className="text-[12.5px] font-medium text-ink-2">{t("servers.portLabel")}</label>
           <input
             type="number"
             value={port}
@@ -349,7 +355,7 @@ function AddServerModal({
           className="flex items-center justify-center gap-2 rounded-[12px] bg-accent py-2.5 text-[13.5px] font-semibold text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-50"
         >
           {saving && <Loader2 size={14} className="animate-spin" />}
-          保存
+          {t("common.save")}
         </button>
       </div>
     </AnimatePresenceWrap>
@@ -368,6 +374,7 @@ function AnimatePresenceWrap({
   title: string;
   children: React.ReactNode;
 }) {
+  const { t } = useTranslation();
   if (!show) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
@@ -382,7 +389,7 @@ function AnimatePresenceWrap({
           <button
             onClick={onClose}
             className="rounded-full p-1.5 text-ink-3 transition-colors hover:bg-hover"
-            aria-label="关闭"
+            aria-label={t("common.close")}
           >
             <X size={16} />
           </button>

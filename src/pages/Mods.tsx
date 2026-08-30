@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Search,
@@ -34,6 +35,7 @@ function formatSize(bytes: number): string {
 }
 
 export default function Mods() {
+  const { t } = useTranslation();
   const s = useModsStore();
   const [query, setQuery] = useState("");
 
@@ -58,13 +60,13 @@ export default function Mods() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-[24px] font-bold tracking-tight text-ink">Mod</h1>
-            <p className="mt-1 text-[13px] text-ink-3">浏览 Modrinth 并安装到指定实例</p>
+            <p className="mt-1 text-[13px] text-ink-3">{t("mods.subtitle")}</p>
           </div>
           {/* 实例选择 */}
           <AppSelect
             value={s.selectedInstanceId}
             onChange={(v) => s.selectInstance(v)}
-            placeholder={s.instances.length === 0 ? "暂无实例" : undefined}
+            placeholder={s.instances.length === 0 ? t("mods.noInstances") : undefined}
             className="max-w-[220px]"
             options={s.instances.map((inst) => ({
               value: inst.id,
@@ -82,21 +84,21 @@ export default function Mods() {
               { key: "modrinth", label: "Modrinth" },
               { key: "curseforge", label: "CurseForge" },
             ] as const
-          ).map((t) => (
+          ).map((src) => (
             <button
-              key={t.key}
-              onClick={() => s.setSource(t.key)}
+              key={src.key}
+              onClick={() => s.setSource(src.key)}
               className={`rounded-full px-4 py-1.5 text-[12.5px] font-medium transition-colors ${
-                s.source === t.key
+                s.source === src.key
                   ? "bg-accent text-on-accent"
                   : "border border-divider text-ink-2 hover:bg-hover"
               }`}
             >
-              {t.label}
+              {src.label}
             </button>
           ))}
           {s.source === "curseforge" && (
-            <span className="text-[11.5px] text-ink-3">需在设置页配置 CurseForge API Key</span>
+            <span className="text-[11.5px] text-ink-3">{t("mods.cfKeyHint")}</span>
           )}
         </div>
 
@@ -106,7 +108,7 @@ export default function Mods() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-            placeholder="搜索 Mod,如 Sodium、Fabric API..."
+            placeholder={t("mods.searchPlaceholder")}
             className="flex-1 rounded-[12px] border border-divider bg-card px-4 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
           />
           <motion.button
@@ -116,16 +118,16 @@ export default function Mods() {
             className="flex items-center gap-2 rounded-[12px] bg-accent px-4 py-2.5 text-[13.5px] font-semibold text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-40"
           >
             {s.searching ? <Loader2 size={15} className="animate-spin" /> : <Search size={15} />}
-            搜索
+            {t("mods.search")}
           </motion.button>
         </div>
 
         {/* 搜索结果 */}
         {s.searched && (
           <div className="mt-6">
-            <SectionTitle title={`搜索结果 (${s.results.length})`} />
+            <SectionTitle title={t("mods.resultCount", { count: s.results.length })} />
             {s.results.length === 0 ? (
-              <EmptyHint text="没有找到匹配的 Mod" />
+              <EmptyHint text={t("mods.noResults")} />
             ) : (
               <div className="mt-3 flex flex-col gap-3">
                 <AnimatePresence mode="popLayout">
@@ -140,9 +142,9 @@ export default function Mods() {
 
         {/* 已安装 mod */}
         <div className="mt-8">
-          <SectionTitle title={`已安装 (${s.installed.length})`} />
+          <SectionTitle title={t("mods.installedTitle", { count: s.installed.length })} />
           {s.installed.length === 0 && !s.loadingInstalled ? (
-            <EmptyHint text="该实例还没有安装 Mod" />
+            <EmptyHint text={t("mods.emptyInstalled")} />
           ) : (
             <div className="mt-3 flex flex-col gap-3">
               {s.installed.map((mod, i) => (
@@ -173,6 +175,7 @@ function EmptyHint({ text }: { text: string }) {
 }
 
 function SearchCard({ hit, index }: { hit: ModSearchResult; index: number }) {
+  const { t } = useTranslation();
   const s = useModsStore();
   return (
     <motion.div
@@ -206,7 +209,7 @@ function SearchCard({ hit, index }: { hit: ModSearchResult; index: number }) {
         onClick={() => s.openVersions(hit)}
         className="shrink-0 rounded-[10px] bg-accent px-3.5 py-2 text-[12.5px] font-semibold text-on-accent transition-colors hover:bg-accent-hover"
       >
-        安装
+        {t("mods.install")}
       </motion.button>
     </motion.div>
   );
@@ -225,6 +228,7 @@ function ModIcon({ hit }: { hit: ModSearchResult }) {
 }
 
 function InstalledCard({ mod, index }: { mod: ModEntry; index: number }) {
+  const { t } = useTranslation();
   const s = useModsStore();
   return (
     <motion.div
@@ -248,7 +252,7 @@ function InstalledCard({ mod, index }: { mod: ModEntry; index: number }) {
         className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${
           mod.enabled ? "bg-accent" : "bg-hover"
         }`}
-        aria-label={mod.enabled ? "禁用" : "启用"}
+        aria-label={mod.enabled ? t("mods.disable") : t("mods.enable")}
       >
         <span
           className={`absolute top-0.5 h-5 w-5 rounded-full bg-card shadow transition-all ${
@@ -258,10 +262,10 @@ function InstalledCard({ mod, index }: { mod: ModEntry; index: number }) {
       </button>
       <button
         onClick={() => {
-          if (confirm(`确定删除 mod「${mod.file_name}」吗?`)) s.remove(mod);
+          if (confirm(t("mods.deleteConfirm", { name: mod.file_name }))) s.remove(mod);
         }}
         className="shrink-0 rounded-[10px] border border-divider p-2 text-ink-3 transition-colors hover:bg-danger-50 hover:text-danger-500"
-        aria-label="删除"
+        aria-label={t("mods.delete")}
       >
         <Trash2 size={14} />
       </button>
@@ -270,6 +274,7 @@ function InstalledCard({ mod, index }: { mod: ModEntry; index: number }) {
 }
 
 function VersionModal() {
+  const { t } = useTranslation();
   const s = useModsStore();
   const hit = s.versionModalProject;
   const isCf = hit?.source === "curseforge";
@@ -299,24 +304,24 @@ function VersionModal() {
                 onClick={s.closeVersions}
                 disabled={s.installing}
                 className="rounded-full p-1.5 text-ink-3 transition-colors hover:bg-hover"
-                aria-label="关闭"
+                aria-label={t("common.close")}
               >
                 <X size={16} />
               </button>
             </div>
 
             <p className="mt-3 text-[12.5px] text-ink-3">
-              选择兼容当前实例的版本进行安装
+              {t("mods.versionHint")}
             </p>
 
             {/* CurseForge 禁止第三方分发提示 */}
             {isCf && hit.allow_mod_distribution === false && (
               <div className="mt-3 rounded-[10px] border border-warning-50 bg-warning-50 px-3.5 py-2.5">
                 <p className="text-[12px] font-medium text-warning-600">
-                  此 mod 的作者禁止第三方启动器自动分发
+                  {t("mods.distributionBlocked")}
                 </p>
                 <p className="mt-0.5 text-[12px] text-warning-700">
-                  请前往 CurseForge 页面手动下载 jar 后放入 mods 目录。
+                  {t("mods.distributionHint")}
                 </p>
               </div>
             )}
@@ -326,13 +331,13 @@ function VersionModal() {
               <div className="mt-3 rounded-[10px] border border-warning-50 bg-warning-50 px-3.5 py-2.5">
                 {s.depResult.conflicts.map((c, i) => (
                   <p key={i} className="text-[12px] font-medium text-warning-600">
-                    冲突:{c}
+                    {t("mods.conflict", { name: c })}
                   </p>
                 ))}
                 {s.depResult.missing_required.length > 0 && (
                   <div className="mt-1">
                     <p className="text-[12px] font-medium text-warning-600">
-                      缺少 {s.depResult.missing_required.length} 个必需依赖:
+                      {t("mods.missingDeps", { count: s.depResult.missing_required.length })}
                     </p>
                     <div className="mt-1 flex flex-col gap-1">
                       {s.depResult.missing_required.map((dep, i) => (
@@ -346,7 +351,7 @@ function VersionModal() {
                               disabled={s.installing}
                               className="ml-2 shrink-0 rounded-[6px] bg-warning-500 px-2 py-1 text-[11px] font-medium text-on-accent transition-colors hover:bg-warning-600 disabled:opacity-50"
                             >
-                              自动安装
+                              {t("mods.autoInstall")}
                             </button>
                           )}
                         </div>
@@ -355,7 +360,7 @@ function VersionModal() {
                   </div>
                 )}
                 {s.depResult.ok && (
-                  <p className="text-[12px] text-success-600">依赖检查通过,可放心安装</p>
+                  <p className="text-[12px] text-success-600">{t("mods.depsOk")}</p>
                 )}
               </div>
             )}
@@ -366,7 +371,7 @@ function VersionModal() {
                   <Loader2 size={18} className="animate-spin" />
                 </div>
               ) : isCf ? s.cfFiles.length === 0 ? (
-                <p className="py-8 text-center text-[13px] text-ink-3">当前实例没有兼容的文件</p>
+                <p className="py-8 text-center text-[13px] text-ink-3">{t("mods.noCompatibleFiles")}</p>
               ) : (
                 <div className="flex flex-col gap-2.5">
                   <AnimatePresence initial={false}>
@@ -377,7 +382,7 @@ function VersionModal() {
                 </div>
               ) : s.versions.length === 0 ? (
                 <p className="py-8 text-center text-[13px] text-ink-3">
-                  当前实例没有兼容的版本
+                  {t("mods.noCompatibleVersions")}
                 </p>
               ) : (
                 <div className="flex flex-col gap-2.5">
@@ -401,7 +406,7 @@ function VersionModal() {
               className="mt-4 flex items-center gap-1 text-[12px] text-ink-3 transition-colors hover:text-accent"
             >
               <ExternalLink size={12} />
-              查看项目详情
+              {t("mods.viewProject")}
             </a>
           </motion.div>
         </motion.div>
@@ -411,6 +416,7 @@ function VersionModal() {
 }
 
 function VersionRow({ version, index }: { version: ModrinthVersion; index: number }) {
+  const { t } = useTranslation();
   const s = useModsStore();
   const file = version.files.find((f) => f.primary) ?? version.files[0];
   return (
@@ -432,7 +438,7 @@ function VersionRow({ version, index }: { version: ModrinthVersion; index: numbe
         onClick={() => s.checkDeps(version.id)}
         className="shrink-0 rounded-[8px] border border-divider px-2 py-1 text-[11.5px] text-ink-3 transition-colors hover:text-warning-600"
       >
-        依赖
+        {t("mods.dependencies")}
       </button>
       <motion.button
         whileTap={{ scale: 0.95 }}
@@ -440,13 +446,14 @@ function VersionRow({ version, index }: { version: ModrinthVersion; index: numbe
         disabled={s.installing}
         className="shrink-0 rounded-[10px] bg-accent px-3 py-1.5 text-[12px] font-semibold text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-50"
       >
-        {s.installing ? <Loader2 size={12} className="animate-spin" /> : "安装"}
+        {s.installing ? <Loader2 size={12} className="animate-spin" /> : t("mods.install")}
       </motion.button>
     </motion.div>
   );
 }
 
 function CfFileRow({ file, index }: { file: CurseForgeFile; index: number }) {
+  const { t } = useTranslation();
   const s = useModsStore();
   return (
     <motion.div
@@ -465,7 +472,7 @@ function CfFileRow({ file, index }: { file: CurseForgeFile; index: number }) {
         disabled={s.installing}
         className="shrink-0 rounded-[10px] bg-accent px-3 py-1.5 text-[12px] font-semibold text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-50"
       >
-        {s.installing ? <Loader2 size={12} className="animate-spin" /> : "安装"}
+        {s.installing ? <Loader2 size={12} className="animate-spin" /> : t("mods.install")}
       </motion.button>
     </motion.div>
   );

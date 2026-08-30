@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Box,
   Loader2,
@@ -21,6 +22,7 @@ function formatBytes(n: number): string {
 }
 
 export default function SavePanel({ instanceId }: { instanceId: string }) {
+  const { t } = useTranslation();
   const s = useSavesStore();
   const [tab, setTab] = useState<Tab>("saves");
   // 截图画廊:分页 + 大图预览
@@ -42,22 +44,22 @@ export default function SavePanel({ instanceId }: { instanceId: string }) {
       <div className="flex items-center gap-2">
         {(
           [
-            { key: "saves", label: "存档", icon: Box },
-            { key: "backups", label: "备份", icon: Archive },
-            { key: "screenshots", label: "截图", icon: Camera },
-          ] as const
-        ).map((t) => (
+            { key: "saves", label: t("saves.tabSaves"), icon: Box },
+            { key: "backups", label: t("saves.tabBackups"), icon: Archive },
+            { key: "screenshots", label: t("saves.tabScreenshots"), icon: Camera },
+          ] as { key: Tab; label: string; icon: typeof Box }[]
+        ).map((item) => (
           <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
+            key={item.key}
+            onClick={() => setTab(item.key)}
             className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12px] font-medium transition-colors ${
-              tab === t.key
+              tab === item.key
                 ? "bg-accent text-on-accent"
                 : "border border-divider text-ink-2 hover:bg-hover"
             }`}
           >
-            <t.icon size={12} />
-            {t.label}
+            <item.icon size={12} />
+            {item.label}
           </button>
         ))}
         {s.loading && <Loader2 size={13} className="ml-auto animate-spin text-ink-3" />}
@@ -78,7 +80,7 @@ export default function SavePanel({ instanceId }: { instanceId: string }) {
         {tab === "saves" && (
           <div className="flex flex-col gap-2">
             {s.saves.length === 0 && (
-              <p className="py-4 text-center text-[12.5px] text-ink-3">还没有世界存档</p>
+              <p className="py-4 text-center text-[12.5px] text-ink-3">{t("saves.emptySaves")}</p>
             )}
             {s.saves.map((sv) => (
               <div
@@ -97,14 +99,14 @@ export default function SavePanel({ instanceId }: { instanceId: string }) {
                   className="flex shrink-0 items-center gap-1 rounded-[8px] bg-accent px-2.5 py-1.5 text-[11.5px] font-medium text-on-accent transition-colors hover:bg-accent-hover"
                 >
                   <Archive size={12} />
-                  备份
+                  {t("saves.backup")}
                 </button>
                 <button
                   onClick={() => {
-                    if (confirm(`确定删除存档「${sv.name}」吗?`)) s.removeSave(sv.name);
+                    if (confirm(t("saves.deleteConfirm", { name: sv.name }))) s.removeSave(sv.name);
                   }}
                   className="shrink-0 rounded-[8px] border border-divider p-1.5 text-ink-3 transition-colors hover:bg-danger-50 hover:text-danger-500"
-                  aria-label="删除存档"
+                  aria-label={t("saves.deleteSave")}
                 >
                   <Trash2 size={13} />
                 </button>
@@ -116,7 +118,7 @@ export default function SavePanel({ instanceId }: { instanceId: string }) {
         {tab === "backups" && (
           <div className="flex flex-col gap-2">
             {s.backups.length === 0 && (
-              <p className="py-4 text-center text-[12.5px] text-ink-3">还没有备份,可在「存档」页一键备份</p>
+              <p className="py-4 text-center text-[12.5px] text-ink-3">{t("saves.emptyBackups")}</p>
             )}
             {s.backups.map((bk) => (
               <div
@@ -133,18 +135,18 @@ export default function SavePanel({ instanceId }: { instanceId: string }) {
                 <input
                   value={restoreTarget}
                   onChange={(e) => setRestoreTarget(e.target.value)}
-                  placeholder="恢复为..."
+                  placeholder={t("saves.restoreAs")}
                   className="w-24 rounded-[8px] border border-divider px-2 py-1.5 text-[11.5px] text-ink outline-none focus:border-accent"
                 />
                 <button
                   onClick={() => {
                     const target = restoreTarget.trim() || bk.name;
-                    if (confirm(`将备份恢复为「${target}」?`)) s.restore(bk.name, target);
+                    if (confirm(t("saves.restoreConfirm", { target }))) s.restore(bk.name, target);
                   }}
                   className="flex shrink-0 items-center gap-1 rounded-[8px] border border-divider px-2.5 py-1.5 text-[11.5px] font-medium text-ink-2 transition-colors hover:bg-hover"
                 >
                   <RotateCcw size={12} />
-                  恢复
+                  {t("saves.restore")}
                 </button>
               </div>
             ))}
@@ -154,7 +156,7 @@ export default function SavePanel({ instanceId }: { instanceId: string }) {
         {tab === "screenshots" && (
           <div className="flex flex-col gap-2">
             {s.screenshots.length === 0 && (
-              <p className="py-4 text-center text-[12.5px] text-ink-3">还没有截图</p>
+              <p className="py-4 text-center text-[12.5px] text-ink-3">{t("saves.emptyScreenshots")}</p>
             )}
             {s.screenshots.length > 0 && (
               <>
@@ -175,7 +177,7 @@ export default function SavePanel({ instanceId }: { instanceId: string }) {
                     className="mt-2 flex items-center justify-center gap-1.5 rounded-[10px] border border-divider px-3.5 py-2 text-[12.5px] font-medium text-ink-2 transition-colors hover:bg-hover"
                   >
                     <Camera size={13} />
-                    加载更多
+                    {t("saves.loadMore")}
                   </button>
                 )}
               </>
@@ -199,14 +201,14 @@ export default function SavePanel({ instanceId }: { instanceId: string }) {
                 className="flex items-center gap-1.5 rounded-[10px] border border-white/20 px-3.5 py-2 text-[12.5px] font-medium text-on-accent transition-colors hover:bg-danger-500 hover:border-danger-500"
               >
                 <Trash2 size={13} />
-                删除
+                {t("saves.delete")}
               </button>
               <button
                 onClick={() => setPreview(null)}
                 className="flex items-center gap-1.5 rounded-[10px] border border-white/20 px-3.5 py-2 text-[12.5px] font-medium text-on-accent transition-colors hover:bg-card/10"
               >
                 <X size={13} />
-                关闭
+                {t("common.close")}
               </button>
             </div>
           </div>
@@ -228,6 +230,7 @@ function ShotThumb({
   onOpen: (src: string) => void;
   onDelete: () => void;
 }) {
+  const { t } = useTranslation();
   const [src, setSrc] = useState<string | null>(null);
   useEffect(() => {
     let alive = true;
@@ -260,7 +263,7 @@ function ShotThumb({
       <button
         onClick={onDelete}
         className="absolute right-1.5 top-1.5 rounded-[8px] bg-black/40 p-1.5 text-on-accent opacity-0 transition-opacity hover:bg-danger-500 group-hover:opacity-100"
-        aria-label="删除截图"
+        aria-label={t("saves.deleteScreenshot")}
       >
         <Trash2 size={12} />
       </button>

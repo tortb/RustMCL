@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Search,
@@ -19,14 +20,11 @@ import type { ModrinthVersion } from "../lib/types";
 
 const ease = [0.32, 0.72, 0, 1] as const;
 
-const typeLabels: Record<PackType, string> = {
-  resourcepack: "资源包",
-  shaderpack: "光影包",
-};
-
 export default function Packs() {
+  const { t } = useTranslation();
   const s = usePacksStore();
   const [query, setQuery] = useState("");
+  const typeLabel = (tp: PackType) => (tp === "resourcepack" ? t("packs.type.resourcepack") : t("packs.type.shaderpack"));
 
   useEffect(() => {
     s.loadInstances();
@@ -43,8 +41,8 @@ export default function Packs() {
       >
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-[24px] font-bold tracking-tight text-ink">资源包与光影</h1>
-            <p className="mt-1 text-[13px] text-ink-3">管理实例的材质包与光影包</p>
+            <h1 className="text-[24px] font-bold tracking-tight text-ink">{t("packs.title")}</h1>
+            <p className="mt-1 text-[13px] text-ink-3">{t("packs.subtitle")}</p>
           </div>
           <AppSelect
             value={s.selectedInstanceId}
@@ -52,7 +50,7 @@ export default function Packs() {
               usePacksStore.setState({ selectedInstanceId: v });
               void usePacksStore.getState().scan();
             }}
-            placeholder={s.instances.length === 0 ? "暂无实例" : undefined}
+            placeholder={s.instances.length === 0 ? t("packs.noInstances") : undefined}
             className="max-w-[220px]"
             options={s.instances.map((inst) => ({ value: inst.id, label: inst.name }))}
           />
@@ -60,18 +58,18 @@ export default function Packs() {
 
         {/* 类型切换 */}
         <div className="mt-5 flex items-center gap-2">
-          {(["resourcepack", "shaderpack"] as const).map((t) => (
+          {(["resourcepack", "shaderpack"] as const).map((type) => (
             <button
-              key={t}
-              onClick={() => s.setType(t)}
+              key={type}
+              onClick={() => s.setType(type)}
               className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-[12.5px] font-medium transition-colors ${
-                s.type === t
+                s.type === type
                   ? "bg-accent text-on-accent"
                   : "border border-divider text-ink-2 hover:bg-hover"
               }`}
             >
-              {t === "resourcepack" ? <Image size={13} /> : <Sun size={13} />}
-              {typeLabels[t]}
+              {type === "resourcepack" ? <Image size={13} /> : <Sun size={13} />}
+              {typeLabel(type)}
             </button>
           ))}
           <button
@@ -79,14 +77,14 @@ export default function Packs() {
             className="ml-auto flex items-center gap-1.5 rounded-[10px] border border-divider px-3.5 py-1.5 text-[12px] text-ink-2 transition-colors hover:bg-hover"
           >
             <RefreshCw size={13} />
-            重新扫描
+            {t("packs.rescan")}
           </button>
         </div>
 
         {/* 光影依赖提示 */}
         {s.type === "shaderpack" && s.shaderSupport && !s.shaderSupport.supported && (
           <div className="mt-4 rounded-[10px] border border-warning-50 bg-warning-50 px-3.5 py-2.5">
-            <p className="text-[12px] font-medium text-warning-600">可能无法显示光影</p>
+            <p className="text-[12px] font-medium text-warning-600">{t("packs.shaderWarning")}</p>
             <p className="mt-0.5 text-[12px] text-warning-700">{s.shaderSupport.message}</p>
           </div>
         )}
@@ -97,7 +95,7 @@ export default function Packs() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && s.search()}
-            placeholder={`搜索 ${typeLabels[s.type]}(Modrinth)...`}
+            placeholder={t("packs.searchPlaceholder", { type: typeLabel(s.type) })}
             className="flex-1 rounded-[12px] border border-divider bg-card px-4 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
           />
           <motion.button
@@ -107,7 +105,7 @@ export default function Packs() {
             className="flex items-center gap-2 rounded-[12px] bg-accent px-4 py-2.5 text-[13.5px] font-semibold text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-40"
           >
             {s.searching ? <Loader2 size={15} className="animate-spin" /> : <Search size={15} />}
-            搜索
+            {t("packs.search")}
           </motion.button>
         </div>
 
@@ -145,7 +143,7 @@ export default function Packs() {
                   className="flex shrink-0 items-center gap-1.5 rounded-[10px] bg-accent px-3 py-1.5 text-[12px] font-semibold text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-40"
                 >
                   <Plus size={14} strokeWidth={2.4} />
-                  添加
+                  {t("packs.add")}
                 </motion.button>
               </motion.div>
             ))}
@@ -155,13 +153,13 @@ export default function Packs() {
         {/* 本地列表 */}
         <div className="mt-8">
           <h2 className="text-[13px] font-semibold uppercase tracking-wide text-ink-3">
-            已安装 {typeLabels[s.type]}({s.packs.length})
+            {t("packs.installedTitle", { type: typeLabel(s.type), count: s.packs.length })}
           </h2>
           {s.packs.length === 0 && !s.loading ? (
             <div className="mt-3 flex flex-col items-center gap-2 rounded-[16px] bg-card py-10 shadow-card">
               <Package size={24} className="text-ink-3" strokeWidth={1.5} />
               <p className="text-[13px] text-ink-3">
-                目录中没有 {typeLabels[s.type]},可以放到实例的 {s.type === "shaderpack" ? "shaderpacks" : "resourcepacks"} 目录
+                {t("packs.emptyHint", { type: typeLabel(s.type), dir: s.type === "shaderpack" ? "shaderpacks" : "resourcepacks" })}
               </p>
             </div>
           ) : (
@@ -190,7 +188,7 @@ export default function Packs() {
                       className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${
                         pack.enabled ? "bg-accent" : "bg-hover"
                       }`}
-                      aria-label={pack.enabled ? "禁用" : "启用"}
+                      aria-label={pack.enabled ? t("packs.disable") : t("packs.enable")}
                     >
                       <span
                         className={`absolute top-0.5 h-5 w-5 rounded-full bg-card shadow transition-all ${
@@ -201,7 +199,7 @@ export default function Packs() {
                     <button
                       onClick={() => s.remove(pack)}
                       className="shrink-0 rounded-[8px] border border-divider p-1.5 text-ink-3 transition-colors hover:bg-danger-50 hover:text-danger-500"
-                      aria-label="删除"
+                      aria-label={t("packs.delete")}
                     >
                       <Trash2 size={13} />
                     </button>
@@ -237,13 +235,13 @@ export default function Packs() {
                       {s.versionModalProject.title}
                     </h2>
                     <p className="mt-0.5 text-[12px] text-ink-3">
-                      选择要安装的 {typeLabels[s.type]} 版本
+                      {t("packs.versionHint", { type: typeLabel(s.type) })}
                     </p>
                   </div>
                   <button
                     onClick={s.closeVersions}
                     className="rounded-full p-1.5 text-ink-3 transition-colors hover:bg-hover"
-                    aria-label="关闭"
+                    aria-label={t("common.close")}
                   >
                     <X size={16} />
                   </button>
@@ -256,7 +254,7 @@ export default function Packs() {
                     </div>
                   ) : s.versions.length === 0 ? (
                     <p className="py-8 text-center text-[13px] text-ink-3">
-                      该版本没有与当前实例兼容的 {typeLabels[s.type]}
+                      {t("packs.noCompatibleVersion", { type: typeLabel(s.type) })}
                     </p>
                   ) : (
                     <div className="flex flex-col gap-2">
@@ -292,7 +290,7 @@ export default function Packs() {
 
                 {s.installError && (
                   <p className="mt-3 rounded-[10px] bg-danger-50 px-3.5 py-2.5 text-[12.5px] text-danger-600">
-                    安装失败:{s.installError}
+                    {t("packs.installError", { error: s.installError })}
                   </p>
                 )}
               </motion.div>

@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { AnimatePresence, motion } from "framer-motion";
 import { useVersionsStore } from "../stores/versions";
 import type { VersionFilter } from "../lib/types";
 
 const appleEase = [0.32, 0.72, 0, 1] as const;
 
-const filters: { key: VersionFilter; label: string }[] = [
-  { key: "release", label: "正式版" },
-  { key: "snapshot", label: "快照" },
-  { key: "all", label: "全部" },
+const filters: { key: VersionFilter; labelKey: string }[] = [
+  { key: "release", labelKey: "versionPicker.filterRelease" },
+  { key: "snapshot", labelKey: "versionPicker.filterSnapshot" },
+  { key: "all", labelKey: "versionPicker.filterAll" },
 ];
 
 const listVariants = {
@@ -26,6 +28,7 @@ const itemVariants = {
 };
 
 export default function VersionPicker() {
+  const { t } = useTranslation();
   const { versions, loading, error, filter, query, setFilter, setQuery, load } =
     useVersionsStore();
   const [touched, setTouched] = useState(false);
@@ -41,18 +44,18 @@ export default function VersionPicker() {
     return versions.filter((v) => v.id.toLowerCase().includes(q));
   }, [versions, query]);
 
-  const versionTypeLabel = (t: string) => {
-    switch (t) {
+  const versionTypeLabel = (type: string, t: TFunction) => {
+    switch (type) {
       case "release":
-        return "正式版";
+        return t("versionPicker.filterRelease");
       case "snapshot":
-        return "快照";
+        return t("versionPicker.filterSnapshot");
       case "old_beta":
         return "Beta";
       case "old_alpha":
         return "Alpha";
       default:
-        return t;
+        return type;
     }
   };
 
@@ -65,16 +68,16 @@ export default function VersionPicker() {
         className="flex items-end justify-between"
       >
         <div>
-          <h1 className="text-[28px] font-bold tracking-tight">版本</h1>
+          <h1 className="text-[28px] font-bold tracking-tight">{t("versionPicker.title")}</h1>
           <p className="mt-1.5 text-[14px] text-ink-2">
-            从 Mojang 官方清单拉取,选择一个版本开始配置实例。
+            {t("versionPicker.subtitle")}
           </p>
         </div>
         <button
           onClick={() => load(true)}
           className="rounded-btn bg-accent px-4 py-2 text-[13px] font-medium text-on-accent shadow-card transition-transform duration-100 active:scale-[0.97]"
         >
-          刷新
+          {t("versionPicker.refresh")}
         </button>
       </motion.div>
 
@@ -96,14 +99,14 @@ export default function VersionPicker() {
                   : "text-ink-2 hover:text-ink"
               }`}
             >
-              {f.label}
+              {t(f.labelKey)}
             </button>
           ))}
         </div>
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="搜索版本,如 1.21"
+          placeholder={t("versionPicker.searchPlaceholder")}
           className="w-52 rounded-input bg-card px-3.5 py-2 text-[13px] text-ink shadow-card outline-none placeholder:text-ink-3 focus:ring-2 focus:ring-accent/40"
         />
       </motion.div>
@@ -121,7 +124,7 @@ export default function VersionPicker() {
         ) : filtered.length === 0 ? (
           <div className="rounded-card bg-card p-6 text-center shadow-card">
             <p className="text-[13.5px] text-ink-3">
-              {versions.length === 0 ? "暂无版本数据" : "没有匹配的版本"}
+              {versions.length === 0 ? t("versionPicker.noVersionData") : t("versionPicker.noMatch")}
             </p>
           </div>
         ) : (
@@ -146,7 +149,7 @@ export default function VersionPicker() {
                             : "bg-bg text-ink-3"
                         }`}
                       >
-                        {versionTypeLabel(v.version_type)}
+                        {versionTypeLabel(v.version_type, t)}
                       </span>
                     </div>
                     <span className="text-[12px] text-ink-3">
