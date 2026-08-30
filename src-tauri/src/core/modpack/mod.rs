@@ -330,7 +330,7 @@ where
         let file_label = rel.rsplit('/').next().unwrap_or(&rel).to_string();
         on_progress(done, total, file_label.clone());
         match ok {
-            Ok(()) => {
+            Ok(_) => {
                 if rel.starts_with("mods/") {
                     installed.push(file_label);
                 }

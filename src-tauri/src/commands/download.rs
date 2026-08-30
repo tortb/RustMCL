@@ -12,6 +12,7 @@ use crate::core::loader;
 use crate::core::mirror::Mirror;
 use crate::core::version::rules::{FeaturesCtx, RuleContext};
 use crate::core::version::version_json::VersionJson;
+use crate::commands::launch::GameLogEvent;
 use crate::error::RmclError;
 use crate::AppState;
 
@@ -137,7 +138,7 @@ pub(crate) async fn run_download_for_version(
     core_items.push(asset_index_item(&version, &layout.assets_dir));
 
     let app1 = app.clone();
-    download_many(
+    let core_stats = download_many(
         &client,
         mirror,
         core_items,
@@ -156,6 +157,15 @@ pub(crate) async fn run_download_for_version(
         },
     )
     .await?;
+    let _ = app.emit(
+        "game-log",
+        GameLogEvent {
+            line: format!(
+                "[RustMCL] 核心资源:命中缓存跳过 {} 个,实际下载 {} 个",
+                core_stats.cached, core_stats.downloaded
+            ),
+        },
+    );
 
     // 4. 阶段二:assets objects
     let index_path = layout
@@ -166,7 +176,7 @@ pub(crate) async fn run_download_for_version(
     let items = asset_items(&index, &layout.assets_dir);
     let total = items.len();
     let app2 = app.clone();
-    download_many(
+    let asset_stats = download_many(
         &client,
         mirror,
         items,
@@ -185,6 +195,15 @@ pub(crate) async fn run_download_for_version(
         },
     )
     .await?;
+    let _ = app.emit(
+        "game-log",
+        GameLogEvent {
+            line: format!(
+                "[RustMCL] 资源文件:命中缓存跳过 {} 个,实际下载 {} 个",
+                asset_stats.cached, asset_stats.downloaded
+            ),
+        },
+    );
 
     Ok(())
 }
