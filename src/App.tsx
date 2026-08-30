@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "framer-motion";
 import { RefreshCw, X } from "lucide-react";
 import Sidebar from "./components/Sidebar";
@@ -13,6 +14,7 @@ import Servers from "./pages/Servers";
 import Packs from "./pages/Packs";
 import { useAppStore } from "./stores/app";
 import { useAccountStore } from "./stores/account";
+import { useSettingsStore } from "./stores/settings";
 import { checkForUpdate } from "./lib/api";
 import type { UpdateInfo } from "./lib/types";
 
@@ -27,6 +29,7 @@ export type PageKey =
   | "settings";
 
 export default function App() {
+  const { t } = useTranslation();
   const init = useAppStore((s) => s.init);
   const loadAccounts = useAccountStore((s) => s.loadAccounts);
   const [page, setPage] = useState<PageKey>("home");
@@ -35,6 +38,8 @@ export default function App() {
   useEffect(() => {
     init();
     loadAccounts();
+    // 启动加载应用配置并应用主题/语言
+    useSettingsStore.getState().load();
     // 启动静默检查更新;未配置更新源或网络失败时静默忽略
     checkForUpdate()
       .then((info) => {
@@ -58,20 +63,20 @@ export default function App() {
             >
               <RefreshCw size={14} className="shrink-0 text-accent" />
               <span className="text-ink">
-                发现新版本 v{silentUpdate.latest}(当前 v{silentUpdate.current})
+                {t("app.updateAvailable", { latest: silentUpdate.latest, current: silentUpdate.current })}
               </span>
               <button
                 onClick={() => {
                   setPage("settings");
                   setSilentUpdate(null);
                 }}
-                className="ml-auto shrink-0 rounded-[8px] bg-accent px-3 py-1.5 text-[12px] font-semibold text-white transition-colors hover:bg-accent-hover"
+                className="ml-auto shrink-0 rounded-[8px] bg-accent px-3 py-1.5 text-[12px] font-semibold text-on-accent transition-colors hover:bg-accent-hover"
               >
-                去设置查看
+                {t("app.goToSettings")}
               </button>
               <button
                 onClick={() => setSilentUpdate(null)}
-                className="shrink-0 rounded-full p-1.5 text-ink-3 transition-colors hover:bg-black/[0.05]"
+                className="shrink-0 rounded-full p-1.5 text-ink-3 transition-colors hover:bg-hover"
                 aria-label="关闭"
               >
                 <X size={14} />

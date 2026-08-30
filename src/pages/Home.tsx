@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { getJavaVersion } from "../lib/api";
 import { Play, HardDrive, Coffee, Boxes, AlertTriangle, Pencil } from "lucide-react";
@@ -34,7 +35,7 @@ function GrassBlock({ size = 40 }: { size?: number }) {
 
 function SkeletonCard() {
   return (
-    <div className="flex animate-pulse items-center rounded-[14px] bg-white px-5 py-4 shadow-card">
+    <div className="flex animate-pulse items-center rounded-[14px] bg-card px-5 py-4 shadow-card">
       <div className="h-11 w-11 rounded-[6px] bg-gray-200" />
       <div className="ml-4 flex-1">
         <div className="h-4 w-40 rounded bg-gray-200" />
@@ -49,6 +50,7 @@ function SkeletonCard() {
 }
 
 export default function Home({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
+  const { t } = useTranslation();
   const s = useInstanceStore();
   // 实际用于启动的 Java 版本(全局单值,一次探测;供实例卡显示)
   const [javaVersion, setJavaVersion] = useState<string | null>(null);
@@ -63,7 +65,7 @@ export default function Home({ onNavigate }: { onNavigate: (p: PageKey) => void 
   }, []);
 
   const latestVersion = s.versions[0]?.id ?? "1.21";
-  const latestLoader = "原版";
+  const latestLoader = t("common.vanilla");
 
   // 英雄区"启动":有实例则启动最近的一个(走登录门禁),否则跳转到实例页
   const handleHeroLaunch = () => {
@@ -83,13 +85,13 @@ export default function Home({ onNavigate }: { onNavigate: (p: PageKey) => void 
   };
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#f3f4f6]">
+    <div className="flex-1 overflow-y-auto bg-bg">
       {/* Hero Banner */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease }}
-        className="relative mx-6 mt-6 overflow-hidden rounded-[16px] bg-white shadow-card"
+        className="relative mx-6 mt-6 overflow-hidden rounded-[16px] bg-card shadow-card"
         style={{ height: 220 }}
       >
         <div className="absolute inset-0">
@@ -98,10 +100,7 @@ export default function Home({ onNavigate }: { onNavigate: (p: PageKey) => void 
 
         <div
           className="absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(90deg, rgba(243,244,246,0.97) 0%, rgba(243,244,246,0.85) 35%, rgba(243,244,246,0.4) 60%, transparent 80%)",
-          }}
+          style={{ background: "var(--rmcl-hero-overlay)" }}
         />
 
         <div className="relative z-10 flex h-full flex-col justify-center px-10">
@@ -116,11 +115,11 @@ export default function Home({ onNavigate }: { onNavigate: (p: PageKey) => void 
           </div>
           <button
             onClick={handleHeroLaunch}
-            className="mt-6 flex items-center gap-2 rounded-[12px] bg-[#7cb342] px-7 py-3 text-[15px] font-semibold text-white shadow-lg transition-all duration-150 hover:bg-[#689f38] active:scale-[0.97]"
+            className="mt-6 flex items-center gap-2 rounded-[12px] bg-accent px-7 py-3 text-[15px] font-semibold text-on-accent shadow-lg transition-all duration-150 hover:bg-accent-hover active:scale-[0.97]"
             style={{ boxShadow: "0 4px 14px rgba(124,179,66,0.35)" }}
           >
             <Play size={18} fill="white" strokeWidth={0} />
-            启动
+            {t("common.start")}
           </button>
         </div>
       </motion.div>
@@ -132,7 +131,7 @@ export default function Home({ onNavigate }: { onNavigate: (p: PageKey) => void 
         transition={{ delay: 0.1, duration: 0.4, ease }}
         className="px-6 pt-8 pb-10"
       >
-        <h2 className="mb-4 text-[16px] font-bold text-ink">最近实例</h2>
+        <h2 className="mb-4 text-[16px] font-bold text-ink">{t("home.recent")}</h2>
 
         {/* 加载态 */}
         {s.loading && (
@@ -145,14 +144,14 @@ export default function Home({ onNavigate }: { onNavigate: (p: PageKey) => void 
 
         {/* 错误态 */}
         {!s.loading && s.error && (
-          <div className="flex flex-col items-center gap-3 rounded-[14px] border border-red-100 bg-red-50/60 px-6 py-8 text-center">
-            <AlertTriangle size={22} className="text-red-500" />
-            <p className="text-[13.5px] leading-relaxed text-red-600">{s.error}</p>
+          <div className="flex flex-col items-center gap-3 rounded-[14px] border border-danger-50 bg-danger-50/60 px-6 py-8 text-center">
+            <AlertTriangle size={22} className="text-danger-500" />
+            <p className="text-[13.5px] leading-relaxed text-danger-600">{s.error}</p>
             <button
               onClick={() => s.loadInstances()}
-              className="mt-1 rounded-[10px] bg-accent px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-accent-hover"
+              className="mt-1 rounded-[10px] bg-accent px-4 py-2 text-[13px] font-semibold text-on-accent transition-colors hover:bg-accent-hover"
             >
-              重试
+              {t("common.retry")}
             </button>
           </div>
         )}
@@ -162,7 +161,7 @@ export default function Home({ onNavigate }: { onNavigate: (p: PageKey) => void 
           <div className="flex flex-col items-center gap-3 rounded-[14px] border border-dashed border-divider px-6 py-10 text-center">
             <Boxes size={26} className="text-ink-3" />
             <p className="text-[13.5px] leading-relaxed text-ink-2">
-              还没有任何实例,去「实例」页创建你的第一个版本吧。
+              {t("home.empty")}
             </p>
           </div>
         )}
@@ -177,7 +176,7 @@ export default function Home({ onNavigate }: { onNavigate: (p: PageKey) => void 
         )}
 
         {!s.loading && !s.error && s.instances.length > 0 && (
-          <p className="mt-4 text-center text-[12.5px] text-ink-3">共 {s.instances.length} 个实例</p>
+          <p className="mt-4 text-center text-[12.5px] text-ink-3">{t("home.instanceCount", { n: s.instances.length })}</p>
         )}
       </motion.div>
     </div>
@@ -195,6 +194,7 @@ function InstanceRow({
   onNavigate: (p: PageKey) => void;
   javaVersion: string | null;
 }) {
+  const { t } = useTranslation();
   const loader = inst.loader && inst.loader !== "vanilla" ? inst.loader : null;
   const memory = inst.config.jvm.max_memory;
   return (
@@ -202,7 +202,7 @@ function InstanceRow({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.15 + index * 0.06, duration: 0.3, ease }}
-      className="flex items-center rounded-[14px] bg-white px-5 py-4 shadow-card transition-shadow duration-200 hover:shadow-card-hover"
+      className="flex items-center rounded-[14px] bg-card px-5 py-4 shadow-card transition-shadow duration-200 hover:shadow-card-hover"
     >
       <GrassBlock size={44} />
 
@@ -210,11 +210,11 @@ function InstanceRow({
         <span className="text-[15px] font-semibold text-ink">{inst.name}</span>
         <span
           className={`mt-1 inline-flex w-fit items-center rounded-[6px] px-2 py-0.5 text-[11.5px] font-medium ${
-            loader ? "bg-[#f1f8e9] text-[#558b2f]" : "bg-gray-100 text-ink-3"
+            loader ? "bg-badge-bg text-badge-text" : "bg-gray-100 text-ink-3"
           }`}
         >
           {inst.mc_version}
-          {loader ? ` · ${loaderLabels[loader as Loader] ?? loader}` : " 原版"}
+          {loader ? ` · ${loaderLabels[loader as Loader] ?? loader}` : ` ${t("common.vanilla")}`}
         </span>
       </div>
 

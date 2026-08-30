@@ -1,0 +1,73 @@
+// 简体中文文案。key 按页面/模块分簇,迁移各页面时同步补全。
+const zhCN = {
+  common: {
+    save: "保存",
+    cancel: "取消",
+    confirm: "确认",
+    close: "关闭",
+    loading: "加载中…",
+    retry: "重试",
+    yes: "是",
+    no: "否",
+    start: "启动",
+    vanilla: "原版",
+  },
+  nav: {
+    home: "主页",
+    instances: "实例",
+    mods: "Mod",
+    packs: "资源包",
+    servers: "服务器",
+    java: "Java",
+    settings: "设置",
+  },
+  account: {
+    microsoft: "微软账号",
+    offline: "离线账号",
+    switch: "切换账号",
+    logout: "退出登录",
+    notLoggedIn: "未登录",
+    clickToLogin: "点击登录微软账号",
+    logoutConfirm: "确定要退出登录「{{name}}」吗?下次启动将需要用该账号重新登录。",
+  },
+  home: {
+    recent: "最近实例",
+    empty: "还没有任何实例,去「实例」页创建你的第一个版本吧。",
+    instanceCount: "共 {{n}} 个实例",
+  },
+  app: {
+    updateAvailable: "发现新版本 v{{latest}}(当前 v{{current}})",
+    goToSettings: "去设置查看",
+  },
+  settings: {
+    title: "设置",
+    subtitle: "应用级配置,保存至 config.toml",
+    section: {
+      download: "下载",
+      mirror: "下载源",
+      network: "网络",
+      update: "检查更新",
+      skin: "皮肤",
+      java: "Java",
+      appearance: "外观与语言",
+    },
+    theme: { dark: "深色", light: "浅色" },
+    language: { zh: "简体中文", en: "English" },
+    save: "保存设置",
+  },
+  login: {
+    title: "账号登录",
+    start: "开始登录",
+    fetching: "正在获取设备码…",
+    openBrowser: "请在浏览器打开授权页面,输入以下代码完成登录:",
+    waiting: "等待授权…",
+    completing: "正在完成登录…",
+    msHint: "通过微软官方授权登录你的 Minecraft 账号,refresh token 将安全保存在系统钥匙串中。",
+    offlineHint: "离线模式无需联网,输入一个用户名即可生成固定的身份(UUID)进入游戏;相同用户名会得到相同身份。",
+    usernamePlaceholder: "请输入用户名",
+    createOffline: "创建离线账号",
+    usernameRule: "用户名需为 3-16 位字母、数字或下划线",
+  },
+};
+
+export default zhCN;

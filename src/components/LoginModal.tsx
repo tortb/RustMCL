@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "framer-motion";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { Copy, Check, Loader2, X, Wifi, User } from "lucide-react";
@@ -12,6 +13,7 @@ const USERNAME_RE = /^[A-Za-z0-9_]{3,16}$/;
 type LoginMode = "microsoft" | "offline";
 
 export default function LoginModal() {
+  const { t } = useTranslation();
   const s = useAccountStore();
   const [copied, setCopied] = useState(false);
   const [mode, setMode] = useState<LoginMode>("microsoft");
@@ -66,14 +68,14 @@ export default function LoginModal() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 8 }}
             transition={{ duration: 0.28, ease }}
-            className="w-[400px] rounded-[20px] bg-white p-7 shadow-[0_24px_64px_rgba(0,0,0,0.16)]"
+            className="w-[400px] rounded-[20px] bg-card p-7 shadow-[0_24px_64px_rgba(0,0,0,0.16)]"
           >
             <div className="flex items-center justify-between">
-              <h2 className="text-[18px] font-bold tracking-tight text-ink">账号登录</h2>
+              <h2 className="text-[18px] font-bold tracking-tight text-ink">{t("login.title")}</h2>
               {s.stage === "waiting" && mode === "microsoft" && (
                 <button
                   onClick={s.cancelLogin}
-                  className="rounded-full p-1.5 text-ink-3 transition-colors hover:bg-black/[0.05]"
+                  className="rounded-full p-1.5 text-ink-3 transition-colors hover:bg-hover"
                   aria-label="关闭"
                 >
                   <X size={16} />
@@ -82,11 +84,11 @@ export default function LoginModal() {
             </div>
 
             {/* 登录方式切换 */}
-            <div className="mt-4 flex rounded-[10px] bg-[#f2f2f4] p-1 text-[13px] font-medium">
+            <div className="mt-4 flex rounded-[10px] bg-sidebar p-1 text-[13px] font-medium">
               {(
                 [
-                  { key: "microsoft", label: "微软账号", icon: Wifi },
-                  { key: "offline", label: "离线账号", icon: User },
+                  { key: "microsoft", label: t("account.microsoft"), icon: Wifi },
+                  { key: "offline", label: t("account.offline"), icon: User },
                 ] as { key: LoginMode; label: string; icon: React.ElementType }[]
               ).map((tab) => {
                 const Icon = tab.icon;
@@ -100,7 +102,7 @@ export default function LoginModal() {
                       s.openLogin();
                     }}
                     className={`flex flex-1 items-center justify-center gap-1.5 rounded-[8px] py-2 transition-colors duration-150 ${
-                      active ? "bg-white text-ink shadow-sm" : "text-ink-3 hover:text-ink"
+                      active ? "bg-card text-ink shadow-sm" : "text-ink-3 hover:text-ink"
                     }`}
                   >
                     <Icon size={14} strokeWidth={1.8} />
@@ -117,14 +119,14 @@ export default function LoginModal() {
                 {s.stage === "idle" && (
                   <>
                     <p className="mt-2 text-[13px] leading-relaxed text-ink-3">
-                      通过微软官方授权登录你的 Minecraft 账号,refresh token 将安全保存在系统钥匙串中。
+                      {t("login.msHint")}
                     </p>
                     <motion.button
                       whileTap={{ scale: 0.97 }}
                       onClick={s.startLogin}
-                      className="mt-6 w-full rounded-[12px] bg-accent py-3 text-[14px] font-semibold text-white transition-colors hover:bg-accent-hover"
+                      className="mt-6 w-full rounded-[12px] bg-accent py-3 text-[14px] font-semibold text-on-accent transition-colors hover:bg-accent-hover"
                     >
-                      开始登录
+                      {t("login.start")}
                     </motion.button>
                   </>
                 )}
@@ -133,7 +135,7 @@ export default function LoginModal() {
                 {s.stage === "device" && (
                   <div className="mt-6 flex flex-col items-center gap-3 py-4">
                     <Loader2 size={22} className="animate-spin text-accent" />
-                    <p className="text-[13px] text-ink-3">正在获取设备码…</p>
+                    <p className="text-[13px] text-ink-3">{t("login.fetching")}</p>
                   </div>
                 )}
 
@@ -141,15 +143,15 @@ export default function LoginModal() {
                 {s.stage === "waiting" && s.device && (
                   <>
                     <p className="mt-3 text-[13px] leading-relaxed text-ink-3">
-                      请在浏览器打开授权页面,输入以下代码完成登录:
+                      {t("login.openBrowser")}
                     </p>
-                    <div className="mt-4 flex items-center justify-center gap-3 rounded-[14px] bg-[#f5f5f7] py-4">
+                    <div className="mt-4 flex items-center justify-center gap-3 rounded-[14px] bg-sidebar py-4">
                       <span className="font-mono text-[26px] font-bold tracking-[0.2em] text-ink">
                         {s.device.user_code}
                       </span>
                       <button
                         onClick={copyCode}
-                        className="rounded-full p-2 text-ink-3 transition-colors hover:bg-black/[0.06]"
+                        className="rounded-full p-2 text-ink-3 transition-colors hover:bg-hover"
                         aria-label="复制设备码"
                       >
                         {copied ? <Check size={15} className="text-accent" /> : <Copy size={15} />}
@@ -166,13 +168,13 @@ export default function LoginModal() {
                         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-60" />
                         <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
                       </span>
-                      <span className="text-[12px] text-ink-2">等待授权…</span>
+                      <span className="text-[12px] text-ink-2">{t("login.waiting")}</span>
                     </div>
                     <button
                       onClick={s.cancelLogin}
-                      className="mt-5 w-full rounded-[12px] border border-divider py-2.5 text-[13.5px] font-medium text-ink-2 transition-colors hover:bg-black/[0.03]"
+                      className="mt-5 w-full rounded-[12px] border border-divider py-2.5 text-[13.5px] font-medium text-ink-2 transition-colors hover:bg-hover"
                     >
-                      取消
+                      {t("common.cancel")}
                     </button>
                   </>
                 )}
@@ -181,7 +183,7 @@ export default function LoginModal() {
                 {(s.stage === "exchanging" || s.stage === "saving") && (
                   <div className="mt-6 flex flex-col items-center gap-3 py-4">
                     <Loader2 size={22} className="animate-spin text-accent" />
-                    <p className="text-[13px] text-ink-3">{s.statusMsg || "正在完成登录…"}</p>
+                    <p className="text-[13px] text-ink-3">{s.statusMsg || t("login.completing")}</p>
                   </div>
                 )}
 
@@ -212,23 +214,24 @@ function ErrorPanel({
   onRetry: () => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <>
-      <p className="mt-3 rounded-[10px] bg-red-50 px-3.5 py-2.5 text-[13px] leading-relaxed text-red-600">
+      <p className="mt-3 rounded-[10px] bg-danger-50 px-3.5 py-2.5 text-[13px] leading-relaxed text-danger-600">
         {error}
       </p>
       <div className="mt-4 flex gap-3">
         <button
           onClick={onRetry}
-          className="flex-1 rounded-[12px] bg-accent py-2.5 text-[13.5px] font-semibold text-white transition-colors hover:bg-accent-hover"
+          className="flex-1 rounded-[12px] bg-accent py-2.5 text-[13.5px] font-semibold text-on-accent transition-colors hover:bg-accent-hover"
         >
-          重试
+          {t("common.retry")}
         </button>
         <button
           onClick={onClose}
-          className="flex-1 rounded-[12px] border border-divider py-2.5 text-[13.5px] font-medium text-ink-2 transition-colors hover:bg-black/[0.03]"
+          className="flex-1 rounded-[12px] border border-divider py-2.5 text-[13.5px] font-medium text-ink-2 transition-colors hover:bg-hover"
         >
-          关闭
+          {t("common.close")}
         </button>
       </div>
     </>
@@ -236,6 +239,7 @@ function ErrorPanel({
 }
 
 function OfflinePanel({ error }: { error: string }) {
+  const { t } = useTranslation();
   const s = useAccountStore();
   const [name, setName] = useState("");
   const [err, setErr] = useState("");
@@ -243,7 +247,7 @@ function OfflinePanel({ error }: { error: string }) {
 
   const submit = async () => {
     if (!USERNAME_RE.test(name)) {
-      setErr("用户名需为 3-16 位字母、数字或下划线");
+      setErr(t("login.usernameRule"));
       return;
     }
     setErr("");
@@ -255,7 +259,7 @@ function OfflinePanel({ error }: { error: string }) {
   return (
     <div className="mt-4">
       <p className="text-[13px] leading-relaxed text-ink-3">
-        离线模式无需联网,输入一个用户名即可生成固定的身份(UUID)进入游戏;相同用户名会得到相同身份。
+        {t("login.offlineHint")}
       </p>
       <input
         value={name}
@@ -266,20 +270,20 @@ function OfflinePanel({ error }: { error: string }) {
         onKeyDown={(e) => {
           if (e.key === "Enter") submit();
         }}
-        placeholder="请输入用户名"
+        placeholder={t("login.usernamePlaceholder")}
         maxLength={16}
-        className="mt-4 w-full rounded-[12px] bg-[#f5f5f7] px-4 py-3 text-[14px] text-ink outline-none placeholder:text-ink-3 focus:ring-2 focus:ring-accent/40"
+        className="mt-4 w-full rounded-[12px] bg-sidebar px-4 py-3 text-[14px] text-ink outline-none placeholder:text-ink-3 focus:ring-2 focus:ring-accent/40"
       />
-      {err && <p className="mt-2 text-[12.5px] text-red-600">{err}</p>}
-      {error && <p className="mt-2 rounded-[10px] bg-red-50 px-3.5 py-2.5 text-[13px] leading-relaxed text-red-600">{error}</p>}
+      {err && <p className="mt-2 text-[12.5px] text-danger-600">{err}</p>}
+      {error && <p className="mt-2 rounded-[10px] bg-danger-50 px-3.5 py-2.5 text-[13px] leading-relaxed text-danger-600">{error}</p>}
       <motion.button
         whileTap={{ scale: 0.97 }}
         onClick={submit}
         disabled={busy}
-        className="mt-4 flex w-full items-center justify-center gap-2 rounded-[12px] bg-accent py-3 text-[14px] font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-60"
+        className="mt-4 flex w-full items-center justify-center gap-2 rounded-[12px] bg-accent py-3 text-[14px] font-semibold text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-60"
       >
         {busy && <Loader2 size={16} className="animate-spin" />}
-        创建离线账号
+        {t("login.createOffline")}
       </motion.button>
     </div>
   );

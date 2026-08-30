@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
@@ -37,12 +38,8 @@ import { AppSelect } from "../components/AppSelect";
 
 const ease = [0.32, 0.72, 0, 1] as const;
 
-const themeLabels: Record<string, string> = {
-  dark: "深色",
-  light: "浅色",
-};
-
 export default function Settings() {
+  const { t } = useTranslation();
   const s = useSettingsStore();
   const [maxConcurrent, setMaxConcurrent] = useState(8);
   const [retryTimes, setRetryTimes] = useState(3);
@@ -271,7 +268,7 @@ export default function Settings() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#f3f4f6] px-6 py-8">
+    <div className="flex-1 overflow-y-auto bg-bg px-6 py-8">
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -280,15 +277,15 @@ export default function Settings() {
       >
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-[24px] font-bold tracking-tight text-ink">设置</h1>
-            <p className="mt-1 text-[13px] text-ink-3">应用级配置,保存至 config.toml</p>
+            <h1 className="text-[24px] font-bold tracking-tight text-ink">{t("settings.title")}</h1>
+            <p className="mt-1 text-[13px] text-ink-3">{t("settings.subtitle")}</p>
           </div>
         </div>
 
         {s.config ? (
           <div className="mt-6 flex flex-col gap-4">
             {/* 下载设置 */}
-            <Section icon={<Download size={16} />} title="下载">
+            <Section icon={<Download size={16} />} title={t("settings.section.download")}>
               <div className="grid grid-cols-2 gap-4">
                 <Field label="最大并发数">
                   <input
@@ -296,7 +293,7 @@ export default function Settings() {
                     min={1}
                     value={maxConcurrent}
                     onChange={(e) => setMaxConcurrent(Number(e.target.value) || 1)}
-                    className="mt-1.5 w-full rounded-[10px] border border-divider bg-white px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
+                    className="mt-1.5 w-full rounded-[10px] border border-divider bg-card px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
                   />
                 </Field>
                 <Field label="失败重试次数">
@@ -305,14 +302,14 @@ export default function Settings() {
                     min={0}
                     value={retryTimes}
                     onChange={(e) => setRetryTimes(Number(e.target.value) || 0)}
-                    className="mt-1.5 w-full rounded-[10px] border border-divider bg-white px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
+                    className="mt-1.5 w-full rounded-[10px] border border-divider bg-card px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
                   />
                 </Field>
               </div>
             </Section>
 
             {/* 下载源 */}
-            <Section icon={<Zap size={16} />} title="下载源">
+            <Section icon={<Zap size={16} />} title={t("settings.section.mirror")}>
               <Field label="镜像源">
                 <AppSelect
                   value={selectedMirror}
@@ -333,7 +330,7 @@ export default function Settings() {
                     value={customBase}
                     onChange={(e) => setCustomBase(e.target.value)}
                     placeholder="https://example.com"
-                    className="mt-1.5 w-full rounded-[10px] border border-divider bg-white px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
+                    className="mt-1.5 w-full rounded-[10px] border border-divider bg-card px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
                   />
                 </Field>
               )}
@@ -342,7 +339,7 @@ export default function Settings() {
                 <button
                   onClick={handleSpeedTest}
                   disabled={testing}
-                  className="flex items-center gap-1.5 rounded-[10px] border border-divider px-3.5 py-2 text-[12.5px] font-medium text-ink-2 transition-colors hover:bg-black/[0.03] disabled:opacity-50"
+                  className="flex items-center gap-1.5 rounded-[10px] border border-divider px-3.5 py-2 text-[12.5px] font-medium text-ink-2 transition-colors hover:bg-hover disabled:opacity-50"
                 >
                   {testing ? <Loader2 size={13} className="animate-spin" /> : <Zap size={13} />}
                   测速全部节点
@@ -356,13 +353,13 @@ export default function Settings() {
                     <li
                       key={r.id}
                       className={`flex items-center gap-3 rounded-[10px] border px-3.5 py-2.5 text-[12.5px] ${
-                        r.ok ? "border-divider" : "border-red-200 bg-red-50"
+                        r.ok ? "border-divider" : "border-danger-50 bg-danger-50"
                       }`}
                     >
                       <span className="w-16 shrink-0 font-medium text-ink">{r.name || r.id}</span>
                       {r.ok ? (
                         <>
-                          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-black/[0.06]">
+                          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-hover">
                             <div
                               className="h-full rounded-full bg-accent transition-all"
                               style={{ width: `${Math.min(100, r.throughput / 100)}%` }}
@@ -376,7 +373,7 @@ export default function Settings() {
                           </span>
                         </>
                       ) : (
-                        <span className="flex-1 truncate text-red-500">{r.error}</span>
+                        <span className="flex-1 truncate text-danger-500">{r.error}</span>
                       )}
                     </li>
                   ))}
@@ -385,13 +382,13 @@ export default function Settings() {
             </Section>
 
             {/* 网络 */}
-            <Section icon={<KeyRound size={16} />} title="网络">
+            <Section icon={<KeyRound size={16} />} title={t("settings.section.network")}>
               <Field label="CurseForge API Key">
                 <input
                   value={cfKey}
                   onChange={(e) => setCfKey(e.target.value)}
                   placeholder="可选,用于 CurseForge 源搜索/安装"
-                  className="mt-1.5 w-full rounded-[10px] border border-divider bg-white px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
+                  className="mt-1.5 w-full rounded-[10px] border border-divider bg-card px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
                 />
               </Field>
               <p className="text-[11.5px] text-ink-3">
@@ -400,7 +397,7 @@ export default function Settings() {
             </Section>
 
             {/* 检查更新 */}
-            <Section icon={<RefreshCw size={16} />} title="检查更新">
+            <Section icon={<RefreshCw size={16} />} title={t("settings.section.update")}>
               <div className="flex items-center justify-between gap-3">
                 <div className="flex flex-col gap-1 text-[12.5px] text-ink-2">
                   <span>检查是否有新版本可用</span>
@@ -413,7 +410,7 @@ export default function Settings() {
                 <button
                   onClick={handleCheckUpdate}
                   disabled={checking}
-                  className="flex shrink-0 items-center gap-1.5 rounded-[10px] border border-divider px-3.5 py-2 text-[12.5px] font-medium text-ink-2 transition-colors hover:bg-black/[0.03] disabled:opacity-50"
+                  className="flex shrink-0 items-center gap-1.5 rounded-[10px] border border-divider px-3.5 py-2 text-[12.5px] font-medium text-ink-2 transition-colors hover:bg-hover disabled:opacity-50"
                 >
                   {checking ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
                   检查
@@ -434,7 +431,7 @@ export default function Settings() {
                   <button
                     onClick={handleInstallUpdate}
                     disabled={installing}
-                    className="mt-3 flex items-center gap-1.5 rounded-[10px] bg-accent px-3.5 py-2 text-[12.5px] font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
+                    className="mt-3 flex items-center gap-1.5 rounded-[10px] bg-accent px-3.5 py-2 text-[12.5px] font-semibold text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-50"
                   >
                     {installing ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
                     {installing ? "正在更新..." : "下载并更新"}
@@ -443,29 +440,29 @@ export default function Settings() {
               )}
 
               {updateInfo && !updateInfo.has_update && (
-                <div className="rounded-[10px] border border-divider bg-black/[0.02] p-3.5 text-[12.5px] text-ink-2">
+                <div className="rounded-[10px] border border-divider bg-hover p-3.5 text-[12.5px] text-ink-2">
                   当前已是最新版本。
                 </div>
               )}
 
               {updateMsg && (
-                <p className="rounded-[10px] bg-green-50 px-3.5 py-2.5 text-[12.5px] text-green-600">
+                <p className="rounded-[10px] bg-success-50 px-3.5 py-2.5 text-[12.5px] text-success-600">
                   {updateMsg}
                 </p>
               )}
 
               {updateError && (
-                <p className="rounded-[10px] bg-red-50 px-3.5 py-2.5 text-[12.5px] text-red-600">
+                <p className="rounded-[10px] bg-danger-50 px-3.5 py-2.5 text-[12.5px] text-danger-600">
                   {updateError}
                 </p>
               )}
             </Section>
 
             {/* 皮肤 */}
-            <Section icon={<UserRound size={16} />} title="皮肤">
+            <Section icon={<UserRound size={16} />} title={t("settings.section.skin")}>
               <div className="flex flex-col gap-4 sm:flex-row">
                 {/* 3D 预览 */}
-                <div className="flex w-full shrink-0 items-center justify-center rounded-[12px] bg-black/[0.03] p-3 sm:w-[240px]">
+                <div className="flex w-full shrink-0 items-center justify-center rounded-[12px] bg-hover p-3 sm:w-[240px]">
                   <SkinPreview skin={skinPreview} model={skinModel} width={210} height={300} />
                 </div>
 
@@ -484,7 +481,7 @@ export default function Settings() {
                     <button
                       onClick={handleImportSkin}
                       disabled={skinImporting}
-                      className="ml-auto flex items-center gap-1.5 rounded-[10px] border border-divider px-3.5 py-2 text-[12.5px] font-medium text-ink-2 transition-colors hover:bg-black/[0.03] disabled:opacity-50"
+                      className="ml-auto flex items-center gap-1.5 rounded-[10px] border border-divider px-3.5 py-2 text-[12.5px] font-medium text-ink-2 transition-colors hover:bg-hover disabled:opacity-50"
                     >
                       {skinImporting ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
                       导入 PNG
@@ -495,7 +492,7 @@ export default function Settings() {
                     <button
                       onClick={handleUploadSkin}
                       disabled={!selectedSkin || skinUploading}
-                      className="flex items-center justify-center gap-1.5 rounded-[10px] bg-accent px-3.5 py-2 text-[12.5px] font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
+                      className="flex items-center justify-center gap-1.5 rounded-[10px] bg-accent px-3.5 py-2 text-[12.5px] font-semibold text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-50"
                     >
                       {skinUploading ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
                       上传到当前微软账号
@@ -506,7 +503,7 @@ export default function Settings() {
                         <button
                           onClick={handleSetOfflineSkin}
                           disabled={!selectedSkin}
-                          className="flex items-center justify-center gap-1.5 rounded-[10px] bg-accent px-3.5 py-2 text-[12.5px] font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
+                          className="flex items-center justify-center gap-1.5 rounded-[10px] bg-accent px-3.5 py-2 text-[12.5px] font-semibold text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-50"
                         >
                           <UserRound size={13} />
                           {offlineSkinId ? "更新离线皮肤" : "设为此账号的离线皮肤"}
@@ -514,7 +511,7 @@ export default function Settings() {
                         {offlineSkinId && (
                           <button
                             onClick={handleClearOfflineSkin}
-                            className="flex items-center gap-1.5 rounded-[10px] border border-divider px-3.5 py-2 text-[12.5px] font-medium text-ink-2 transition-colors hover:bg-black/[0.03]"
+                            className="flex items-center gap-1.5 rounded-[10px] border border-divider px-3.5 py-2 text-[12.5px] font-medium text-ink-2 transition-colors hover:bg-hover"
                           >
                             清除关联
                           </button>
@@ -523,12 +520,12 @@ export default function Settings() {
                       {offlineSkinMsg && (
                         <p className="text-[11.5px] text-ink-2">{offlineSkinMsg}</p>
                       )}
-                      <p className="rounded-[10px] bg-black/[0.02] px-3.5 py-2.5 text-[12px] text-ink-3">
+                      <p className="rounded-[10px] bg-hover px-3.5 py-2.5 text-[12px] text-ink-3">
                         离线账号无 Mojang 账号系统支撑,游戏内的皮肤实际渲染因版本而异(需额外方案)。此处将所选本地皮肤与该账号关联,便于本地管理与预览。
                       </p>
                     </div>
                   ) : (
-                    <p className="rounded-[10px] bg-black/[0.02] px-3.5 py-2.5 text-[12px] text-ink-3">
+                    <p className="rounded-[10px] bg-hover px-3.5 py-2.5 text-[12px] text-ink-3">
                       上传皮肤需先登录微软账号;离线账号可先导入本地皮肤库。
                     </p>
                   )}
@@ -541,11 +538,11 @@ export default function Settings() {
                           className={`flex cursor-pointer items-center gap-2 rounded-[10px] border px-3 py-2 text-[12.5px] transition-colors ${
                             selectedSkin?.id === sk.id
                               ? "border-accent bg-accent/[0.06] text-ink"
-                              : "border-divider bg-white text-ink-2 hover:bg-black/[0.02]"
+                              : "border-divider bg-card text-ink-2 hover:bg-hover"
                           }`}
                         >
                           <span className="max-w-[120px] truncate">{sk.name}</span>
-                          <span className="rounded bg-black/[0.05] px-1.5 py-0.5 text-[10.5px] text-ink-3">
+                          <span className="rounded bg-hover px-1.5 py-0.5 text-[10.5px] text-ink-3">
                             {sk.width}x{sk.height}
                           </span>
                           <button
@@ -553,7 +550,7 @@ export default function Settings() {
                               e.stopPropagation();
                               handleRemoveSkin(sk);
                             }}
-                            className="ml-1 text-ink-3 transition-colors hover:text-red-500"
+                            className="ml-1 text-ink-3 transition-colors hover:text-danger-500"
                             aria-label="删除"
                           >
                             <Trash2 size={13} />
@@ -569,7 +566,7 @@ export default function Settings() {
                   {skinMsg && (
                     <p
                       className={`rounded-[10px] px-3.5 py-2.5 text-[12px] ${
-                        skinMsg.ok ? "bg-black/[0.02] text-ink-2" : "bg-red-50 text-red-600"
+                        skinMsg.ok ? "bg-hover text-ink-2" : "bg-danger-50 text-danger-600"
                       }`}
                     >
                       {skinMsg.text}
@@ -580,18 +577,18 @@ export default function Settings() {
             </Section>
 
             {/* Java 设置 */}
-            <Section icon={<Coffee size={16} />} title="Java">
+            <Section icon={<Coffee size={16} />} title={t("settings.section.java")}>
               <div className="flex items-center justify-between rounded-[10px] border border-divider px-3.5 py-2.5">
                 <span className="text-[13.5px] text-ink">自动检测系统 Java</span>
                 <button
                   onClick={() => setAutoDetect(!autoDetect)}
                   className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${
-                    autoDetect ? "bg-accent" : "bg-black/[0.12]"
+                    autoDetect ? "bg-accent" : "bg-hover"
                   }`}
                   aria-label="自动检测"
                 >
                   <span
-                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-card shadow transition-all ${
                       autoDetect ? "left-[18px]" : "left-0.5"
                     }`}
                   />
@@ -603,21 +600,24 @@ export default function Settings() {
                     value={javaPath}
                     onChange={(e) => setJavaPath(e.target.value)}
                     placeholder="/usr/bin/java"
-                    className="mt-1.5 w-full rounded-[10px] border border-divider bg-white px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
+                    className="mt-1.5 w-full rounded-[10px] border border-divider bg-card px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors focus:border-accent"
                   />
                 </Field>
               )}
             </Section>
 
             {/* 外观 */}
-            <Section icon={<FolderOpen size={16} />} title="外观与语言">
+            <Section icon={<FolderOpen size={16} />} title={t("settings.section.appearance")}>
               <div className="grid grid-cols-2 gap-4">
                 <Field label="主题">
                   <AppSelect
                     value={theme}
                     onChange={(v) => setTheme(v)}
                     className="mt-1.5 w-full"
-                    options={Object.entries(themeLabels).map(([k, v]) => ({ value: k, label: v }))}
+                    options={[
+                      { value: "dark", label: t("settings.theme.dark") },
+                      { value: "light", label: t("settings.theme.light") },
+                    ]}
                   />
                 </Field>
                 <Field label="语言">
@@ -626,8 +626,8 @@ export default function Settings() {
                     onChange={(v) => setLanguage(v)}
                     className="mt-1.5 w-full"
                     options={[
-                      { value: "zh-CN", label: "简体中文" },
-                      { value: "en-US", label: "English" },
+                      { value: "zh-CN", label: t("settings.language.zh") },
+                      { value: "en-US", label: t("settings.language.en") },
                     ]}
                   />
                 </Field>
@@ -635,7 +635,7 @@ export default function Settings() {
             </Section>
 
             {s.error && (
-              <p className="rounded-[10px] bg-red-50 px-3.5 py-2.5 text-[12.5px] text-red-600">
+              <p className="rounded-[10px] bg-danger-50 px-3.5 py-2.5 text-[12.5px] text-danger-600">
                 {s.error}
               </p>
             )}
@@ -644,14 +644,14 @@ export default function Settings() {
               whileTap={{ scale: 0.98 }}
               onClick={handleSave}
               disabled={s.saving}
-              className="flex items-center justify-center gap-2 rounded-[12px] bg-accent py-2.5 text-[13.5px] font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
+              className="flex items-center justify-center gap-2 rounded-[12px] bg-accent py-2.5 text-[13.5px] font-semibold text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-50"
             >
               {s.saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-              保存设置
+              {t("settings.save")}
             </motion.button>
           </div>
         ) : (
-          <div className="mt-6 flex items-center justify-center rounded-[16px] bg-white py-14 shadow-card">
+          <div className="mt-6 flex items-center justify-center rounded-[16px] bg-card py-14 shadow-card">
             <Loader2 size={18} className="animate-spin text-ink-3" />
           </div>
         )}
@@ -662,7 +662,7 @@ export default function Settings() {
 
 function Section({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-[16px] bg-white p-5 shadow-card">
+    <div className="rounded-[16px] bg-card p-5 shadow-card">
       <div className="mb-4 flex items-center gap-2 text-ink">
         <span className="text-ink-3">{icon}</span>
         <h2 className="text-[14.5px] font-semibold">{title}</h2>

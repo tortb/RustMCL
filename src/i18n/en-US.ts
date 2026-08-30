@@ -1,0 +1,73 @@
+// English strings. Keys share the same cluster structure as zh-CN; keep them in sync.
+const enUS = {
+  common: {
+    save: "Save",
+    cancel: "Cancel",
+    confirm: "Confirm",
+    close: "Close",
+    loading: "Loading…",
+    retry: "Retry",
+    yes: "Yes",
+    no: "No",
+    start: "Launch",
+    vanilla: "Vanilla",
+  },
+  nav: {
+    home: "Home",
+    instances: "Instances",
+    mods: "Mods",
+    packs: "Resource Packs",
+    servers: "Servers",
+    java: "Java",
+    settings: "Settings",
+  },
+  account: {
+    microsoft: "Microsoft Account",
+    offline: "Offline Account",
+    switch: "Switch Account",
+    logout: "Log Out",
+    notLoggedIn: "Not logged in",
+    clickToLogin: "Click to sign in with Microsoft",
+    logoutConfirm: "Log out of “{{name}}”? You will need to sign in again on the next launch.",
+  },
+  home: {
+    recent: "Recent Instances",
+    empty: "No instances yet. Go to the “Instances” page to create your first one.",
+    instanceCount: "{{count}} instance(s)",
+  },
+  app: {
+    updateAvailable: "Version v{{latest}} available (current v{{current}})",
+    goToSettings: "Go to Settings",
+  },
+  settings: {
+    title: "Settings",
+    subtitle: "App-level config, saved to config.toml",
+    section: {
+      download: "Download",
+      mirror: "Mirrors",
+      network: "Network",
+      update: "Updates",
+      skin: "Skins",
+      java: "Java",
+      appearance: "Appearance & Language",
+    },
+    theme: { dark: "Dark", light: "Light" },
+    language: { zh: "简体中文", en: "English" },
+    save: "Save Settings",
+  },
+  login: {
+    title: "Account Login",
+    start: "Sign In",
+    fetching: "Fetching device code…",
+    openBrowser: "Open the authorization page in your browser and enter this code to log in:",
+    waiting: "Waiting for authorization…",
+    completing: "Completing sign-in…",
+    msHint: "Sign in to your Minecraft account via Microsoft authorization. The refresh token is stored securely in the system keychain.",
+    offlineHint: "Offline mode needs no internet. Enter a username to generate a fixed identity (UUID); the same username yields the same identity.",
+    usernamePlaceholder: "Enter a username",
+    createOffline: "Create Offline Account",
+    usernameRule: "Username must be 3-16 letters, digits or underscores",
+  },
+};
+
+export default enUS;

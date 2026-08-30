@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import {
   Home,
@@ -17,14 +18,14 @@ import type { PageKey } from "../App";
 import { useAccountStore } from "../stores/account";
 import logoUrl from "../assets/logo.png";
 
-const navItems: { key: PageKey; label: string; icon: React.ElementType }[] = [
-  { key: "home", label: "主页", icon: Home },
-  { key: "instances", label: "实例", icon: Box },
-  { key: "mods", label: "Mod", icon: Puzzle },
-  { key: "packs", label: "资源包", icon: Image },
-  { key: "servers", label: "服务器", icon: Server },
-  { key: "java", label: "Java", icon: Coffee },
-  { key: "settings", label: "设置", icon: Settings },
+const navItems: { key: PageKey; icon: React.ElementType }[] = [
+  { key: "home", icon: Home },
+  { key: "instances", icon: Box },
+  { key: "mods", icon: Puzzle },
+  { key: "packs", icon: Image },
+  { key: "servers", icon: Server },
+  { key: "java", icon: Coffee },
+  { key: "settings", icon: Settings },
 ];
 
 export default function Sidebar({
@@ -34,6 +35,7 @@ export default function Sidebar({
   active: PageKey;
   onSelect: (key: PageKey) => void;
 }) {
+  const { t } = useTranslation();
   const activeAccount = useAccountStore((s) => s.active);
   const openLogin = useAccountStore((s) => s.openLogin);
   const logout = useAccountStore((s) => s.logout);
@@ -48,7 +50,7 @@ export default function Sidebar({
   const handleLogout = () => {
     if (!activeAccount) return;
     if (
-      window.confirm(`确定要退出登录「${activeAccount.username}」吗?下次启动将需要用该账号重新登录。`)
+      window.confirm(t("account.logoutConfirm", { name: activeAccount.username }))
     ) {
       logout(activeAccount.id);
     }
@@ -56,7 +58,7 @@ export default function Sidebar({
   };
 
   return (
-    <aside className="flex h-full w-[210px] shrink-0 flex-col bg-[#f6f6f7]">
+    <aside className="flex h-full w-[210px] shrink-0 flex-col bg-sidebar">
       {/* Logo */}
       <div className="px-5 pt-6 pb-5">
         <div className="flex items-center gap-2.5">
@@ -81,12 +83,12 @@ export default function Sidebar({
               onClick={() => onSelect(item.key)}
               className={`flex items-center gap-3 rounded-[10px] px-3.5 py-2.5 text-left text-[14px] transition-colors duration-150 ${
                 isActive
-                  ? "bg-[#e8f5e9] font-medium text-ink"
-                  : "text-ink-2 hover:bg-black/[0.04] hover:text-ink"
+                  ? "bg-nav-active font-medium text-ink"
+                  : "text-ink-2 hover:bg-hover hover:text-ink"
               }`}
             >
               <Icon size={18} strokeWidth={1.8} />
-              {item.label}
+              {t(`nav.${item.key}`)}
             </motion.button>
           );
         })}
@@ -98,9 +100,9 @@ export default function Sidebar({
           <div className="relative">
             <button
               onClick={() => setMenuOpen((v) => !v)}
-              className="flex w-full items-center gap-3 rounded-[10px] px-2 py-2 text-left transition-colors hover:bg-black/[0.04]"
+              className="flex w-full items-center gap-3 rounded-[10px] px-2 py-2 text-left transition-colors hover:bg-hover"
             >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#e0e0e0]">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-subtle">
                 <svg viewBox="0 0 36 36" className="h-9 w-9">
                   <rect width="36" height="36" fill="#8d6e63" />
                   <rect x="8" y="6" width="20" height="14" rx="2" fill="#f5deb3" />
@@ -113,8 +115,8 @@ export default function Sidebar({
               <div className="flex flex-1 flex-col items-start">
                 <span className="text-[13.5px] font-medium text-ink">{activeAccount.username}</span>
                 <span className="flex items-center gap-1.5 text-[11.5px] text-ink-3">
-                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#4caf50]" />
-                  {activeAccount.account_type === "microsoft" ? "微软账号" : "离线账号"}
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-success-600" />
+                  {t(activeAccount.account_type === "microsoft" ? "account.microsoft" : "account.offline")}
                 </span>
               </div>
               <ChevronDown
@@ -127,27 +129,27 @@ export default function Sidebar({
 
             {/* 账号菜单:查看/切换与登出完全独立,登出需二次确认 */}
             {menuOpen && (
-              <div className="absolute bottom-full left-0 right-0 mb-2 overflow-hidden rounded-[12px] border border-[#e5e7eb] bg-white shadow-[0_12px_32px_rgba(0,0,0,0.12)]">
+              <div className="absolute bottom-full left-0 right-0 mb-2 overflow-hidden rounded-[12px] border border-divider bg-card shadow-[0_12px_32px_rgba(0,0,0,0.12)]">
                 <div className="border-b border-divider px-4 py-3">
                   <p className="text-[12px] font-semibold text-ink">{activeAccount.username}</p>
                   <p className="mt-0.5 text-[11px] text-ink-3">
-                    {activeAccount.account_type === "microsoft" ? "微软账号" : "离线账号"} ·{" "}
+                    {t(activeAccount.account_type === "microsoft" ? "account.microsoft" : "account.offline")} ·{" "}
                     {activeAccount.uuid.slice(0, 8)}
                   </p>
                 </div>
                 <button
                   onClick={handleSwitchAccount}
-                  className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-[13px] text-ink transition-colors hover:bg-black/[0.04]"
+                  className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-[13px] text-ink transition-colors hover:bg-hover"
                 >
                   <RefreshCw size={15} strokeWidth={1.8} />
-                  切换账号
+                  {t("account.switch")}
                 </button>
                 <button
                   onClick={handleLogout}
-                  className="flex w-full items-center gap-2.5 border-t border-divider px-4 py-2.5 text-left text-[13px] text-red-600 transition-colors hover:bg-red-50"
+                  className="flex w-full items-center gap-2.5 border-t border-divider px-4 py-2.5 text-left text-[13px] text-danger-600 transition-colors hover:bg-danger-50"
                 >
                   <LogOut size={15} strokeWidth={1.8} />
-                  退出登录
+                  {t("account.logout")}
                 </button>
               </div>
             )}
@@ -155,14 +157,14 @@ export default function Sidebar({
         ) : (
           <button
             onClick={openLogin}
-            className="flex w-full items-center gap-3 rounded-[10px] px-2 py-2 transition-colors hover:bg-black/[0.04]"
+            className="flex w-full items-center gap-3 rounded-[10px] px-2 py-2 transition-colors hover:bg-hover"
           >
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-dashed border-ink-3 text-ink-3">
               <LogIn size={15} />
             </div>
             <div className="flex flex-1 flex-col items-start">
-              <span className="text-[13.5px] font-medium text-ink-2">未登录</span>
-              <span className="text-[11.5px] text-ink-3">点击登录微软账号</span>
+              <span className="text-[13.5px] font-medium text-ink-2">{t("account.notLoggedIn")}</span>
+              <span className="text-[11.5px] text-ink-3">{t("account.clickToLogin")}</span>
             </div>
             <ChevronDown size={14} className="text-ink-3" />
           </button>
