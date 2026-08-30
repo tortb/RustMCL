@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   Home,
@@ -10,6 +11,8 @@ import {
   LogIn,
   Server,
   Image,
+  RefreshCw,
+  LogOut,
 } from "lucide-react";
 import type { PageKey } from "../App";
 import { useAccountStore } from "../stores/account";
@@ -36,6 +39,23 @@ export default function Sidebar({
   const activeAccount = useAccountStore((s) => s.active);
   const openLogin = useAccountStore((s) => s.openLogin);
   const logout = useAccountStore((s) => s.logout);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // 与"点击账号"解耦:单纯的查看/切换,不再触发登出
+  const handleSwitchAccount = () => {
+    setMenuOpen(false);
+    openLogin();
+  };
+  // 登出必须是用户主动、明确的操作 + 二次确认
+  const handleLogout = () => {
+    if (!activeAccount) return;
+    if (
+      window.confirm(`确定要退出登录「${activeAccount.username}」吗?下次启动将需要用该账号重新登录。`)
+    ) {
+      logout(activeAccount.id);
+    }
+    setMenuOpen(false);
+  };
 
   return (
     <aside className="flex h-full w-[210px] shrink-0 flex-col bg-[#f6f6f7]">
@@ -77,31 +97,62 @@ export default function Sidebar({
       {/* User profile */}
       <div className="border-t border-divider px-4 py-3.5">
         {activeAccount ? (
-          <div className="flex items-center gap-3 rounded-[10px] px-2 py-2">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#e0e0e0]">
-              <svg viewBox="0 0 36 36" className="h-9 w-9">
-                <rect width="36" height="36" fill="#8d6e63" />
-                <rect x="8" y="6" width="20" height="14" rx="2" fill="#f5deb3" />
-                <rect x="11" y="10" width="4" height="3" rx="0.5" fill="#5d4037" />
-                <rect x="21" y="10" width="4" height="3" rx="0.5" fill="#5d4037" />
-                <rect x="14" y="16" width="8" height="2" rx="0.5" fill="#5d4037" />
-                <rect x="6" y="22" width="24" height="10" rx="2" fill="#4caf50" />
-              </svg>
-            </div>
-            <div className="flex flex-1 flex-col items-start">
-              <span className="text-[13.5px] font-medium text-ink">{activeAccount.username}</span>
-              <span className="flex items-center gap-1.5 text-[11.5px] text-ink-3">
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#4caf50]" />
-                {activeAccount.account_type === "microsoft" ? "微软账号" : "离线账号"}
-              </span>
-            </div>
+          <div className="relative">
             <button
-              onClick={() => logout(activeAccount.id)}
-              className="rounded-full p-1.5 text-ink-3 transition-colors hover:bg-black/[0.05]"
-              aria-label="退出登录"
+              onClick={() => setMenuOpen((v) => !v)}
+              className="flex w-full items-center gap-3 rounded-[10px] px-2 py-2 text-left transition-colors hover:bg-black/[0.04]"
             >
-              <ChevronDown size={14} />
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#e0e0e0]">
+                <svg viewBox="0 0 36 36" className="h-9 w-9">
+                  <rect width="36" height="36" fill="#8d6e63" />
+                  <rect x="8" y="6" width="20" height="14" rx="2" fill="#f5deb3" />
+                  <rect x="11" y="10" width="4" height="3" rx="0.5" fill="#5d4037" />
+                  <rect x="21" y="10" width="4" height="3" rx="0.5" fill="#5d4037" />
+                  <rect x="14" y="16" width="8" height="2" rx="0.5" fill="#5d4037" />
+                  <rect x="6" y="22" width="24" height="10" rx="2" fill="#4caf50" />
+                </svg>
+              </div>
+              <div className="flex flex-1 flex-col items-start">
+                <span className="text-[13.5px] font-medium text-ink">{activeAccount.username}</span>
+                <span className="flex items-center gap-1.5 text-[11.5px] text-ink-3">
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#4caf50]" />
+                  {activeAccount.account_type === "microsoft" ? "微软账号" : "离线账号"}
+                </span>
+              </div>
+              <ChevronDown
+                size={14}
+                className={`shrink-0 text-ink-3 transition-transform duration-200 ${
+                  menuOpen ? "rotate-180" : ""
+                }`}
+              />
             </button>
+
+            {/* 账号菜单:查看/切换与登出完全独立,登出需二次确认 */}
+            {menuOpen && (
+              <div className="absolute bottom-full left-0 right-0 mb-2 overflow-hidden rounded-[12px] border border-[#e5e7eb] bg-white shadow-[0_12px_32px_rgba(0,0,0,0.12)]">
+                <div className="border-b border-divider px-4 py-3">
+                  <p className="text-[12px] font-semibold text-ink">{activeAccount.username}</p>
+                  <p className="mt-0.5 text-[11px] text-ink-3">
+                    {activeAccount.account_type === "microsoft" ? "微软账号" : "离线账号"} ·{" "}
+                    {activeAccount.uuid.slice(0, 8)}
+                  </p>
+                </div>
+                <button
+                  onClick={handleSwitchAccount}
+                  className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-[13px] text-ink transition-colors hover:bg-black/[0.04]"
+                >
+                  <RefreshCw size={15} strokeWidth={1.8} />
+                  切换账号
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="flex w-full items-center gap-2.5 border-t border-divider px-4 py-2.5 text-left text-[13px] text-red-600 transition-colors hover:bg-red-50"
+                >
+                  <LogOut size={15} strokeWidth={1.8} />
+                  退出登录
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <button
