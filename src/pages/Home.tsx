@@ -1,6 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Play, HardDrive, Coffee, MoreHorizontal, Boxes, AlertTriangle, Pencil } from "lucide-react";
+import { getJavaVersion } from "../lib/api";
+import { Play, HardDrive, Coffee, Boxes, AlertTriangle, Pencil } from "lucide-react";
 import { useInstanceStore } from "../stores/instance";
 import { useAccountStore } from "../stores/account";
 import type { PageKey } from "../App";
@@ -49,10 +50,15 @@ function SkeletonCard() {
 
 export default function Home({ onNavigate }: { onNavigate: (p: PageKey) => void }) {
   const s = useInstanceStore();
+  // 实际用于启动的 Java 版本(全局单值,一次探测;供实例卡显示)
+  const [javaVersion, setJavaVersion] = useState<string | null>(null);
 
   useEffect(() => {
     s.loadInstances();
     s.loadVersions();
+    getJavaVersion()
+      .then(setJavaVersion)
+      .catch(() => setJavaVersion(null));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -165,7 +171,7 @@ export default function Home({ onNavigate }: { onNavigate: (p: PageKey) => void 
         {!s.loading && !s.error && s.instances.length > 0 && (
           <div className="flex flex-col gap-3">
             {s.instances.map((inst, i) => (
-              <InstanceRow key={inst.id} inst={inst} index={i} onNavigate={onNavigate} />
+              <InstanceRow key={inst.id} inst={inst} index={i} onNavigate={onNavigate} javaVersion={javaVersion} />
             ))}
           </div>
         )}
@@ -182,10 +188,12 @@ function InstanceRow({
   inst,
   index,
   onNavigate,
+  javaVersion,
 }: {
   inst: InstanceDetail;
   index: number;
   onNavigate: (p: PageKey) => void;
+  javaVersion: string | null;
 }) {
   const loader = inst.loader && inst.loader !== "vanilla" ? inst.loader : null;
   const memory = inst.config.jvm.max_memory;
@@ -217,24 +225,21 @@ function InstanceRow({
         </span>
         <span className="flex items-center gap-1.5">
           <Coffee size={15} strokeWidth={1.8} />
-          Java 21
+          Java {javaVersion ?? "?"}
         </span>
       </div>
 
       <div className="ml-6 flex items-center gap-2">
         <button
-          onClick={() => onNavigate("instances")}
+          onClick={() => {
+            onNavigate("instances");
+            useInstanceStore.getState().openEdit(inst);
+          }}
           className="flex h-9 w-9 items-center justify-center rounded-full border border-divider text-ink-2 transition-colors hover:bg-gray-50 hover:text-ink"
           aria-label="编辑实例"
+          title="编辑实例"
         >
           <Pencil size={14} />
-        </button>
-        <button
-          onClick={() => onNavigate("instances")}
-          className="flex h-9 w-9 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-gray-50 hover:text-ink-2"
-          aria-label="更多"
-        >
-          <MoreHorizontal size={16} />
         </button>
       </div>
     </motion.div>
