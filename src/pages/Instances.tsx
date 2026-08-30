@@ -125,7 +125,10 @@ export default function Instances() {
         else st.setModpackProgress(null);
       }),
     ]).then((un) => {
-      if (mounted) unlisteners = un;
+      // 无论是否已卸载都保存,确保返回函数能解除监听;
+      // 若卸载发生在 Promise 解析前,则立即解除刚注册的监听(避免 StrictMode 下重复回调)。
+      unlisteners = un;
+      if (!mounted) un.forEach((u) => u());
     });
     return () => {
       mounted = false;

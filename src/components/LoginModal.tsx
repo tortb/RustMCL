@@ -30,7 +30,8 @@ export default function LoginModal() {
       listen<MsLoginStatus>("ms-login-status", (e) => s.onStatus(e.payload)),
       listen<MsLoginFinished>("ms-login-finished", (e) => s.onFinished(e.payload)),
     ]).then((un) => {
-      if (mounted) unlisteners = un;
+      unlisteners = un;
+      if (!mounted) un.forEach((u) => u());
     });
     return () => {
       mounted = false;

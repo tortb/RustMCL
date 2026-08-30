@@ -41,7 +41,8 @@ export default function Downloads() {
         s.setRunState("exited", e.payload.code);
       }),
     ]).then((un) => {
-      if (mounted) unlisteners = un;
+      unlisteners = un;
+      if (!mounted) un.forEach((u) => u());
     });
     return () => {
       mounted = false;

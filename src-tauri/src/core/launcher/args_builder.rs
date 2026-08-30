@@ -66,10 +66,7 @@ pub fn build_launch_command(
     opts: &LaunchOptions,
     java_path: &str,
 ) -> Result<LaunchCommand, RmclError> {
-    let ctx = RuleContext::current(FeaturesCtx {
-        has_custom_resolution: true,
-        is_demo_user: false,
-    });
+    let ctx = RuleContext::current(FeaturesCtx::default().custom_resolution(true));
 
     // 1. classpath:应用规则的 libraries artifact + client.jar
     let mut classpath: Vec<String> = Vec::new();
@@ -300,5 +297,42 @@ mod tests {
         let joined = cmd.args.join(" ");
         assert!(joined.contains("brigadier-1.1.8.jar"));
         assert!(!joined.contains("lwjgl-3.3.3.jar"), "native 库不应进 classpath");
+    }
+
+    #[test]
+    fn quick_play_not_injected_when_feature_disabled() {
+        // 复现崩溃场景:MC 1.21.11 的 game arguments 含 has_quick_plays_support 系列规则,
+        // 若被误判为启用并注入 --quickPlay*,MC 客户端会抛
+        // "Only one quick play option can be specified" 而崩溃。
+        // 默认未启用时,这些 quick play 参数不应出现在启动参数里。
+        let json = r#"{
+          "id": "1.21.11",
+          "arguments": {
+            "game": [
+              "--username", "${auth_player_name}",
+              "--version", "${version_name}",
+              "--gameDir", "${game_directory}",
+              {"rules": [{"action":"allow","features":{"has_quick_plays_support":true}}], "value": ["--quickPlayPath", "${quickPlayPath}"]},
+              {"rules": [{"action":"allow","features":{"is_quick_play_singleplayer":true}}], "value": ["--quickPlaySingleplayer", "${quickPlaySingleplayer}"]},
+              {"rules": [{"action":"allow","features":{"is_quick_play_multiplayer":true}}], "value": ["--quickPlayMultiplayer", "${quickPlayMultiplayer}"]},
+              {"rules": [{"action":"allow","features":{"is_quick_play_realms":true}}], "value": ["--quickPlayRealms", "${quickPlayRealms}"]}
+            ],
+            "jvm": ["-Djava.library.path=${natives_directory}", "-cp", "${classpath}"]
+          },
+          "assetIndex": {"id": "18", "sha1": "aabb", "size": 400000, "url": "https://example.com/18.json"},
+          "downloads": {"client": {"sha1": "ccdd", "size": 25000000, "url": "https://example.com/client.jar"}},
+          "libraries": [],
+          "mainClass": "net.minecraft.client.main.Main",
+          "type": "release"
+        }"#;
+        let version: VersionJson = serde_json::from_str(json).unwrap();
+        let opts = LaunchOptions::default();
+        let cmd = build_launch_command(&version, &paths(), &opts, "java").unwrap();
+        let joined = cmd.args.join(" ");
+        assert!(
+            !joined.contains("--quickPlay"),
+            "未启用 quick play 时不应注入 quickPlay 参数,实际: {joined}"
+        );
+        assert!(!joined.contains("${"), "不应残留未替换 token,实际: {joined}");
     }
 }

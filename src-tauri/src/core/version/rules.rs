@@ -16,8 +16,30 @@ pub struct RuleContext {
 
 #[derive(Debug, Clone, Default)]
 pub struct FeaturesCtx {
-    pub is_demo_user: bool,
-    pub has_custom_resolution: bool,
+    /// 当前启动上下文中开启的 feature 集合。
+    /// 用集合而非固定字段,避免 version.json 新增 feature(如 quick play 系列)时
+    /// 因字段缺失而被误判为"已启用",导致参数被错误注入。
+    pub enabled: std::collections::HashSet<String>,
+}
+
+impl FeaturesCtx {
+    pub fn custom_resolution(mut self, yes: bool) -> Self {
+        set_feature(&mut self, "has_custom_resolution", yes);
+        self
+    }
+
+    pub fn demo_user(mut self, yes: bool) -> Self {
+        set_feature(&mut self, "is_demo_user", yes);
+        self
+    }
+}
+
+fn set_feature(ctx: &mut FeaturesCtx, name: &str, on: bool) {
+    if on {
+        ctx.enabled.insert(name.to_string());
+    } else {
+        ctx.enabled.remove(name);
+    }
 }
 
 impl RuleContext {
@@ -66,24 +88,31 @@ pub struct OsRule {
     pub version: Option<String>,
 }
 
-/// 目前 Mojang 只用这两个 feature,其余字段缺失时该规则视为不匹配
+/// 捕获 version.json 规则中声明的任意 feature 组合。
+/// 不再只固定 demo_user / custom_resolution:若只识别这两个字段,
+/// quick play(is_quick_play_* 等)会被当成"已填 false"而非"未启用",
+/// 从而被误判为匹配。这里用 Map 保留全部字段,便于对未知 feature 做兜底判定。
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct FeaturesRule {
-    #[serde(default)]
-    pub is_demo_user: Option<bool>,
-    #[serde(default)]
-    pub has_custom_resolution: Option<bool>,
+    #[serde(flatten)]
+    pub fields: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
 impl FeaturesRule {
+    /// 一条 rule 是否匹配当前 feature 上下文:
+    /// 规则声明要求的每个 feature,都必须**处于开启状态**才匹配;
+    /// 未在上下文启用的 feature(含完全未知的)一律视为不匹配。
+    /// 例如 quick play 规则要求 is_quick_play_singleplayer: true,
+    /// 但默认未启用该 feature => 规则不匹配 => 参数不会被注入。
     fn matches(&self, ctx: &RuleContext) -> bool {
-        if let Some(need) = self.is_demo_user {
-            if ctx.features.is_demo_user != need {
-                return false;
-            }
-        }
-        if let Some(need) = self.has_custom_resolution {
-            if ctx.features.has_custom_resolution != need {
+        for (name, need) in &self.fields {
+            let need_true = need.as_bool().unwrap_or(false);
+            let enabled = ctx.features.enabled.contains(name);
+            // 规则要求该 feature 处于某一状态,而当前上下文不满足时即整体不匹配。
+            // 注意:未声明的 feature(如 quick play 系列)默认不启用,因此"要求启用"
+            // 的规则不会命中 —— 这是修复 MC 1.21.11 崩溃的关键。
+            // 同时兼容 `{"is_demo_user": false}` 这类"要求关闭"的规则。
+            if enabled != need_true {
                 return false;
             }
         }
@@ -209,14 +238,63 @@ mod tests {
             action: RuleAction::Allow,
             os: None,
             features: Some(FeaturesRule {
-                has_custom_resolution: Some(true),
-                ..Default::default()
+                fields: [("has_custom_resolution".into(), serde_json::json!(true))]
+                    .into_iter()
+                    .collect(),
             }),
         }];
-        let mut c = ctx();
-        c.features.has_custom_resolution = true;
+        // 未启用该 feature => 规则不匹配
+        let c = ctx();
+        assert!(!rules_allow(Some(&rules), &c));
+        // 启用后 => 规则匹配
+        let c = RuleContext::current(FeaturesCtx::default().custom_resolution(true));
         assert!(rules_allow(Some(&rules), &c));
-        c.features.has_custom_resolution = false;
+    }
+
+    #[test]
+    fn quick_play_features_not_enabled_are_not_matched() {
+        // 复现 crash 场景:MC 1.21.11 的 quick play 规则引用了多个 feature,
+        // 未启用时应全部不匹配,而不是都被注入(否则 MC 抛 "Only one quick play option")。
+        let make = |name: &str| {
+            vec![Rule {
+                action: RuleAction::Allow,
+                os: None,
+                features: Some(FeaturesRule {
+                    fields: [(name.to_string(), serde_json::json!(true))].into_iter().collect(),
+                }),
+            }]
+        };
+        for name in [
+            "has_quick_plays_support",
+            "is_quick_play_singleplayer",
+            "is_quick_play_multiplayer",
+            "is_quick_play_realms",
+        ] {
+            let rules = make(name);
+            assert!(
+                !rules_allow(Some(&rules), &ctx()),
+                "{name} 未启用时不应匹配"
+            );
+        }
+    }
+
+    #[test]
+    fn feature_requires_false_matches_when_not_enabled() {
+        // 兼容 Mojang 的 `{"features":{"is_demo_user":false}}` 规则:
+        // "当该 feature 处于关闭状态时允许"。默认未启用 => 应匹配(而非被误判为永不匹配)。
+        let rules = vec![Rule {
+            action: RuleAction::Allow,
+            os: None,
+            features: Some(FeaturesRule {
+                fields: [("is_demo_user".into(), serde_json::json!(false))]
+                    .into_iter()
+                    .collect(),
+            }),
+        }];
+        // 未启用 demo => 规则命中
+        assert!(rules_allow(Some(&rules), &ctx()));
+        // 启用 demo => 规则不命中
+        let c = RuleContext::current(FeaturesCtx::default().demo_user(true));
         assert!(!rules_allow(Some(&rules), &c));
     }
 }
