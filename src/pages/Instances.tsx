@@ -143,7 +143,16 @@ export default function Instances() {
   }, [s.logs]);
 
   const handleDelete = async (inst: InstanceDetail) => {
-    if (confirm(`确定删除实例「${inst.name}」吗?该操作会删除实例目录。`)) {
+    // 运行中的实例禁止删除:游戏进程正占用实例目录,删除会导致运行异常
+    if (s.runningId === inst.id) {
+      alert("该实例正在运行中,请先停止游戏后再删除。");
+      return;
+    }
+    if (
+      confirm(
+        `确定删除实例「${inst.name}」吗?\n\n此操作不可撤销,将删除该实例的数据库记录与全部目录(含 mod / 配置 / 存档)。`,
+      )
+    ) {
       await s.remove(inst.id);
     }
   };
