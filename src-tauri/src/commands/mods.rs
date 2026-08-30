@@ -122,9 +122,36 @@ pub fn list_instance_mods(state: State<'_, AppState>, instance_id: String) -> Re
     Repository::list_mods(&conn, &instance_id).map_err(|e| e.to_string())
 }
 
-/// 启用/禁用 mod(仅 DB 记录;实际加载由启动时的 mods 目录决定)
+/// 启用/禁用 mod:把文件重命名为 <file_name>.disabled 实现真正卸载,更新 DB。
+/// 加载器只加载 mods/ 下 *.jar,故 .jar.disabled 不会被加载;启用时改回。
 #[tauri::command]
 pub fn set_mod_enabled(state: State<'_, AppState>, id: String, enabled: bool) -> Result<(), String> {
+    let (game_dir, file_name) = {
+        let conn = state
+            .db
+            .lock()
+            .map_err(|e| format!("数据库锁获取失败: {e}"))?;
+        let m = Repository::get_mod(&conn, &id)
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| format!("Mod 不存在: {id}"))?;
+        let game = Repository::get_instance(&conn, &m.instance_id)
+            .map_err(|e| e.to_string())?
+            .map(|i| i.game_dir)
+            .ok_or("实例不存在")?;
+        (game, m.file_name)
+    };
+    let mods_dir = std::path::Path::new(&game_dir).join("mods");
+    let active = mods_dir.join(&file_name);
+    let disabled = mods_dir.join(format!("{file_name}.disabled"));
+
+    if enabled {
+        if disabled.exists() {
+            std::fs::rename(&disabled, &active).map_err(|e| format!("启用失败: {e}"))?;
+        }
+    } else if active.exists() {
+        std::fs::rename(&active, &disabled).map_err(|e| format!("禁用失败: {e}"))?;
+    }
+
     let conn = state
         .db
         .lock()
@@ -296,11 +323,15 @@ pub fn delete_mod(state: State<'_, AppState>, id: String) -> Result<(), String> 
             .map_err(|e| e.to_string())?
     };
     if let Some(inst) = inst {
-        let file = std::path::Path::new(&inst.game_dir)
-            .join("mods")
-            .join(&entry.file_name);
-        if file.exists() {
-            let _ = std::fs::remove_file(file);
+        let mods_dir = std::path::Path::new(&inst.game_dir).join("mods");
+        // 同时处理 active 与已禁用的 .disabled 文件
+        for candidate in [
+            mods_dir.join(&entry.file_name),
+            mods_dir.join(format!("{}.disabled", entry.file_name)),
+        ] {
+            if candidate.exists() {
+                let _ = std::fs::remove_file(candidate);
+            }
         }
     }
     Ok(())
