@@ -16,8 +16,8 @@ use serde::Serialize;
 
 use crate::error::RmclError;
 
-/// 第三方启动器通用的 Microsoft client id(Mojang 官方授权)
-pub const CLIENT_ID: &str = "00000000402b5328";
+/// 独立注册的 Azure AD 应用 client id(非官方共享,已注册于 login.microsoftonline.com)
+pub const CLIENT_ID: &str = "0f8c2c12-fcd8-4d56-8c5e-59bd13e78ee8";
 
 const SCOPE: &str = "XboxLive.signin offline_access";
 
@@ -156,18 +156,15 @@ struct XboxAuthRequest<'a> {
 
 #[derive(Serialize)]
 struct XboxAuthProperties<'a> {
-    /// 仅 XBL 使用(值为 "RelyingParty");XSTS 不携带
+    /// 仅 XBL 使用(官方值为 "RPS");XSTS 不携带
     #[serde(rename = "AuthMethod", skip_serializing_if = "Option::is_none")]
     auth_method: Option<&'a str>,
     /// 仅 XBL 使用
     #[serde(rename = "SiteName", skip_serializing_if = "Option::is_none")]
     site_name: Option<&'a str>,
-    /// 仅 XBL 使用(Properties 内嵌的 RelyingParty)
-    #[serde(rename = "RelyingParty", skip_serializing_if = "Option::is_none")]
-    relying_party: Option<&'a str>,
-    /// 仅 XBL 使用("d=<msa_token>");XSTS 不携带
-    #[serde(rename = "Token", skip_serializing_if = "Option::is_none")]
-    token: Option<String>,
+    /// "d=<msa_token>";XSTS 不携带
+    #[serde(rename = "RpsTicket", skip_serializing_if = "Option::is_none")]
+    rps_ticket: Option<String>,
     #[serde(rename = "SandboxId", skip_serializing_if = "Option::is_none")]
     sandbox_id: Option<&'a str>,
     #[serde(rename = "UserTokens", skip_serializing_if = "Option::is_none")]
@@ -191,11 +188,19 @@ async fn xbox_auth(
     let resp = client
         .post(url)
         .header("x-xbl-contract-version", "1")
+        .header("Accept", "application/json")
         .json(&req)
         .send()
         .await?;
     let status = resp.status();
-    let body: serde_json::Value = resp.json().await?;
+    let status_code = status.as_u16();
+    // 先取原始响应体文本并打印,避免解码失败时丢失 status/body;再尝试解析为 JSON
+    let raw = resp.text().await.unwrap_or_default();
+    eprintln!("[rmcl-ms] {url} HTTP {status_code} body: {}", raw.chars().take(400).collect::<String>());
+    let body: serde_json::Value = match serde_json::from_str(&raw) {
+        Ok(v) => v,
+        Err(_) => serde_json::Value::String(raw),
+    };
     if status.is_success() {
         let token = body["Token"]
             .as_str()
@@ -235,16 +240,21 @@ pub async fn exchange_tokens(
     msa_access_token: &str,
     msa_refresh_token: Option<&str>,
 ) -> Result<MicrosoftAccount, RmclError> {
+    // 日志 token 类型前缀,便于排查(MSA access token 可能是 opaque 或 JWT,均属正常)
+    eprintln!(
+        "[rmcl-ms] MSA access_token 前缀: {}(token 长度 {})",
+        msa_access_token.chars().take(8).collect::<String>(),
+        msa_access_token.len()
+    );
     // 1. XBL token(携带 MSA access token)
     let (xbl_token, _uhs) = xbox_auth(
         client,
         XBL_AUTH_URL,
         "http://auth.xboxlive.com",
         XboxAuthProperties {
-            auth_method: Some("RelyingParty"),
+            auth_method: Some("RPS"),
             site_name: Some("user.auth.xboxlive.com"),
-            relying_party: Some("http://auth.xboxlive.com"),
-            token: Some(format!("d={msa_access_token}")),
+            rps_ticket: Some(format!("d={msa_access_token}")),
             sandbox_id: None,
             user_tokens: None,
         },
@@ -258,8 +268,7 @@ pub async fn exchange_tokens(
         XboxAuthProperties {
             auth_method: None,
             site_name: None,
-            relying_party: None,
-            token: None,
+            rps_ticket: None,
             sandbox_id: Some("RETAIL"),
             user_tokens: Some(vec![xbl_token]),
         },
