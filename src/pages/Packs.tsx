@@ -8,9 +8,14 @@ import {
   Sun,
   Package,
   RefreshCw,
+  Plus,
+  X,
+  Download,
+  CheckCircle2,
 } from "lucide-react";
 import { usePacksStore, type PackType } from "../stores/packs";
 import { AppSelect } from "../components/AppSelect";
+import type { ModrinthVersion } from "../lib/types";
 
 const ease = [0.32, 0.72, 0, 1] as const;
 
@@ -133,6 +138,15 @@ export default function Packs() {
                   <span className="block truncate text-[14px] font-medium text-ink">{hit.title}</span>
                   <span className="block truncate text-[12px] text-ink-3">{hit.description}</span>
                 </div>
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => s.openVersions(hit)}
+                  disabled={s.installing}
+                  className="flex shrink-0 items-center gap-1.5 rounded-[10px] bg-accent px-3 py-1.5 text-[12px] font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-40"
+                >
+                  <Plus size={14} strokeWidth={2.4} />
+                  添加
+                </motion.button>
               </motion.div>
             ))}
           </div>
@@ -197,6 +211,94 @@ export default function Packs() {
             </div>
           )}
         </div>
+
+        {/* 版本选择弹窗(从搜索结果添加) */}
+        <AnimatePresence>
+          {s.versionModalProject && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+              onClick={s.closeVersions}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 8 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 8 }}
+                transition={{ duration: 0.28, ease }}
+                onClick={(e) => e.stopPropagation()}
+                className="w-[440px] rounded-[20px] bg-white p-6 shadow-[0_24px_64px_rgba(0,0,0,0.16)]"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-[17px] font-bold tracking-tight text-ink">
+                      {s.versionModalProject.title}
+                    </h2>
+                    <p className="mt-0.5 text-[12px] text-ink-3">
+                      选择要安装的 {typeLabels[s.type]} 版本
+                    </p>
+                  </div>
+                  <button
+                    onClick={s.closeVersions}
+                    className="rounded-full p-1.5 text-ink-3 transition-colors hover:bg-black/[0.05]"
+                    aria-label="关闭"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+
+                <div className="mt-4 max-h-[320px] overflow-y-auto">
+                  {s.loadingVersions ? (
+                    <div className="flex justify-center py-10 text-ink-3">
+                      <Loader2 size={20} className="animate-spin" />
+                    </div>
+                  ) : s.versions.length === 0 ? (
+                    <p className="py-8 text-center text-[13px] text-ink-3">
+                      该版本没有与当前实例兼容的 {typeLabels[s.type]}
+                    </p>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      {s.versions.map((v: ModrinthVersion) => (
+                        <button
+                          key={v.id}
+                          onClick={() => s.install(v)}
+                          disabled={s.installing}
+                          className="flex items-center gap-3 rounded-[12px] border border-divider px-3.5 py-3 text-left transition-colors hover:bg-black/[0.03] disabled:opacity-50"
+                        >
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-badge-bg">
+                            {s.installing ? (
+                              <Loader2 size={14} className="animate-spin text-badge-text" />
+                            ) : (
+                              <Download size={14} className="text-badge-text" />
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <span className="block truncate text-[13.5px] font-medium text-ink">
+                              {v.name || v.version_number}
+                            </span>
+                            <span className="block truncate text-[11.5px] text-ink-3">
+                              {v.game_versions.slice(0, 3).join(", ")}
+                              {v.loaders.length > 0 && ` · ${v.loaders.slice(0, 2).join("/")} `}
+                            </span>
+                          </div>
+                          {s.installing && <CheckCircle2 size={16} className="shrink-0 text-accent" />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {s.installError && (
+                  <p className="mt-3 rounded-[10px] bg-red-50 px-3.5 py-2.5 text-[12.5px] text-red-600">
+                    安装失败:{s.installError}
+                  </p>
+                )}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
     </div>
   );

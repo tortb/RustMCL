@@ -2,6 +2,8 @@ import { create } from "zustand";
 import {
   checkShaderSupport,
   getInstance,
+  getResourcePackVersions,
+  installResourcePack,
   listInstances,
   removeResourcePack,
   scanResourcePacks,
@@ -11,6 +13,7 @@ import {
 import type {
   InstanceDetail,
   ModrinthHit,
+  ModrinthVersion,
   ResourcePackEntry,
   ShaderSupportInfo,
 } from "../lib/types";
@@ -29,11 +32,21 @@ interface PacksStore {
   searching: boolean;
   shaderSupport: ShaderSupportInfo | null;
 
+  // 版本选择弹窗(从搜索结果安装)
+  versionModalProject: ModrinthHit | null;
+  versions: ModrinthVersion[];
+  loadingVersions: boolean;
+  installing: boolean;
+  installError: string;
+
   loadInstances: () => Promise<void>;
   setType: (t: PackType) => Promise<void>;
   setQuery: (q: string) => void;
   scan: () => Promise<void>;
   search: () => Promise<void>;
+  openVersions: (hit: ModrinthHit) => Promise<void>;
+  closeVersions: () => void;
+  install: (version: ModrinthVersion) => Promise<void>;
   toggle: (pack: ResourcePackEntry) => Promise<void>;
   remove: (pack: ResourcePackEntry) => Promise<void>;
 }
@@ -49,6 +62,12 @@ export const usePacksStore = create<PacksStore>((set, get) => ({
   results: [],
   searching: false,
   shaderSupport: null,
+
+  versionModalProject: null,
+  versions: [],
+  loadingVersions: false,
+  installing: false,
+  installError: "",
 
   loadInstances: async () => {
     try {
@@ -109,6 +128,47 @@ export const usePacksStore = create<PacksStore>((set, get) => ({
       set({ results, searching: false });
     } catch {
       set({ results: [], searching: false });
+    }
+  },
+
+  openVersions: async (hit) => {
+    const id = get().selectedInstanceId;
+    if (!id) return;
+    set({
+      versionModalProject: hit,
+      versions: [],
+      loadingVersions: true,
+      installing: false,
+      installError: "",
+    });
+    try {
+      const versions = await getResourcePackVersions(hit.project_id, id);
+      set({ versions, loadingVersions: false });
+    } catch {
+      set({ versions: [], loadingVersions: false, installError: "获取版本失败" });
+    }
+  },
+
+  closeVersions: () =>
+    set({
+      versionModalProject: null,
+      versions: [],
+      loadingVersions: false,
+      installing: false,
+      installError: "",
+    }),
+
+  install: async (version) => {
+    const id = get().selectedInstanceId;
+    const packType = get().type;
+    if (!id) return;
+    set({ installing: true, installError: "" });
+    try {
+      await installResourcePack(id, version.id, packType);
+      await get().scan();
+      set({ versionModalProject: null, versions: [], installing: false });
+    } catch (e) {
+      set({ installing: false, installError: String(e) });
     }
   },
 

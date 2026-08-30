@@ -349,6 +349,23 @@ export function searchResourcePacks(query: string, packType: string): Promise<Mo
   return invoke<ModrinthHit[]>("search_resource_packs", { query, packType });
 }
 
+/** 获取某个资源包/光影包项目与指定实例兼容的版本列表 */
+export function getResourcePackVersions(
+  projectId: string,
+  instanceId: string,
+): Promise<ModrinthVersion[]> {
+  return invoke<ModrinthVersion[]>("get_resource_pack_versions", { projectId, instanceId });
+}
+
+/** 从 Modrinth 版本安装资源包/光影包到实例目录,packType: resourcepack | shaderpack */
+export function installResourcePack(
+  instanceId: string,
+  versionId: string,
+  packType: string,
+): Promise<ResourcePackEntry> {
+  return invoke<ResourcePackEntry>("install_resource_pack", { instanceId, versionId, packType });
+}
+
 /** 检测实例是否已安装光影加载器(Iris/OptiFine) */
 export function checkShaderSupport(instanceId: string): Promise<ShaderSupportInfo> {
   return invoke<ShaderSupportInfo>("check_shader_support", { instanceId });

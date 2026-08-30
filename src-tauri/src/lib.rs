@@ -156,6 +156,8 @@ pub fn run() {
             commands::resourcepacks::remove_resource_pack,
             commands::resourcepacks::search_resource_packs,
             commands::resourcepacks::check_shader_support,
+            commands::resourcepacks::get_resource_pack_versions,
+            commands::resourcepacks::install_resource_pack,
             commands::saves::list_saves,
             commands::saves::backup_save,
             commands::saves::list_backups,

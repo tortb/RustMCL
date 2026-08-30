@@ -3,12 +3,14 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::Serialize;
-use tauri::State;
+use tauri::{AppHandle, Emitter, State};
 
 use crate::core::mods::modrinth;
 use crate::db::repository::Repository;
 use crate::db::schema::ResourcePackEntry;
 use crate::AppState;
+
+use super::download::DownloadProgressEvent;
 
 fn now_secs() -> i64 {
     SystemTime::now()
@@ -171,6 +173,102 @@ pub async fn search_resource_packs(
     )
     .await
     .map_err(|e| e.to_string())
+}
+
+/// 获取某资源包/光影包项目与指定实例兼容的版本列表
+#[tauri::command]
+pub async fn get_resource_pack_versions(
+    state: State<'_, AppState>,
+    project_id: String,
+    instance_id: String,
+) -> Result<Vec<modrinth::ModrinthVersion>, String> {
+    let mc_version = {
+        let conn = state
+            .db
+            .lock()
+            .map_err(|e| format!("数据库锁获取失败: {e}"))?;
+        let inst = Repository::get_instance(&conn, &instance_id)
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| format!("实例不存在: {instance_id}"))?;
+        (inst.mc_version, inst.loader.as_deref().unwrap_or("vanilla").to_string())
+    };
+    let (mc_version, loader) = mc_version;
+    modrinth::compatible_versions(
+        &state.client,
+        &project_id,
+        &mc_version,
+        &loader,
+        state.retry_times,
+    )
+    .await
+    .map_err(|e| e.to_string())
+}
+
+/// 从 Modrinth 版本安装资源包/光影包到实例目录(resourcepacks/ 或 shaderpacks/)并记录 DB
+#[tauri::command]
+pub async fn install_resource_pack(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    instance_id: String,
+    version_id: String,
+    pack_type: String,
+) -> Result<ResourcePackEntry, String> {
+    let inst = {
+        let conn = state
+            .db
+            .lock()
+            .map_err(|e| format!("数据库锁获取失败: {e}"))?;
+        Repository::get_instance(&conn, &instance_id)
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| format!("实例不存在: {instance_id}"))?
+    };
+    let version = modrinth::fetch_version(&state.client, &version_id, state.retry_times)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let type_kind = if pack_type == "shaderpack" {
+        "shaderpack"
+    } else {
+        "resourcepack"
+    };
+    let game_dir = std::path::Path::new(&inst.game_dir);
+    let dir = dir_for_type(game_dir, type_kind);
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let file_name = crate::core::mods::install_version(
+        &state.client,
+        &state.mirror(),
+        &version,
+        &dir,
+        state.retry_times,
+    )
+    .await
+    .map_err(|e| e.to_string())?;
+
+    // 与 scan_resource_packs 生成的 id 同构,保证幂等且不被下次扫描删除
+    let entry = ResourcePackEntry {
+        id: format!("{instance_id}:{type_kind}:{file_name}"),
+        instance_id: inst.id.clone(),
+        type_kind: type_kind.to_string(),
+        file_name,
+        enabled: true,
+        created_at: now_secs(),
+    };
+    let conn = state
+        .db
+        .lock()
+        .map_err(|e| format!("数据库锁获取失败: {e}"))?;
+    Repository::upsert_resource_pack(&conn, &entry).map_err(|e| e.to_string())?;
+
+    let _ = app.emit(
+        "mod-install",
+        DownloadProgressEvent {
+            phase: "pack".into(),
+            current: 1,
+            total: 1,
+            file: entry.file_name.clone(),
+        },
+    );
+    Ok(entry)
 }
 
 /// 光影依赖检测:是否装了 Iris/OptiFine
