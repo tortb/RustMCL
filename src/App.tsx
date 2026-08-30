@@ -11,7 +11,6 @@ import JavaPage from "./pages/JavaPage";
 import Settings from "./pages/Settings";
 import Servers from "./pages/Servers";
 import Packs from "./pages/Packs";
-import Placeholder from "./components/Placeholder";
 import { useAppStore } from "./stores/app";
 import { useAccountStore } from "./stores/account";
 import { checkForUpdate } from "./lib/api";
@@ -26,12 +25,6 @@ export type PageKey =
   | "servers"
   | "java"
   | "settings";
-
-const pages: Record<string, string> = {
-  instances: "实例管理",
-  downloads: "下载管理",
-  java: "Java 管理",
-};
 
 export default function App() {
   const init = useAppStore((s) => s.init);
@@ -103,7 +96,6 @@ export default function App() {
             {page === "java" && <JavaPage />}
             {page === "servers" && <Servers />}
             {page === "settings" && <Settings />}
-            {page in pages && <Placeholder title={pages[page as keyof typeof pages]} />}
           </motion.div>
         </AnimatePresence>
       </main>
