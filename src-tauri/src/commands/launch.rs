@@ -175,23 +175,23 @@ pub(crate) fn spawn_instance_launch(
             },
         );
         // 2. 启动:游戏目录使用实例专属目录(保证 mods/存档隔离)
-    let game_dir = inst.game_dir.clone();
-    let result = run_launch(
-        client,
-        &data_dir,
-        &config_path,
-        &mc_version,
-        Some(&loader_name),
-         Some(&loader_version),
-         Some(std::path::Path::new(&game_dir)),
-         opts,
-        &mirror,
-        retry_times,
-        app.clone(),
-    )
-    .await;
-    emit_launch_result(&app, result);
-});
+        let game_dir = inst.game_dir.clone();
+        let result = run_launch(
+            client,
+            &data_dir,
+            &config_path,
+            &mc_version,
+            Some(&loader_name),
+            Some(&loader_version),
+            Some(std::path::Path::new(&game_dir)),
+            opts,
+            &mirror,
+            retry_times,
+            app.clone(),
+        )
+        .await;
+        emit_launch_result(&app, result);
+    });
     Ok(())
 }
 
@@ -234,17 +234,11 @@ async fn resolve_launch_account(
     let active = Repository::get_active_account(&conn)?;
     drop(conn);
     match active {
-        Some(acc) if acc.account_type == "offline" => {
-            Ok((acc.username, acc.uuid, "0".into()))
-        }
+        Some(acc) if acc.account_type == "offline" => Ok((acc.username, acc.uuid, "0".into())),
         Some(_) => resolve_active_account(client)
             .await?
             .ok_or_else(|| RmclError::other("微软账号令牌已失效,请重新登录")),
-        None => Ok((
-            "Steve".into(),
-            uuid::Uuid::new_v4().to_string(),
-            "0".into(),
-        )),
+        None => Ok(("Steve".into(), uuid::Uuid::new_v4().to_string(), "0".into())),
     }
 }
 
@@ -298,7 +292,10 @@ async fn run_launch(
     }
 
     // 3. 解压 natives
-    extract_natives(&native_plan(&version, &ctx, &layout.libraries_dir), &natives_dir)?;
+    extract_natives(
+        &native_plan(&version, &ctx, &layout.libraries_dir),
+        &natives_dir,
+    )?;
 
     // 4. 账号解析:未指定用户名时优先 DB 中激活账号(离线用固定 UUID,微软走 token 续期),否则离线 Steve
     let (username, uuid, access_token) = if opts.username.is_empty() {

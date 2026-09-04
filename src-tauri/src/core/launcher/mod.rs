@@ -16,17 +16,31 @@ pub struct NativePlan {
 }
 
 /// 收集本机需要解压的 native 库
-pub fn native_plan(version: &VersionJson, ctx: &RuleContext, libraries_dir: &PathBuf) -> Vec<NativePlan> {
+pub fn native_plan(
+    version: &VersionJson,
+    ctx: &RuleContext,
+    libraries_dir: &PathBuf,
+) -> Vec<NativePlan> {
     let mut plans = Vec::new();
     for lib in &version.libraries {
         if !rules_allow(lib.rules.as_deref(), ctx) {
             continue;
         }
-        let Some(natives) = &lib.natives else { continue };
-        let Some(classifier) = natives.get(ctx.os_name) else { continue };
-        let Some(downloads) = &lib.downloads else { continue };
-        let Some(classifiers) = &downloads.classifiers else { continue };
-        let Some(dl) = classifiers.get(classifier) else { continue };
+        let Some(natives) = &lib.natives else {
+            continue;
+        };
+        let Some(classifier) = natives.get(ctx.os_name) else {
+            continue;
+        };
+        let Some(downloads) = &lib.downloads else {
+            continue;
+        };
+        let Some(classifiers) = &downloads.classifiers else {
+            continue;
+        };
+        let Some(dl) = classifiers.get(classifier) else {
+            continue;
+        };
         plans.push(NativePlan {
             jar_path: libraries_dir.join(dl.path.clone().unwrap_or_default()),
             exclude: lib

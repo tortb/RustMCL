@@ -49,8 +49,17 @@ fn tier_of(total_mb: u64) -> Tier {
 /// 依据系统内存与(可选)mod 数量推荐 JVM 参数。
 /// `available_mb` 用于兜底,确保推荐值不超过系统可用内存的合理比例,避免卡死。
 /// `is_32bit` 时一律走保守档(< 4G 逻辑)。
-pub fn recommend(total_mb: u64, available_mb: u64, mod_count: u32, is_32bit: bool) -> JvmRecommendation {
-    let tier = if is_32bit { Tier::Low } else { tier_of(total_mb) };
+pub fn recommend(
+    total_mb: u64,
+    available_mb: u64,
+    mod_count: u32,
+    is_32bit: bool,
+) -> JvmRecommendation {
+    let tier = if is_32bit {
+        Tier::Low
+    } else {
+        tier_of(total_mb)
+    };
 
     let mod_extra_mb = (mod_count as u64).min(64) * 24; // 每个 mod 约 +24MB,封顶
     let (mut max_mb, mut min_mb, extra_args, tier_label, note) = match tier {
@@ -156,7 +165,11 @@ mod tests {
     fn low_memory_conservative() {
         let r = recommend(3072, 2048, 0, false);
         assert_eq!(r.tier_label, "保守(低内存)");
-        assert!(r.max_mb <= 3072, "低内存 max 不应超过 3G, 实际 {}", r.max_mb);
+        assert!(
+            r.max_mb <= 3072,
+            "低内存 max 不应超过 3G, 实际 {}",
+            r.max_mb
+        );
         assert!(!r.max_mb as u64 > 2048 * 7 / 10, "不应超过可用内存 70%");
         assert!(r.extra_args.is_empty());
     }

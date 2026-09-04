@@ -13,7 +13,10 @@ pub fn get_app_config(state: State<'_, AppState>) -> Result<AppConfig, String> {
 
 /// 保存应用配置并返回最新配置
 #[tauri::command]
-pub fn update_app_config(state: State<'_, AppState>, config: AppConfig) -> Result<AppConfig, String> {
+pub fn update_app_config(
+    state: State<'_, AppState>,
+    config: AppConfig,
+) -> Result<AppConfig, String> {
     config.save(&state.config_path).map_err(|e| e.to_string())?;
     Ok(config)
 }

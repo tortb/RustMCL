@@ -1,7 +1,7 @@
 // CRUD 方法由 M2/M4 阶段的 Tauri command 调用,未全部接线前不告警
 #![allow(dead_code)]
 
-use rusqlite::{Connection, OptionalExtension, params};
+use rusqlite::{params, Connection, OptionalExtension};
 
 use crate::db::schema::*;
 use crate::error::RmclError;
@@ -159,7 +159,10 @@ impl Repository {
                 acc.refreshed_at,
             ],
         )?;
-        conn.execute("UPDATE accounts SET is_active = 0 WHERE id != ?1", [&acc.id])?;
+        conn.execute(
+            "UPDATE accounts SET is_active = 0 WHERE id != ?1",
+            [&acc.id],
+        )?;
         Ok(())
     }
 
@@ -261,7 +264,10 @@ impl Repository {
     }
 
     pub fn set_mod_enabled(conn: &Connection, id: &str, enabled: bool) -> Result<(), RmclError> {
-        conn.execute("UPDATE mods SET enabled = ?1 WHERE id = ?2", params![enabled as i64, id])?;
+        conn.execute(
+            "UPDATE mods SET enabled = ?1 WHERE id = ?2",
+            params![enabled as i64, id],
+        )?;
         Ok(())
     }
 
@@ -346,21 +352,39 @@ impl Repository {
     }
 
     /// 更新服务器(仅更新传入的 Some 字段)
-    pub fn update_server(conn: &Connection, id: &str, name: Option<&str>, favorite: Option<bool>, sort_order: Option<i64>) -> Result<(), RmclError> {
+    pub fn update_server(
+        conn: &Connection,
+        id: &str,
+        name: Option<&str>,
+        favorite: Option<bool>,
+        sort_order: Option<i64>,
+    ) -> Result<(), RmclError> {
         if let Some(name) = name {
-            conn.execute("UPDATE servers SET name = ?1 WHERE id = ?2", params![name, id])?;
+            conn.execute(
+                "UPDATE servers SET name = ?1 WHERE id = ?2",
+                params![name, id],
+            )?;
         }
         if let Some(fav) = favorite {
-            conn.execute("UPDATE servers SET is_favorite = ?1 WHERE id = ?2", params![fav as i64, id])?;
+            conn.execute(
+                "UPDATE servers SET is_favorite = ?1 WHERE id = ?2",
+                params![fav as i64, id],
+            )?;
         }
         if let Some(so) = sort_order {
-            conn.execute("UPDATE servers SET sort_order = ?1 WHERE id = ?2", params![so, id])?;
+            conn.execute(
+                "UPDATE servers SET sort_order = ?1 WHERE id = ?2",
+                params![so, id],
+            )?;
         }
         Ok(())
     }
 
     pub fn set_server_ping(conn: &Connection, id: &str, ping_ms: i64) -> Result<(), RmclError> {
-        conn.execute("UPDATE servers SET last_ping_ms = ?1 WHERE id = ?2", params![ping_ms, id])?;
+        conn.execute(
+            "UPDATE servers SET last_ping_ms = ?1 WHERE id = ?2",
+            params![ping_ms, id],
+        )?;
         Ok(())
     }
 
@@ -383,7 +407,10 @@ impl Repository {
         Ok(())
     }
 
-    pub fn list_resource_packs(conn: &Connection, instance_id: &str) -> Result<Vec<ResourcePackEntry>, RmclError> {
+    pub fn list_resource_packs(
+        conn: &Connection,
+        instance_id: &str,
+    ) -> Result<Vec<ResourcePackEntry>, RmclError> {
         let mut stmt = conn.prepare(
             "SELECT id, instance_id, type, file_name, enabled, created_at
              FROM resource_packs WHERE instance_id = ?1 ORDER BY type, file_name",
@@ -405,7 +432,10 @@ impl Repository {
         Ok(out)
     }
 
-    pub fn get_resource_pack(conn: &Connection, id: &str) -> Result<Option<ResourcePackEntry>, RmclError> {
+    pub fn get_resource_pack(
+        conn: &Connection,
+        id: &str,
+    ) -> Result<Option<ResourcePackEntry>, RmclError> {
         let p = conn
             .query_row(
                 "SELECT id, instance_id, type, file_name, enabled, created_at
@@ -431,8 +461,15 @@ impl Repository {
         Ok(())
     }
 
-    pub fn set_resource_pack_enabled(conn: &Connection, id: &str, enabled: bool) -> Result<(), RmclError> {
-        conn.execute("UPDATE resource_packs SET enabled = ?1 WHERE id = ?2", params![enabled as i64, id])?;
+    pub fn set_resource_pack_enabled(
+        conn: &Connection,
+        id: &str,
+        enabled: bool,
+    ) -> Result<(), RmclError> {
+        conn.execute(
+            "UPDATE resource_packs SET enabled = ?1 WHERE id = ?2",
+            params![enabled as i64, id],
+        )?;
         Ok(())
     }
 }

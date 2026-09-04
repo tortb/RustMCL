@@ -283,7 +283,9 @@ mod tests {
         let m = Mirror::from_config("bmclapi", None);
         // libraries.minecraft.net 无 maven 前缀
         assert_eq!(
-            m.rewrite("https://libraries.minecraft.net/com/mojang/brigadier/1.1.8/brigadier-1.1.8.jar"),
+            m.rewrite(
+                "https://libraries.minecraft.net/com/mojang/brigadier/1.1.8/brigadier-1.1.8.jar"
+            ),
             "https://bmclapi2.bangbang93.com/maven/com/mojang/brigadier/1.1.8/brigadier-1.1.8.jar"
         );
         // forge 带 maven 前缀,应去掉避免双 maven

@@ -64,10 +64,7 @@ pub struct Arguments {
 #[serde(untagged)]
 pub enum Arg {
     Plain(String),
-    Conditional {
-        rules: Vec<Rule>,
-        value: OneOrMore,
-    },
+    Conditional { rules: Vec<Rule>, value: OneOrMore },
 }
 
 impl Arg {
@@ -197,7 +194,12 @@ pub async fn fetch_version_json(
     Ok(serde_json::from_str(&body)?)
 }
 
-async fn fetch_body(client: &reqwest::Client, mirror: &Mirror, url: &str, retry_times: u32) -> Result<String, RmclError> {
+async fn fetch_body(
+    client: &reqwest::Client,
+    mirror: &Mirror,
+    url: &str,
+    retry_times: u32,
+) -> Result<String, RmclError> {
     let url = mirror.rewrite(url);
     let mut last_err = None;
     for attempt in 0..=retry_times {
@@ -301,9 +303,18 @@ mod tests {
         let v: VersionJson = serde_json::from_str(SAMPLE).unwrap();
         let lwjgl = &v.libraries[1];
         let natives = lwjgl.natives.as_ref().unwrap();
-        assert_eq!(natives.get("linux").map(|s| s.as_str()), Some("natives-linux"));
+        assert_eq!(
+            natives.get("linux").map(|s| s.as_str()),
+            Some("natives-linux")
+        );
         assert_eq!(lwjgl.extract.as_ref().unwrap().exclude, vec!["META-INF/"]);
-        let classifiers = lwjgl.downloads.as_ref().unwrap().classifiers.as_ref().unwrap();
+        let classifiers = lwjgl
+            .downloads
+            .as_ref()
+            .unwrap()
+            .classifiers
+            .as_ref()
+            .unwrap();
         assert!(classifiers.contains_key("natives-linux"));
     }
 }

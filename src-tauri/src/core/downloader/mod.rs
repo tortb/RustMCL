@@ -61,9 +61,7 @@ pub async fn download_one(
 ) -> Result<bool, RmclError> {
     // 已存在:有 sha1 则校验,无 sha1(maven 库)只做存在性判断
     if item.dest.exists() {
-        if item.sha1.is_empty()
-            || sha1_of(&item.dest).map(|h| h == item.sha1).unwrap_or(false)
-        {
+        if item.sha1.is_empty() || sha1_of(&item.dest).map(|h| h == item.sha1).unwrap_or(false) {
             return Ok(false);
         }
     }

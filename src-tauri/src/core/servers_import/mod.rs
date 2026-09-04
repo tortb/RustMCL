@@ -432,10 +432,13 @@ fn has(fields: &[(String, Value)], name: &str) -> bool {
 }
 
 fn str_field(fields: &[(String, Value)], name: &str) -> Option<String> {
-    fields.iter().find(|(k, _)| k == name).and_then(|(_, v)| match v {
-        Value::Str(s) => Some(s.clone()),
-        _ => None,
-    })
+    fields
+        .iter()
+        .find(|(k, _)| k == name)
+        .and_then(|(_, v)| match v {
+            Value::Str(s) => Some(s.clone()),
+            _ => None,
+        })
 }
 
 fn int_field(fields: &[(String, Value)], name: &str) -> Result<i64, RmclError> {

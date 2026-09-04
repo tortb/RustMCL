@@ -157,17 +157,25 @@ pub async fn search(
     }
     let body = fetch_body(client, req).await?;
     let wrap: SearchWrap = serde_json::from_str(&body)?;
-    Ok(wrap.data.into_iter().map(|p| CurseForgeHit {
-        project_id: p.id.to_string(),
-        slug: p.slug,
-        title: p.name,
-        description: p.summary,
-        categories: p.categories.into_iter().map(|c| c.name).collect(),
-        downloads: p.download_count,
-        icon_url: p.logo.map(|l| l.url).filter(|u| !u.is_empty()),
-        versions: p.latest_files_indexes.into_iter().map(|f| f.game_version).collect(),
-        allow_mod_distribution: p.allow_mod_distribution,
-    }).collect())
+    Ok(wrap
+        .data
+        .into_iter()
+        .map(|p| CurseForgeHit {
+            project_id: p.id.to_string(),
+            slug: p.slug,
+            title: p.name,
+            description: p.summary,
+            categories: p.categories.into_iter().map(|c| c.name).collect(),
+            downloads: p.download_count,
+            icon_url: p.logo.map(|l| l.url).filter(|u| !u.is_empty()),
+            versions: p
+                .latest_files_indexes
+                .into_iter()
+                .map(|f| f.game_version)
+                .collect(),
+            allow_mod_distribution: p.allow_mod_distribution,
+        })
+        .collect())
 }
 
 /// 获取某 mod 在指定 MC 版本/加载器下的可用文件列表
@@ -190,19 +198,31 @@ pub async fn file_versions(
     }
     let body = fetch_body(client, req).await?;
     let wrap: FilesWrap = serde_json::from_str(&body)?;
-    Ok(wrap.data.into_iter().map(|f| {
-        let sha1 = f.hashes.iter().find(|h| h.algo == 1).map(|h| h.value.clone()).unwrap_or_default();
-        CurseForgeFile {
-            file_id: f.id,
-            filename: f.file_name,
-            url: f.download_url.unwrap_or_default(),
-            size: f.file_length,
-            sha1,
-        }
-    }).collect())
+    Ok(wrap
+        .data
+        .into_iter()
+        .map(|f| {
+            let sha1 = f
+                .hashes
+                .iter()
+                .find(|h| h.algo == 1)
+                .map(|h| h.value.clone())
+                .unwrap_or_default();
+            CurseForgeFile {
+                file_id: f.id,
+                filename: f.file_name,
+                url: f.download_url.unwrap_or_default(),
+                size: f.file_length,
+                sha1,
+            }
+        })
+        .collect())
 }
 
-pub async fn fetch_body(_client: &reqwest::Client, req: reqwest::RequestBuilder) -> Result<String, RmclError> {
+pub async fn fetch_body(
+    _client: &reqwest::Client,
+    req: reqwest::RequestBuilder,
+) -> Result<String, RmclError> {
     let resp = req.send().await?.error_for_status()?;
     Ok(resp.text().await?)
 }

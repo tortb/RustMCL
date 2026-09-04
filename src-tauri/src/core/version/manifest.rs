@@ -52,7 +52,11 @@ impl VersionFilter {
 }
 
 /// 拉取清单,失败时按 retry_times 重试
-pub async fn fetch(client: &reqwest::Client, mirror: &Mirror, retry_times: u32) -> Result<VersionManifest, RmclError> {
+pub async fn fetch(
+    client: &reqwest::Client,
+    mirror: &Mirror,
+    retry_times: u32,
+) -> Result<VersionManifest, RmclError> {
     let url = mirror.rewrite(MANIFEST_URL);
     let mut last_err = None;
     for attempt in 0..=retry_times {
@@ -142,7 +146,11 @@ mod tests {
         let m: VersionManifest = serde_json::from_str(SAMPLE).unwrap();
         assert_eq!(m.latest.release, "1.21.4");
         let releases = list_versions(&m, VersionFilter::Release);
-        assert!(releases.len() >= 5, "应至少解析出 5 个正式版,实际 {}", releases.len());
+        assert!(
+            releases.len() >= 5,
+            "应至少解析出 5 个正式版,实际 {}",
+            releases.len()
+        );
         assert!(releases.iter().all(|v| v.version_type == "release"));
     }
 

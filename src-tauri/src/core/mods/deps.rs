@@ -30,14 +30,25 @@ pub fn check(target: &ModrinthVersion, installed: &[(String, String)]) -> DepChe
 
     for dep in &target.dependencies {
         let pid = dep.project_id.clone().unwrap_or_default();
-        let installed_version = installed.iter().find(|(p, _)| p == &pid).map(|(_, v)| v.clone());
+        let installed_version = installed
+            .iter()
+            .find(|(p, _)| p == &pid)
+            .map(|(_, v)| v.clone());
 
         match dep.dependency_type.as_str() {
             "required" => match installed_version {
                 Some(v) => {
                     // 已装,但指向的特定版本不同 → 提示版本冲突(不阻断)
-                    if dep.version_id.as_deref().map(|dv| dv != v.as_str()).unwrap_or(false) {
-                        conflicts.push(format!("依赖「{}」要求版本不同(已装 {v})", dep_file_name(dep)));
+                    if dep
+                        .version_id
+                        .as_deref()
+                        .map(|dv| dv != v.as_str())
+                        .unwrap_or(false)
+                    {
+                        conflicts.push(format!(
+                            "依赖「{}」要求版本不同(已装 {v})",
+                            dep_file_name(dep)
+                        ));
                     }
                 }
                 None => missing.push(dep_hint(dep)),
@@ -80,7 +91,12 @@ mod tests {
     use super::*;
     use crate::core::mods::modrinth::ModrinthDependency;
 
-    fn dep(dep_type: &str, project_id: &str, version_id: &str, file_name: &str) -> ModrinthDependency {
+    fn dep(
+        dep_type: &str,
+        project_id: &str,
+        version_id: &str,
+        file_name: &str,
+    ) -> ModrinthDependency {
         ModrinthDependency {
             version_id: Some(version_id.to_string()),
             project_id: Some(project_id.to_string()),

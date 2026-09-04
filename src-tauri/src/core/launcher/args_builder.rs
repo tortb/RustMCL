@@ -75,7 +75,11 @@ pub fn build_launch_command(
             continue;
         }
         // native 库的 jar 解压到 natives 目录,不进 classpath
-        if lib.natives.as_ref().is_some_and(|n| n.contains_key(ctx.os_name)) {
+        if lib
+            .natives
+            .as_ref()
+            .is_some_and(|n| n.contains_key(ctx.os_name))
+        {
             continue;
         }
         if let Some(dl) = &lib.downloads {
@@ -131,7 +135,10 @@ pub fn build_launch_command(
         }
         // 旧版无 arguments,手动补必要 JVM 参数
         None => {
-            jvm_args.push(format!("-Djava.library.path={}", paths.natives_dir.display()));
+            jvm_args.push(format!(
+                "-Djava.library.path={}",
+                paths.natives_dir.display()
+            ));
             jvm_args.push("-cp".into());
             jvm_args.push(classpath.clone());
         }
@@ -207,7 +214,10 @@ fn replace_tokens(s: &str, t: &TokenCtx) -> String {
         .replace("${version_name}", t.version_name)
         .replace("${game_directory}", t.game_directory)
         .replace("${assets_root}", t.assets_root)
-        .replace("${game_assets}", &format!("{}/virtual/legacy", t.assets_root))
+        .replace(
+            "${game_assets}",
+            &format!("{}/virtual/legacy", t.assets_root),
+        )
         .replace("${assets_index_name}", t.assets_index_name)
         .replace("${auth_player_name}", t.username)
         .replace("${auth_uuid}", t.uuid)
@@ -272,7 +282,11 @@ mod tests {
         let cmd = build_launch_command(&version, &paths(), &opts, "java").unwrap();
 
         let joined = cmd.args.join(" ");
-        assert!(cmd.args[0].starts_with("-Xmx"), "首参应为 -Xmx,实际 {}", cmd.args[0]);
+        assert!(
+            cmd.args[0].starts_with("-Xmx"),
+            "首参应为 -Xmx,实际 {}",
+            cmd.args[0]
+        );
         // token 替换生效
         assert!(joined.contains("--username Steve"));
         assert!(joined.contains("--gameDir /game"));
@@ -296,7 +310,10 @@ mod tests {
         let cmd = build_launch_command(&version, &paths(), &opts, "java").unwrap();
         let joined = cmd.args.join(" ");
         assert!(joined.contains("brigadier-1.1.8.jar"));
-        assert!(!joined.contains("lwjgl-3.3.3.jar"), "native 库不应进 classpath");
+        assert!(
+            !joined.contains("lwjgl-3.3.3.jar"),
+            "native 库不应进 classpath"
+        );
     }
 
     #[test]
@@ -333,6 +350,9 @@ mod tests {
             !joined.contains("--quickPlay"),
             "未启用 quick play 时不应注入 quickPlay 参数,实际: {joined}"
         );
-        assert!(!joined.contains("${"), "不应残留未替换 token,实际: {joined}");
+        assert!(
+            !joined.contains("${"),
+            "不应残留未替换 token,实际: {joined}"
+        );
     }
 }

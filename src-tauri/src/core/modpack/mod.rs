@@ -170,7 +170,11 @@ pub fn parse(pack: &Path) -> Result<ModpackInfo, RmclError> {
 fn parse_mrpack(pack: &Path) -> Result<ModpackInfo, RmclError> {
     let raw = read_zip_entry(pack, "modrinth.index.json")?;
     let index: MrpackIndex = serde_json::from_str(&raw)?;
-    let mc_version = index.dependencies.get("minecraft").cloned().unwrap_or_default();
+    let mc_version = index
+        .dependencies
+        .get("minecraft")
+        .cloned()
+        .unwrap_or_default();
     let (loader, loader_version) = loader_from_deps(&index.dependencies);
     let downloads: Vec<ModDownload> = index
         .files
@@ -349,14 +353,20 @@ where
 }
 
 /// 从 zip 中把 `<overrides>/...` 完整复制到 game_dir(含子目录,已做 zip-slip 防护)
-pub fn apply_overrides(pack_path: &Path, overrides_rel: &str, game_dir: &Path) -> Result<(), RmclError> {
+pub fn apply_overrides(
+    pack_path: &Path,
+    overrides_rel: &str,
+    game_dir: &Path,
+) -> Result<(), RmclError> {
     let file = std::fs::File::open(pack_path)?;
     let mut archive = zip::ZipArchive::new(file)?;
     let prefix = overrides_rel.trim_end_matches('/');
     let mut copied = 0usize;
     for i in 0..archive.len() {
         let mut entry = archive.by_index(i)?;
-        let Some(name) = entry.enclosed_name() else { continue };
+        let Some(name) = entry.enclosed_name() else {
+            continue;
+        };
         let name_str = name.to_string_lossy().replace('\\', "/");
         let Some(rel) = name_str.strip_prefix(&format!("{prefix}/")) else {
             continue;
@@ -396,9 +406,15 @@ async fn resolve_curseforge_file(
         .error_for_status()?;
     let body: serde_json::Value = resp.json().await?;
     let data = body.get("data").ok_or_else(|| {
-        RmclError::other(format!("CurseForge 返回异常(project {project_id}, file {file_id})"))
+        RmclError::other(format!(
+            "CurseForge 返回异常(project {project_id}, file {file_id})"
+        ))
     })?;
-    let file_name = data.get("fileName").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let file_name = data
+        .get("fileName")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
     let download_url = data.get("downloadUrl").and_then(|v| v.as_str());
     let sha1 = data
         .get("hashes")
@@ -414,7 +430,10 @@ async fn resolve_curseforge_file(
     let url = match download_url {
         Some(u) if !u.is_empty() => u.to_string(),
         _ => {
-            let id = data.get("id").and_then(|v| v.as_i64()).unwrap_or(file_id as i64);
+            let id = data
+                .get("id")
+                .and_then(|v| v.as_i64())
+                .unwrap_or(file_id as i64);
             format!("https://mediafilez.forgecdn.net/files/{}/{}", id / 1000, id)
         }
     };
@@ -478,12 +497,12 @@ pub fn export_mrpack(
 
     let file = std::fs::File::create(dest)?;
     let mut zip_writer = zip::ZipWriter::new(file);
-    let options = zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+    let options = zip::write::SimpleFileOptions::default()
+        .compression_method(zip::CompressionMethod::Deflated);
     zip_writer
         .start_file("modrinth.index.json", options)
         .map_err(|e| RmclError::Zip(e))?;
-    zip_writer
-        .write_all(serde_json::to_string_pretty(&index)?.as_bytes())?;
+    zip_writer.write_all(serde_json::to_string_pretty(&index)?.as_bytes())?;
     zip_writer.finish().map_err(|e| RmclError::Zip(e))?;
     Ok(())
 }
@@ -507,9 +526,18 @@ mod tests {
 
     #[test]
     fn splits_loader_id() {
-        assert_eq!(split_loader_id("fabric-0.16.9"), ("fabric".into(), "0.16.9".into()));
-        assert_eq!(split_loader_id("forge-47.2.0"), ("forge".into(), "47.2.0".into()));
-        assert_eq!(split_loader_id("vanilla"), ("vanilla".into(), String::new()));
+        assert_eq!(
+            split_loader_id("fabric-0.16.9"),
+            ("fabric".into(), "0.16.9".into())
+        );
+        assert_eq!(
+            split_loader_id("forge-47.2.0"),
+            ("forge".into(), "47.2.0".into())
+        );
+        assert_eq!(
+            split_loader_id("vanilla"),
+            ("vanilla".into(), String::new())
+        );
     }
 
     #[test]
@@ -584,7 +612,8 @@ mod tests {
     #[test]
     fn apply_overrides_copies_files() {
         // 构建一个含 overrides/ 的 zip
-        let root = std::env::temp_dir().join(format!("rmcl_pack_{}", uuid::Uuid::new_v4().simple()));
+        let root =
+            std::env::temp_dir().join(format!("rmcl_pack_{}", uuid::Uuid::new_v4().simple()));
         std::fs::create_dir_all(&root).unwrap();
         let pack = root.join("pack.mrpack");
         let f = std::fs::File::create(&pack).unwrap();
@@ -593,7 +622,8 @@ mod tests {
         // overrides/config/example.toml
         zw.start_file("overrides/config/example.toml", opt).unwrap();
         zw.write_all(b"key=value").unwrap();
-        zw.start_file("overrides/resourcepacks/rp.zip", opt).unwrap();
+        zw.start_file("overrides/resourcepacks/rp.zip", opt)
+            .unwrap();
         zw.write_all(b"zip").unwrap();
         // mods 文件(不应该被当作 overrides 复制)
         zw.start_file("mods/x.jar", opt).unwrap();

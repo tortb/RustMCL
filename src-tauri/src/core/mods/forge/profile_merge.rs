@@ -30,7 +30,11 @@ pub fn merge_forge(vanilla: &VersionJson, forge: &Value) -> Result<VersionJson, 
                 let key = library_key(&l.name);
                 // 已存在(vanilla 或之前 forge)则覆盖
                 if seen.contains(&key) {
-                    if let Some(pos) = merged.libraries.iter().position(|x| library_key(&x.name) == key) {
+                    if let Some(pos) = merged
+                        .libraries
+                        .iter()
+                        .position(|x| library_key(&x.name) == key)
+                    {
                         merged.libraries[pos] = l;
                     }
                 } else {
@@ -46,7 +50,9 @@ pub fn merge_forge(vanilla: &VersionJson, forge: &Value) -> Result<VersionJson, 
 
 /// 追加 forge 的 arguments.game/jvm(过滤掉与 vanilla 完全相同的 plain 项)
 fn append_arguments(merged: &mut VersionJson, forge: &Value) {
-    let Some(fargs) = forge.get("arguments") else { return };
+    let Some(fargs) = forge.get("arguments") else {
+        return;
+    };
     if let Some(fargs) = fargs.as_object() {
         if merged.arguments.is_none() {
             merged.arguments = Some(Arguments {
@@ -202,7 +208,13 @@ mod tests {
         assert_eq!(merged.libraries.len(), 2);
         let forge_lib = &merged.libraries[0];
         // 以 forge 侧 maven url 为准
-        let artifact = forge_lib.downloads.as_ref().unwrap().artifact.as_ref().unwrap();
+        let artifact = forge_lib
+            .downloads
+            .as_ref()
+            .unwrap()
+            .artifact
+            .as_ref()
+            .unwrap();
         assert_eq!(
             artifact.url,
             "https://maven.minecraftforge.net/net/minecraftforge/forge/1.20.1-47.2.0/forge-1.20.1-47.2.0.jar"

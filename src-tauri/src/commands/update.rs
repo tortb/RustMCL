@@ -34,7 +34,9 @@ pub async fn check_for_update(app: AppHandle) -> Result<UpdateInfo, String> {
             }),
             Err(e) => Err(format!("检查更新失败: {e}")),
         },
-        Err(e) => Err(format!("更新源未配置(请在 tauri.conf.json 配置 plugins.updater): {e}")),
+        Err(e) => Err(format!(
+            "更新源未配置(请在 tauri.conf.json 配置 plugins.updater): {e}"
+        )),
     }
 }
 

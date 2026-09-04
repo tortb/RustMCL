@@ -54,9 +54,12 @@ fn trim_backups(backups: &Path) {
         .flatten()
         .filter(|e| e.path().extension().map(|x| x == "zip").unwrap_or(false))
         .filter_map(|e| {
-            e.metadata()
-                .ok()
-                .map(|m| (m.modified().unwrap_or(std::time::SystemTime::UNIX_EPOCH), e.path()))
+            e.metadata().ok().map(|m| {
+                (
+                    m.modified().unwrap_or(std::time::SystemTime::UNIX_EPOCH),
+                    e.path(),
+                )
+            })
         })
         .collect();
     zips.sort_by(|a, b| b.0.cmp(&a.0)); // 新的在前
@@ -101,7 +104,10 @@ fn mtime(path: &Path) -> i64 {
 
 /// 列出实例存档(世界)
 #[tauri::command]
-pub fn list_saves(state: State<'_, AppState>, instance_id: String) -> Result<Vec<SaveInfo>, String> {
+pub fn list_saves(
+    state: State<'_, AppState>,
+    instance_id: String,
+) -> Result<Vec<SaveInfo>, String> {
     let game_dir = instance_game_dir(&state, &instance_id)?;
     let saves = game_dir.join("saves");
     let Ok(entries) = std::fs::read_dir(&saves) else {
@@ -126,7 +132,11 @@ pub fn list_saves(state: State<'_, AppState>, instance_id: String) -> Result<Vec
 
 /// 打包备份存档到 backups/<name>_<ts>.zip,返回备份信息
 #[tauri::command]
-pub fn backup_save(state: State<'_, AppState>, instance_id: String, save_name: String) -> Result<BackupInfo, String> {
+pub fn backup_save(
+    state: State<'_, AppState>,
+    instance_id: String,
+    save_name: String,
+) -> Result<BackupInfo, String> {
     if save_name.trim().is_empty() || save_name.contains("..") || save_name.contains('/') {
         return Err("非法的存档名".into());
     }
@@ -152,7 +162,10 @@ pub fn backup_save(state: State<'_, AppState>, instance_id: String, save_name: S
 
 /// 列出备份历史
 #[tauri::command]
-pub fn list_backups(state: State<'_, AppState>, instance_id: String) -> Result<Vec<BackupInfo>, String> {
+pub fn list_backups(
+    state: State<'_, AppState>,
+    instance_id: String,
+) -> Result<Vec<BackupInfo>, String> {
     let game_dir = instance_game_dir(&state, &instance_id)?;
     let backups = game_dir.join("backups");
     let Ok(entries) = std::fs::read_dir(&backups) else {
@@ -192,14 +205,20 @@ pub fn restore_backup(
     if !src.exists() {
         return Err(format!("备份不存在: {backup_name}"));
     }
-    let dest = game_dir.join("saves").join(sanitize_component(&target_name));
+    let dest = game_dir
+        .join("saves")
+        .join(sanitize_component(&target_name));
     unzip_dir(&src, &dest).map_err(|e| format!("恢复失败: {e}"))?;
     Ok(())
 }
 
 /// 删除存档(目录)
 #[tauri::command]
-pub fn delete_save(state: State<'_, AppState>, instance_id: String, save_name: String) -> Result<(), String> {
+pub fn delete_save(
+    state: State<'_, AppState>,
+    instance_id: String,
+    save_name: String,
+) -> Result<(), String> {
     if save_name.trim().is_empty() || save_name.contains("..") || save_name.contains('/') {
         return Err("非法的存档名".into());
     }
@@ -213,7 +232,10 @@ pub fn delete_save(state: State<'_, AppState>, instance_id: String, save_name: S
 
 /// 列出截图
 #[tauri::command]
-pub fn list_screenshots(state: State<'_, AppState>, instance_id: String) -> Result<Vec<ScreenshotInfo>, String> {
+pub fn list_screenshots(
+    state: State<'_, AppState>,
+    instance_id: String,
+) -> Result<Vec<ScreenshotInfo>, String> {
     let game_dir = instance_game_dir(&state, &instance_id)?;
     let screenshots = game_dir.join("screenshots");
     let Ok(entries) = std::fs::read_dir(&screenshots) else {
@@ -237,7 +259,11 @@ pub fn list_screenshots(state: State<'_, AppState>, instance_id: String) -> Resu
 }
 
 #[tauri::command]
-pub fn delete_screenshot(state: State<'_, AppState>, instance_id: String, name: String) -> Result<(), String> {
+pub fn delete_screenshot(
+    state: State<'_, AppState>,
+    instance_id: String,
+    name: String,
+) -> Result<(), String> {
     if name.contains("..") || name.contains('/') {
         return Err("非法文件名".into());
     }
@@ -293,7 +319,8 @@ fn sanitize_component(name: &str) -> String {
 fn zip_dir(src: &Path, dest: &Path) -> std::io::Result<()> {
     let file = std::fs::File::create(dest)?;
     let mut zw = zip::ZipWriter::new(file);
-    let opt = zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+    let opt = zip::write::SimpleFileOptions::default()
+        .compression_method(zip::CompressionMethod::Deflated);
     add_dir_to_zip(&mut zw, src, src, opt)?;
     zw.finish()?;
     Ok(())
@@ -308,7 +335,11 @@ fn add_dir_to_zip(
     for entry in std::fs::read_dir(dir)? {
         let entry = entry?;
         let path = entry.path();
-        let rel = path.strip_prefix(base).expect("路径应在 base 下").to_string_lossy().replace('\\', "/");
+        let rel = path
+            .strip_prefix(base)
+            .expect("路径应在 base 下")
+            .to_string_lossy()
+            .replace('\\', "/");
         if path.is_dir() {
             add_dir_to_zip(zw, base, &path, opt)?;
         } else {

@@ -93,11 +93,16 @@ pub async fn search(
     retry_times: u32,
 ) -> Result<Vec<ModrinthHit>, RmclError> {
     let url = format!("{API_BASE}/search");
-    let body = fetch(client, &url, retry_times, &[
-        ("query", query),
-        ("limit", &limit.to_string()),
-        ("index", "relevance"),
-    ])
+    let body = fetch(
+        client,
+        &url,
+        retry_times,
+        &[
+            ("query", query),
+            ("limit", &limit.to_string()),
+            ("index", "relevance"),
+        ],
+    )
     .await?;
     let resp: SearchResponse = serde_json::from_str(&body)?;
     Ok(resp.hits)
@@ -113,12 +118,17 @@ pub async fn search_by_type(
 ) -> Result<Vec<ModrinthHit>, RmclError> {
     let url = format!("{API_BASE}/search");
     let facets = format!(r#"[["project_type:{project_type}"]]"#);
-    let body = fetch(client, &url, retry_times, &[
-        ("query", query),
-        ("limit", &limit.to_string()),
-        ("index", "relevance"),
-        ("facets", &facets),
-    ])
+    let body = fetch(
+        client,
+        &url,
+        retry_times,
+        &[
+            ("query", query),
+            ("limit", &limit.to_string()),
+            ("index", "relevance"),
+            ("facets", &facets),
+        ],
+    )
     .await?;
     let resp: SearchResponse = serde_json::from_str(&body)?;
     Ok(resp.hits)
@@ -138,8 +148,7 @@ pub async fn compatible_versions(
     Ok(all
         .into_iter()
         .filter(|v| {
-            v.game_versions.iter().any(|g| g == mc_version)
-                && v.loaders.iter().any(|l| l == loader)
+            v.game_versions.iter().any(|g| g == mc_version) && v.loaders.iter().any(|l| l == loader)
         })
         .collect())
 }

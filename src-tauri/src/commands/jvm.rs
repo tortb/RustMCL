@@ -13,7 +13,10 @@ pub fn get_system_memory() -> Result<SystemMemory, String> {
 
 /// 按系统内存 + 可选 mod 数量返回 JVM 推荐配置(前端仅作提示,用户主动"应用"才生效)
 #[tauri::command]
-pub fn recommend_jvm(state: State<'_, AppState>, mod_count: Option<u32>) -> Result<JvmRecommendation, String> {
+pub fn recommend_jvm(
+    state: State<'_, AppState>,
+    mod_count: Option<u32>,
+) -> Result<JvmRecommendation, String> {
     let m = current_memory();
     // 当未传入 mod 数量时,统计当前正被管理的实例数作为粗略参考(0 表示未知)
     let count = mod_count.unwrap_or_else(|| {

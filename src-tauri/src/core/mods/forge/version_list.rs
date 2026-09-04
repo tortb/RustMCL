@@ -24,11 +24,16 @@ struct Promotions {
 }
 
 /// 解析 promotions_slim.json,返回指定 MC 版本可用的 Forge 版本(按 recommended/最新标记)
-pub fn parse_promotions(promos: &BTreeMap<String, String>, mc_version: &str) -> Vec<ForgeVersionInfo> {
+pub fn parse_promotions(
+    promos: &BTreeMap<String, String>,
+    mc_version: &str,
+) -> Vec<ForgeVersionInfo> {
     let mut map: BTreeMap<String, (bool, bool)> = BTreeMap::new();
     for (key, version) in promos {
         // key 形如 "1.20.1-recommended" / "1.20.1-latest"
-        let Some((mc, flag)) = key.rsplit_once('-') else { continue };
+        let Some((mc, flag)) = key.rsplit_once('-') else {
+            continue;
+        };
         if mc != mc_version {
             continue;
         }

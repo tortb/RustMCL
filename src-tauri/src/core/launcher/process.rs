@@ -8,7 +8,11 @@ use tokio::process::Command;
 use crate::error::RmclError;
 
 /// 启动子进程并逐行转发输出,等待退出后返回退出码
-pub async fn launch_process<F>(java_path: &str, args: &[String], on_line: F) -> Result<i32, RmclError>
+pub async fn launch_process<F>(
+    java_path: &str,
+    args: &[String],
+    on_line: F,
+) -> Result<i32, RmclError>
 where
     F: Fn(String) + Send + Sync + 'static,
 {
@@ -36,7 +40,10 @@ where
     Ok(status.code().unwrap_or(-1))
 }
 
-async fn read_lines<R: tokio::io::AsyncRead + Unpin>(reader: R, on_line: Arc<dyn Fn(String) + Send + Sync>) {
+async fn read_lines<R: tokio::io::AsyncRead + Unpin>(
+    reader: R,
+    on_line: Arc<dyn Fn(String) + Send + Sync>,
+) {
     let mut lines = BufReader::new(reader).lines();
     while let Ok(Some(line)) = lines.next_line().await {
         on_line(line);

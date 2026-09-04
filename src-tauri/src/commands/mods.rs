@@ -19,9 +19,14 @@ pub async fn search_mods(
     query: String,
     limit: Option<u32>,
 ) -> Result<Vec<modrinth::ModrinthHit>, String> {
-    modrinth::search(&state.client, &query, limit.unwrap_or(16), state.retry_times)
-        .await
-        .map_err(|e| e.to_string())
+    modrinth::search(
+        &state.client,
+        &query,
+        limit.unwrap_or(16),
+        state.retry_times,
+    )
+    .await
+    .map_err(|e| e.to_string())
 }
 
 /// 获取某项目与指定实例兼容的版本列表
@@ -114,7 +119,10 @@ pub async fn install_mod(
 
 /// 列出实例已安装的 mod
 #[tauri::command]
-pub fn list_instance_mods(state: State<'_, AppState>, instance_id: String) -> Result<Vec<ModEntry>, String> {
+pub fn list_instance_mods(
+    state: State<'_, AppState>,
+    instance_id: String,
+) -> Result<Vec<ModEntry>, String> {
     let conn = state
         .db
         .lock()
@@ -125,7 +133,11 @@ pub fn list_instance_mods(state: State<'_, AppState>, instance_id: String) -> Re
 /// 启用/禁用 mod:把文件重命名为 <file_name>.disabled 实现真正卸载,更新 DB。
 /// 加载器只加载 mods/ 下 *.jar,故 .jar.disabled 不会被加载;启用时改回。
 #[tauri::command]
-pub fn set_mod_enabled(state: State<'_, AppState>, id: String, enabled: bool) -> Result<(), String> {
+pub fn set_mod_enabled(
+    state: State<'_, AppState>,
+    id: String,
+    enabled: bool,
+) -> Result<(), String> {
     let (game_dir, file_name) = {
         let conn = state
             .db
@@ -174,7 +186,12 @@ pub async fn check_mod_dependencies(
         Repository::list_mods(&conn, &instance_id)
             .map_err(|e| e.to_string())?
             .into_iter()
-            .map(|m| (m.project_id.unwrap_or_default(), m.version_id.unwrap_or_default()))
+            .map(|m| {
+                (
+                    m.project_id.unwrap_or_default(),
+                    m.version_id.unwrap_or_default(),
+                )
+            })
             .filter(|(p, _)| !p.is_empty())
             .collect()
     };
@@ -203,9 +220,16 @@ pub async fn search_curseforge_mods(
     limit: Option<u32>,
 ) -> Result<Vec<curseforge::CurseForgeHit>, String> {
     let key = curseforge_key(&state)?;
-    curseforge::search(&state.client, &key, &query, &mc_version, &loader, limit.unwrap_or(16))
-        .await
-        .map_err(|e| e.to_string())
+    curseforge::search(
+        &state.client,
+        &key,
+        &query,
+        &mc_version,
+        &loader,
+        limit.unwrap_or(16),
+    )
+    .await
+    .map_err(|e| e.to_string())
 }
 
 /// 获取某 CurseForge mod 与当前实例兼容的文件列表
@@ -319,8 +343,7 @@ pub fn delete_mod(state: State<'_, AppState>, id: String) -> Result<(), String> 
             .db
             .lock()
             .map_err(|e| format!("数据库锁获取失败: {e}"))?;
-        Repository::get_instance(&conn, &entry.instance_id)
-            .map_err(|e| e.to_string())?
+        Repository::get_instance(&conn, &entry.instance_id).map_err(|e| e.to_string())?
     };
     if let Some(inst) = inst {
         let mods_dir = std::path::Path::new(&inst.game_dir).join("mods");

@@ -259,7 +259,8 @@ net.minecraftforge.fml.ModLoadingException: ...
 
     #[test]
     fn find_latest_picks_newest() {
-        let dir = std::env::temp_dir().join(format!("rmcl_crash_{}", uuid::Uuid::new_v4().simple()));
+        let dir =
+            std::env::temp_dir().join(format!("rmcl_crash_{}", uuid::Uuid::new_v4().simple()));
         let crash = dir.join("crash-reports");
         std::fs::create_dir_all(&crash).unwrap();
         std::fs::write(crash.join("crash-2024-03-03_03.03.03-server.txt"), "server").unwrap();
@@ -267,7 +268,9 @@ net.minecraftforge.fml.ModLoadingException: ...
         std::fs::write(crash.join("crash-2024-02-02_02.02.02-client.txt"), "new").unwrap();
         let found = find_latest_crash_report(&dir);
         assert_eq!(
-            found.as_ref().map(|p| p.file_name().unwrap().to_string_lossy().to_string()),
+            found
+                .as_ref()
+                .map(|p| p.file_name().unwrap().to_string_lossy().to_string()),
             Some("crash-2024-02-02_02.02.02-client.txt".into())
         );
         let _ = std::fs::remove_dir_all(&dir);

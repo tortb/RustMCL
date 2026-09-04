@@ -44,7 +44,11 @@ fn migrate_dir(old: &Path, new: &Path) -> bool {
         let _ = std::fs::create_dir_all(parent);
     }
     if std::fs::rename(old, new).is_ok() {
-        eprintln!("[rmcl] 已将数据目录从 {} 迁移到 {}", old.display(), new.display());
+        eprintln!(
+            "[rmcl] 已将数据目录从 {} 迁移到 {}",
+            old.display(),
+            new.display()
+        );
         return true;
     }
     // 跨设备时 rename 失败,回退为复制 + 删除
@@ -81,7 +85,8 @@ mod tests {
 
     #[test]
     fn migrate_noop_when_new_exists() {
-        let root = std::env::temp_dir().join(format!("rmcl_mig_test_{}", uuid::Uuid::new_v4().simple()));
+        let root =
+            std::env::temp_dir().join(format!("rmcl_mig_test_{}", uuid::Uuid::new_v4().simple()));
         let new = root.join("new");
         std::fs::create_dir_all(&new).unwrap();
         let _ = std::fs::write(new.join("x.txt"), "x");
@@ -91,7 +96,8 @@ mod tests {
 
     #[test]
     fn migrate_noop_when_old_missing() {
-        let root = std::env::temp_dir().join(format!("rmcl_mig_test_{}", uuid::Uuid::new_v4().simple()));
+        let root =
+            std::env::temp_dir().join(format!("rmcl_mig_test_{}", uuid::Uuid::new_v4().simple()));
         let ok = migrate_dir(&root.join("old"), &root.join("new"));
         assert!(!ok);
         assert!(!root.join("new").exists());
@@ -100,7 +106,8 @@ mod tests {
 
     #[test]
     fn migrate_moves_content() {
-        let root = std::env::temp_dir().join(format!("rmcl_mig_test_{}", uuid::Uuid::new_v4().simple()));
+        let root =
+            std::env::temp_dir().join(format!("rmcl_mig_test_{}", uuid::Uuid::new_v4().simple()));
         let old = root.join("old");
         let new = root.join("new");
         std::fs::create_dir_all(old.join("sub")).unwrap();

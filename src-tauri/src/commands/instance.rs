@@ -6,7 +6,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
-use crate::config::instance_config::{GameConfig, InstanceConfig, JvmConfig, MetaConfig, Resolution};
+use crate::config::instance_config::{
+    GameConfig, InstanceConfig, JvmConfig, MetaConfig, Resolution,
+};
 use crate::db::repository::Repository;
 use crate::db::schema::Instance;
 use crate::AppState;
@@ -65,7 +67,10 @@ fn instance_config_path(data_dir: &std::path::Path, id: &str) -> std::path::Path
 
 /// 创建实例:生成 id、写 instance.toml、写 DB
 #[tauri::command]
-pub fn create_instance(state: State<'_, AppState>, input: InstanceInput) -> Result<InstanceDetail, String> {
+pub fn create_instance(
+    state: State<'_, AppState>,
+    input: InstanceInput,
+) -> Result<InstanceDetail, String> {
     if input.name.trim().is_empty() {
         return Err("实例名称不能为空".into());
     }
@@ -106,8 +111,14 @@ pub fn create_instance(state: State<'_, AppState>, input: InstanceInput) -> Resu
         name: icfg.meta.name.clone(),
         mc_version: icfg.meta.mc_version.clone(),
         loader: Some(loader),
-        loader_version: if loader_version.is_empty() { None } else { Some(loader_version) },
-        game_dir: instance_dir(&state.data_dir, &id).to_string_lossy().to_string(),
+        loader_version: if loader_version.is_empty() {
+            None
+        } else {
+            Some(loader_version)
+        },
+        game_dir: instance_dir(&state.data_dir, &id)
+            .to_string_lossy()
+            .to_string(),
         icon_path: None,
         created_at: now_secs(),
         last_played: None,
@@ -133,7 +144,10 @@ pub fn list_instances(state: State<'_, AppState>) -> Result<Vec<Instance>, Strin
 
 /// 实例详情(DB + TOML)
 #[tauri::command]
-pub fn get_instance(state: State<'_, AppState>, id: String) -> Result<Option<InstanceDetail>, String> {
+pub fn get_instance(
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<Option<InstanceDetail>, String> {
     let conn = state
         .db
         .lock()
@@ -209,7 +223,10 @@ pub fn update_instance(
     drop(conn);
 
     icfg.save(&cfg_path).map_err(|e| e.to_string())?;
-    Ok(InstanceDetail { inst: updated, config: icfg })
+    Ok(InstanceDetail {
+        inst: updated,
+        config: icfg,
+    })
 }
 
 /// 删除实例:DB 记录 + 整个实例目录

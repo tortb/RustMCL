@@ -18,9 +18,15 @@ pub async fn get_latest_loader_version(
     mc_version: String,
     loader: String,
 ) -> Result<String, String> {
-    loader::latest_loader_version(&state.client, &state.mirror(), &loader, &mc_version, state.retry_times)
-        .await
-        .map_err(|e| e.to_string())
+    loader::latest_loader_version(
+        &state.client,
+        &state.mirror(),
+        &loader,
+        &mc_version,
+        state.retry_times,
+    )
+    .await
+    .map_err(|e| e.to_string())
 }
 
 /// 后台安装加载器:解析合并版本 → 下载 client + libraries + natives + assets

@@ -50,7 +50,9 @@ pub fn extract_installer_files(jar_path: &Path, dest_dir: &Path) -> Result<(), R
     std::fs::create_dir_all(dest_dir)?;
     for i in 0..archive.len() {
         let mut entry = archive.by_index(i)?;
-        let Some(rel) = entry.enclosed_name() else { continue };
+        let Some(rel) = entry.enclosed_name() else {
+            continue;
+        };
         let out = dest_dir.join(rel);
         if entry.is_dir() {
             std::fs::create_dir_all(&out)?;
@@ -66,7 +68,11 @@ pub fn extract_installer_files(jar_path: &Path, dest_dir: &Path) -> Result<(), R
 }
 
 /// 解压 installer jar,读取 install_profile.json 与尽可能匹配的 version json
-pub fn extract_installer(jar_path: &Path, mc_version: &str, forge_version: &str) -> Result<InstallerContents, RmclError> {
+pub fn extract_installer(
+    jar_path: &Path,
+    mc_version: &str,
+    forge_version: &str,
+) -> Result<InstallerContents, RmclError> {
     let file = std::fs::File::open(jar_path)?;
     let mut archive = zip::ZipArchive::new(file)?;
 

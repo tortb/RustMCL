@@ -19,7 +19,10 @@ fn now_secs() -> i64 {
         .unwrap_or(0)
 }
 
-fn instance_game_dir(state: &State<'_, AppState>, instance_id: &str) -> Result<std::path::PathBuf, String> {
+fn instance_game_dir(
+    state: &State<'_, AppState>,
+    instance_id: &str,
+) -> Result<std::path::PathBuf, String> {
     let conn = state
         .db
         .lock()
@@ -40,7 +43,10 @@ fn dir_for_type(game_dir: &std::path::Path, type_kind: &str) -> std::path::PathB
 
 /// 扫描实例下资源包/光影包目录,把文件系统状态同步进 DB(新增+删除),并返回最新列表
 #[tauri::command]
-pub fn scan_resource_packs(state: State<'_, AppState>, instance_id: String) -> Result<Vec<ResourcePackEntry>, String> {
+pub fn scan_resource_packs(
+    state: State<'_, AppState>,
+    instance_id: String,
+) -> Result<Vec<ResourcePackEntry>, String> {
     let game_dir = instance_game_dir(&state, &instance_id)?;
     let conn = state
         .db
@@ -48,12 +54,15 @@ pub fn scan_resource_packs(state: State<'_, AppState>, instance_id: String) -> R
         .map_err(|e| format!("数据库锁获取失败: {e}"))?;
 
     // 已有的 DB 条目(用于比对删除)
-    let existing = Repository::list_resource_packs(&conn, &instance_id).map_err(|e| e.to_string())?;
+    let existing =
+        Repository::list_resource_packs(&conn, &instance_id).map_err(|e| e.to_string())?;
 
     let mut seen_ids = std::collections::HashSet::new();
     for type_kind in ["resourcepack", "shaderpack"] {
         let dir = dir_for_type(&game_dir, type_kind);
-        let Ok(entries) = std::fs::read_dir(&dir) else { continue };
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
         for entry in entries.flatten() {
             if !entry.file_type().map(|t| t.is_file()).unwrap_or(false) {
                 continue;
@@ -90,7 +99,11 @@ pub fn scan_resource_packs(state: State<'_, AppState>, instance_id: String) -> R
 
 /// 启用/禁用资源包:重命名 xxx.disabled 后缀,并更新 DB
 #[tauri::command]
-pub fn set_resource_pack_enabled(state: State<'_, AppState>, id: String, enabled: bool) -> Result<(), String> {
+pub fn set_resource_pack_enabled(
+    state: State<'_, AppState>,
+    id: String,
+    enabled: bool,
+) -> Result<(), String> {
     let game_dir = {
         let conn = state
             .db
@@ -144,7 +157,10 @@ pub fn remove_resource_pack(state: State<'_, AppState>, id: String) -> Result<()
     };
     let (game_dir, type_kind, file_name) = game_dir;
     let dir = dir_for_type(std::path::Path::new(&game_dir), &type_kind);
-    for candidate in [dir.join(&file_name), dir.join(format!("{file_name}.disabled"))] {
+    for candidate in [
+        dir.join(&file_name),
+        dir.join(format!("{file_name}.disabled")),
+    ] {
         if candidate.exists() {
             let _ = std::fs::remove_file(&candidate);
         }
@@ -164,15 +180,9 @@ pub async fn search_resource_packs(
     query: String,
     pack_type: String,
 ) -> Result<Vec<modrinth::ModrinthHit>, String> {
-    modrinth::search_by_type(
-        &state.client,
-        &query,
-        &pack_type,
-        12,
-        state.retry_times,
-    )
-    .await
-    .map_err(|e| e.to_string())
+    modrinth::search_by_type(&state.client, &query, &pack_type, 12, state.retry_times)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 /// 获取某资源包/光影包项目与指定实例兼容的版本列表
@@ -190,7 +200,10 @@ pub async fn get_resource_pack_versions(
         let inst = Repository::get_instance(&conn, &instance_id)
             .map_err(|e| e.to_string())?
             .ok_or_else(|| format!("实例不存在: {instance_id}"))?;
-        (inst.mc_version, inst.loader.as_deref().unwrap_or("vanilla").to_string())
+        (
+            inst.mc_version,
+            inst.loader.as_deref().unwrap_or("vanilla").to_string(),
+        )
     };
     let (mc_version, loader) = mc_version;
     modrinth::compatible_versions(

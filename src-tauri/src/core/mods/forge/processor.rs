@@ -42,17 +42,29 @@ pub fn parse_processors(profile: &Value) -> Vec<Processor> {
             let classpath = p
                 .get("classpath")
                 .and_then(Value::as_array)
-                .map(|a| a.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+                .map(|a| {
+                    a.iter()
+                        .filter_map(|v| v.as_str().map(String::from))
+                        .collect()
+                })
                 .unwrap_or_default();
             let args = p
                 .get("args")
                 .and_then(Value::as_array)
-                .map(|a| a.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+                .map(|a| {
+                    a.iter()
+                        .filter_map(|v| v.as_str().map(String::from))
+                        .collect()
+                })
                 .unwrap_or_default();
             let sides = p
                 .get("sides")
                 .and_then(Value::as_array)
-                .map(|a| a.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+                .map(|a| {
+                    a.iter()
+                        .filter_map(|v| v.as_str().map(String::from))
+                        .collect()
+                })
                 .unwrap_or_default();
             let outputs = p
                 .get("outputs")
@@ -93,7 +105,10 @@ pub fn build_vars(
     if let Some(obj) = data.as_object() {
         for (key, entry) in obj {
             if let Some(v) = client_value(entry) {
-                vars.insert(key.clone(), resolve_data_value(&v, libraries_dir, installer_dir));
+                vars.insert(
+                    key.clone(),
+                    resolve_data_value(&v, libraries_dir, installer_dir),
+                );
             }
         }
     }
@@ -223,16 +238,21 @@ fn read_jar_main_class(jar_path: &Path) -> Result<String, RmclError> {
     let file = std::fs::File::open(jar_path)
         .map_err(|e| RmclError::other(format!("无法打开处理器 jar {}: {e}", jar_path.display())))?;
     let mut archive = zip::ZipArchive::new(file)?;
-    let mut manifest = archive
-        .by_name("META-INF/MANIFEST.MF")
-        .map_err(|_| RmclError::other(format!("处理器 jar {} 缺少 MANIFEST.MF", jar_path.display())))?;
+    let mut manifest = archive.by_name("META-INF/MANIFEST.MF").map_err(|_| {
+        RmclError::other(format!(
+            "处理器 jar {} 缺少 MANIFEST.MF",
+            jar_path.display()
+        ))
+    })?;
     let mut text = String::new();
     use std::io::Read;
     manifest.read_to_string(&mut text)?;
     let main = text
         .lines()
         .find_map(|l| l.strip_prefix("Main-Class:").map(|s| s.trim().to_string()))
-        .ok_or_else(|| RmclError::other(format!("处理器 jar {} 缺少 Main-Class", jar_path.display())))?;
+        .ok_or_else(|| {
+            RmclError::other(format!("处理器 jar {} 缺少 Main-Class", jar_path.display()))
+        })?;
     Ok(main)
 }
 
@@ -269,13 +289,22 @@ pub fn build_processor_command(
         .map(|a| resolve_bracket_path(&expand(a, vars), libraries_dir))
         .collect();
 
-    let mut cmd = vec![java_path.to_string(), "-cp".to_string(), cp.join(CP_SEP), main_class];
+    let mut cmd = vec![
+        java_path.to_string(),
+        "-cp".to_string(),
+        cp.join(CP_SEP),
+        main_class,
+    ];
     cmd.extend(args);
     Ok(cmd)
 }
 
 /// 检查某 processor 的 outputs 是否都已产出且满足 SHA1(满足则无需重跑)
-pub fn outputs_done(outputs: &HashMap<String, String>, vars: &HashMap<String, String>, root: &Path) -> bool {
+pub fn outputs_done(
+    outputs: &HashMap<String, String>,
+    vars: &HashMap<String, String>,
+    root: &Path,
+) -> bool {
     if outputs.is_empty() {
         return true;
     }
@@ -352,7 +381,11 @@ pub fn build_processor_vars(
     minecraft_jar: &Path,
 ) -> HashMap<String, String> {
     let special = special_vars(installer_dir, libraries_dir, minecraft_jar);
-    match contents.install_profile.as_ref().and_then(|p| p.get("data")) {
+    match contents
+        .install_profile
+        .as_ref()
+        .and_then(|p| p.get("data"))
+    {
         Some(d) => build_vars(d, &special, libraries_dir, installer_dir),
         None => special,
     }
@@ -392,10 +425,25 @@ fn special_vars(
     let mut m = HashMap::new();
     m.insert("SIDE".into(), "client".into());
     m.insert("ROOT".into(), root.to_string_lossy().to_string());
-    m.insert("INSTALLER_DIR".into(), installer_dir.to_string_lossy().to_string());
-    m.insert("INSTALLER".into(), installer_dir.join("forge-installer.jar").to_string_lossy().to_string());
-    m.insert("MINECRAFT_JAR".into(), minecraft_jar.to_string_lossy().to_string());
-    m.insert("MINECRAFT_JAR_DIRECTORY".into(), libraries_dir.to_string_lossy().to_string());
+    m.insert(
+        "INSTALLER_DIR".into(),
+        installer_dir.to_string_lossy().to_string(),
+    );
+    m.insert(
+        "INSTALLER".into(),
+        installer_dir
+            .join("forge-installer.jar")
+            .to_string_lossy()
+            .to_string(),
+    );
+    m.insert(
+        "MINECRAFT_JAR".into(),
+        minecraft_jar.to_string_lossy().to_string(),
+    );
+    m.insert(
+        "MINECRAFT_JAR_DIRECTORY".into(),
+        libraries_dir.to_string_lossy().to_string(),
+    );
     m
 }
 
@@ -460,7 +508,13 @@ mod tests {
         serde_json::from_str(PROFILE).unwrap()
     }
 
-    fn vars_for(profile: &Value) -> (HashMap<String, String>, std::path::PathBuf, std::path::PathBuf) {
+    fn vars_for(
+        profile: &Value,
+    ) -> (
+        HashMap<String, String>,
+        std::path::PathBuf,
+        std::path::PathBuf,
+    ) {
         let data = profile.get("data");
         let mut special = HashMap::new();
         special.insert("SIDE".into(), "client".into());
@@ -494,9 +548,18 @@ mod tests {
             sides,
             outputs: Default::default(),
         };
-        assert!(!runs_on_client(&make(vec!["server".into()])), "仅 server 应跳过");
-        assert!(runs_on_client(&make(vec!["client".into()])), "client 应执行");
-        assert!(runs_on_client(&make(vec!["client".into(), "server".into()])), "含 client 应执行");
+        assert!(
+            !runs_on_client(&make(vec!["server".into()])),
+            "仅 server 应跳过"
+        );
+        assert!(
+            runs_on_client(&make(vec!["client".into()])),
+            "client 应执行"
+        );
+        assert!(
+            runs_on_client(&make(vec!["client".into(), "server".into()])),
+            "含 client 应执行"
+        );
         assert!(runs_on_client(&make(vec![])), "无 sides(通用)应执行");
     }
 
@@ -509,7 +572,10 @@ mod tests {
             "[net.minecraft:client:1.20.1:slim]"
         );
         let b = data.get("BSERVICE").unwrap();
-        assert_eq!(client_value(b).unwrap(), "net.minecraftforge:forge:1.20.1-47.2.0");
+        assert_eq!(
+            client_value(b).unwrap(),
+            "net.minecraftforge:forge:1.20.1-47.2.0"
+        );
         // 带单引号的 sha 字面量在 client_value 层仍带引号,由 resolve_data_value 剥离
         assert_eq!(
             client_value(data.get("MC_SLIM_SHA").unwrap()).unwrap(),

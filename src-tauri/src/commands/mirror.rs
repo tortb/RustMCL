@@ -62,7 +62,11 @@ pub async fn test_all_mirror_speed(state: State<'_, AppState>) -> Result<Vec<Spe
 
 /// 切换镜像源:persist 到 config.toml,并同步更新 AppState 中的 active mirror
 #[tauri::command]
-pub fn set_mirror(state: State<'_, AppState>, mirror: String, custom_base: Option<String>) -> Result<Mirror, String> {
+pub fn set_mirror(
+    state: State<'_, AppState>,
+    mirror: String,
+    custom_base: Option<String>,
+) -> Result<Mirror, String> {
     let active = Mirror::from_config(&mirror, custom_base.as_deref());
     if !active.is_official() {
         // 校验自定义基址合法性
@@ -78,7 +82,10 @@ pub fn set_mirror(state: State<'_, AppState>, mirror: String, custom_base: Optio
     cfg.save(&state.config_path).map_err(|e| e.to_string())?;
 
     {
-        let mut cur = state.mirror.lock().map_err(|e| format!("镜像状态锁获取失败: {e}"))?;
+        let mut cur = state
+            .mirror
+            .lock()
+            .map_err(|e| format!("镜像状态锁获取失败: {e}"))?;
         *cur = active.clone();
     }
     Ok(active)

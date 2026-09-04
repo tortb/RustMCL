@@ -63,7 +63,10 @@ mod tests {
     #[test]
     fn steve_offline_uuid_matches_java() {
         // 通过 Java UUID.nameUUIDFromBytes 计算的参考值
-        assert_eq!(offline_uuid("Steve"), "5627dd98-e6be-3c21-b8a8-e92344183641");
+        assert_eq!(
+            offline_uuid("Steve"),
+            "5627dd98-e6be-3c21-b8a8-e92344183641"
+        );
         // 幂等:重复调用结果一致
         assert_eq!(offline_uuid("Steve"), offline_uuid("Steve"));
     }

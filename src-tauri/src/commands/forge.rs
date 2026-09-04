@@ -2,10 +2,12 @@
 
 use tauri::{AppHandle, Emitter, State};
 
+use crate::core::mirror::Mirror;
 use crate::core::mods::forge::installer::{extract_installer, extract_installer_files};
 use crate::core::mods::forge::version_list::ForgeVersionInfo;
-use crate::core::mods::forge::{forge_work_dir, is_legacy, resolve_forge_version, run_installer_processors};
-use crate::core::mirror::Mirror;
+use crate::core::mods::forge::{
+    forge_work_dir, is_legacy, resolve_forge_version, run_installer_processors,
+};
 use crate::error::RmclError;
 use crate::{config::app_config::AppConfig, AppState};
 
@@ -101,11 +103,29 @@ async fn install_forge_inner(
         )
         .await?
     } else {
-        resolve_forge_version(&client, mirror, data_dir, mc_version, forge_version, retry_times).await?
+        resolve_forge_version(
+            &client,
+            mirror,
+            data_dir,
+            mc_version,
+            forge_version,
+            retry_times,
+        )
+        .await?
     };
 
     // 2. 下载合并版本的全部依赖(client.jar + libraries + natives + assets),供 processors 使用
-    run_download_for_version(&client, data_dir, &version, retry_times, max_concurrent, app.clone(), mirror, None).await?;
+    run_download_for_version(
+        &client,
+        data_dir,
+        &version,
+        retry_times,
+        max_concurrent,
+        app.clone(),
+        mirror,
+        None,
+    )
+    .await?;
 
     // 3. 旧版无需二进制补丁处理器,直接完成
     if is_legacy(mc_version) {
@@ -153,7 +173,13 @@ async fn install_forge_inner(
     let mc_version = mc_version.to_string();
     let forge_version = forge_version.to_string();
     let res = tauri::async_runtime::spawn_blocking(move || {
-        run_installer_processors(&contents, &data_dir, &mc_version, &forge_version, &java_path)
+        run_installer_processors(
+            &contents,
+            &data_dir,
+            &mc_version,
+            &forge_version,
+            &java_path,
+        )
     })
     .await
     .map_err(|e| RmclError::other(format!("处理器线程异常: {e}")))?;

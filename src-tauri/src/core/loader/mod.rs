@@ -64,7 +64,9 @@ pub async fn resolve_version(
             .await
         }
         // vanilla:直接读原版 version.json
-        "" | "vanilla" => return fetch_vanilla(client, mirror, data_dir, mc_version, retry_times).await,
+        "" | "vanilla" => {
+            return fetch_vanilla(client, mirror, data_dir, mc_version, retry_times).await
+        }
         other => {
             return Err(RmclError::other(format!("暂不支持加载器: {other}")));
         }
@@ -109,7 +111,8 @@ pub(crate) async fn fetch_vanilla(
     retry_times: u32,
 ) -> Result<VersionJson, RmclError> {
     let manifest_cache = data_dir.join("cache").join("version_manifest_v2.json");
-    let manifest = manifest::get_manifest(client, mirror, &manifest_cache, false, retry_times).await?;
+    let manifest =
+        manifest::get_manifest(client, mirror, &manifest_cache, false, retry_times).await?;
     let info = manifest
         .versions
         .iter()
@@ -212,7 +215,11 @@ async fn fetch_body(
 /// - arguments 的 game/jvm 追加到原版后面
 /// - profile 的 maven 库(仅 name+url,无 sha1)转换后追加到 libraries
 /// - 其余(assetIndex/downloads/javaVersion)沿用原版
-fn merge_loader(mut vanilla: VersionJson, profile: &Value, mirror: &Mirror) -> Result<VersionJson, RmclError> {
+fn merge_loader(
+    mut vanilla: VersionJson,
+    profile: &Value,
+    mirror: &Mirror,
+) -> Result<VersionJson, RmclError> {
     if let Some(mc) = profile.get("mainClass").and_then(|v| v.as_str()) {
         vanilla.main_class = mc.to_string();
     }
@@ -220,16 +227,18 @@ fn merge_loader(mut vanilla: VersionJson, profile: &Value, mirror: &Mirror) -> R
     if let Some(args) = profile.get("arguments") {
         if let Some(game) = args.get("game").and_then(|v| v.as_array()) {
             if let Some(vargs) = &mut vanilla.arguments {
-                vargs
-                    .game
-                    .extend(game.iter().filter_map(|a| serde_json::from_value(a.clone()).ok()));
+                vargs.game.extend(
+                    game.iter()
+                        .filter_map(|a| serde_json::from_value(a.clone()).ok()),
+                );
             }
         }
         if let Some(jvm) = args.get("jvm").and_then(|v| v.as_array()) {
             if let Some(vargs) = &mut vanilla.arguments {
-                vargs
-                    .jvm
-                    .extend(jvm.iter().filter_map(|a| serde_json::from_value(a.clone()).ok()));
+                vargs.jvm.extend(
+                    jvm.iter()
+                        .filter_map(|a| serde_json::from_value(a.clone()).ok()),
+                );
             }
         }
     }
@@ -334,7 +343,8 @@ mod tests {
     #[test]
     fn merge_replaces_main_class_and_appends_args_and_libs() {
         let profile: Value = serde_json::from_str(PROFILE).unwrap();
-        let merged = merge_loader(vanilla(), &profile, &Mirror::from_config("official", None)).unwrap();
+        let merged =
+            merge_loader(vanilla(), &profile, &Mirror::from_config("official", None)).unwrap();
 
         assert_eq!(
             merged.main_class,
@@ -343,12 +353,21 @@ mod tests {
         // jvm 参数追加在最后
         let args: &Arguments = merged.arguments.as_ref().unwrap();
         assert_eq!(args.jvm.len(), 3);
-        assert_eq!(args.jvm[2].plain().map(|s| s.as_str()), Some("-DFabricMcEmu=net.fabricmc.loader.impl.launch.knot.KnotClient"));
+        assert_eq!(
+            args.jvm[2].plain().map(|s| s.as_str()),
+            Some("-DFabricMcEmu=net.fabricmc.loader.impl.launch.knot.KnotClient")
+        );
         assert_eq!(merged.libraries.len(), 3);
 
         // maven 库的 path/url 推导正确
         let fabric_loader = &merged.libraries[2];
-        let artifact = fabric_loader.downloads.as_ref().unwrap().artifact.as_ref().unwrap();
+        let artifact = fabric_loader
+            .downloads
+            .as_ref()
+            .unwrap()
+            .artifact
+            .as_ref()
+            .unwrap();
         assert_eq!(
             artifact.path.as_deref(),
             Some("net/fabricmc/fabric-loader/0.16.9/fabric-loader-0.16.9.jar")
@@ -357,22 +376,38 @@ mod tests {
             artifact.url,
             "https://maven.fabricmc.net/net/fabricmc/fabric-loader/0.16.9/fabric-loader-0.16.9.jar"
         );
-        assert!(artifact.sha1.is_empty(), "maven 库无 sha1,应留空以便跳过校验");
+        assert!(
+            artifact.sha1.is_empty(),
+            "maven 库无 sha1,应留空以便跳过校验"
+        );
     }
 
     #[test]
     fn maven_to_library_with_classifier() {
-        let lib = maven_to_library("org.lwjgl:lwjgl:3.3.3:natives-linux", "https://maven/", &Mirror::from_config("official", None)).unwrap();
+        let lib = maven_to_library(
+            "org.lwjgl:lwjgl:3.3.3:natives-linux",
+            "https://maven/",
+            &Mirror::from_config("official", None),
+        )
+        .unwrap();
         let artifact = lib.downloads.unwrap().artifact.unwrap();
         assert_eq!(
             artifact.path.as_deref(),
             Some("org/lwjgl/lwjgl/3.3.3/lwjgl-3.3.3-natives-linux.jar")
         );
-        assert_eq!(artifact.url, "https://maven/org/lwjgl/lwjgl/3.3.3/lwjgl-3.3.3-natives-linux.jar");
+        assert_eq!(
+            artifact.url,
+            "https://maven/org/lwjgl/lwjgl/3.3.3/lwjgl-3.3.3-natives-linux.jar"
+        );
     }
 
     #[test]
     fn invalid_maven_name_returns_none() {
-        assert!(maven_to_library("bad-name", "https://maven/", &Mirror::from_config("official", None)).is_none());
+        assert!(maven_to_library(
+            "bad-name",
+            "https://maven/",
+            &Mirror::from_config("official", None)
+        )
+        .is_none());
     }
 }

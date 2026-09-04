@@ -126,13 +126,10 @@ pub async fn poll_device_token(client: &Client, device_code: &str) -> PollResult
         };
     }
     let status = resp.status();
-    let err: TokenError = resp
-        .json()
-        .await
-        .unwrap_or_else(|_| TokenError {
-            error: "unknown".into(),
-            error_description: None,
-        });
+    let err: TokenError = resp.json().await.unwrap_or_else(|_| TokenError {
+        error: "unknown".into(),
+        error_description: None,
+    });
     eprintln!("[rmcl-ms] poll_token HTTP {status}: {}", err.error);
     match err.error.as_str() {
         "authorization_pending" | "slow_down" => PollResult::Pending,
@@ -196,7 +193,10 @@ async fn xbox_auth(
     let status_code = status.as_u16();
     // 先取原始响应体文本并打印,避免解码失败时丢失 status/body;再尝试解析为 JSON
     let raw = resp.text().await.unwrap_or_default();
-    eprintln!("[rmcl-ms] {url} HTTP {status_code} body: {}", raw.chars().take(400).collect::<String>());
+    eprintln!(
+        "[rmcl-ms] {url} HTTP {status_code} body: {}",
+        raw.chars().take(400).collect::<String>()
+    );
     let body: serde_json::Value = match serde_json::from_str(&raw) {
         Ok(v) => v,
         Err(_) => serde_json::Value::String(raw),
@@ -326,7 +326,9 @@ pub async fn fetch_profile(client: &Client, access_token: &str) -> Result<McProf
         Ok(McProfile { id, name })
     } else if status.as_u16() == 404 {
         eprintln!("[rmcl-ms] profile HTTP 404: 没有 Minecraft Java 版");
-        Err(RmclError::other("该微软账号没有 Minecraft Java 版,请先购买游戏"))
+        Err(RmclError::other(
+            "该微软账号没有 Minecraft Java 版,请先购买游戏",
+        ))
     } else {
         eprintln!("[rmcl-ms] {MC_PROFILE_URL} HTTP {status}: {body}");
         Err(RmclError::other(format!(
@@ -353,9 +355,7 @@ pub async fn refresh_access_token(
         .await?;
     if resp.status().is_success() {
         let t: OAuthToken = resp.json().await?;
-        let new_refresh = t
-            .refresh_token
-            .unwrap_or_else(|| refresh_token.to_string());
+        let new_refresh = t.refresh_token.unwrap_or_else(|| refresh_token.to_string());
         Ok((t.access_token, new_refresh))
     } else {
         let e: TokenError = resp.json().await.unwrap_or_else(|_| TokenError {
@@ -408,11 +408,7 @@ pub async fn resolve_active_account(
         let _ = save_refresh_token(&new_refresh);
     }
     let profile = fetch_profile(client, &access).await?;
-    Ok(Some((
-        profile.name,
-        format_uuid(&profile.id),
-        access,
-    )))
+    Ok(Some((profile.name, format_uuid(&profile.id), access)))
 }
 
 /// 将不带横杠的 32 位 uuid 格式化为标准 8-4-4-4-12(游戏参数要求)

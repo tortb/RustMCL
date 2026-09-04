@@ -33,11 +33,21 @@ pub async fn resolve_legacy(
 
     // 1. 下载 installer 并读取其中的 version.json / install_profile.json
     let work = forge_work_dir(data_dir, mc_version, forge_version);
-    let jar = installer::download_installer(client, mirror, mc_version, forge_version, &work, retry_times).await?;
+    let jar = installer::download_installer(
+        client,
+        mirror,
+        mc_version,
+        forge_version,
+        &work,
+        retry_times,
+    )
+    .await?;
     let contents = installer::extract_installer(&jar, mc_version, forge_version)?;
 
     // 2. 与原版合并(若 installer 里两个 json 都没有,则退回纯原版)
-    let vanilla = crate::core::loader::fetch_vanilla(client, mirror, data_dir, mc_version, retry_times).await?;
+    let vanilla =
+        crate::core::loader::fetch_vanilla(client, mirror, data_dir, mc_version, retry_times)
+            .await?;
     let mut merged = if let Some(forge_json) = contents
         .version_json
         .as_ref()
@@ -62,7 +72,12 @@ pub async fn resolve_legacy(
 }
 
 /// 若 libraries 中缺少 `net.minecraftforge:forge:<mc>-<forge>`,则补一个 universal jar 库(maven 地址,sha1 留空)
-fn ensure_universal_jar(merged: &mut VersionJson, mc_version: &str, forge_version: &str, mirror: &Mirror) {
+fn ensure_universal_jar(
+    merged: &mut VersionJson,
+    mc_version: &str,
+    forge_version: &str,
+    mirror: &Mirror,
+) {
     let dir = format!("{mc_version}-{forge_version}");
     let name = format!("net.minecraftforge:forge:{dir}");
     if merged.libraries.iter().any(|l| l.name == name) {
@@ -109,15 +124,31 @@ mod tests {
             }"#,
         )
         .unwrap();
-        ensure_universal_jar(&mut v, "1.12.2", "14.23.5.2860", &Mirror::from_config("official", None));
+        ensure_universal_jar(
+            &mut v,
+            "1.12.2",
+            "14.23.5.2860",
+            &Mirror::from_config("official", None),
+        );
         assert_eq!(v.libraries.len(), 1);
         let lib = &v.libraries[0];
-        assert!(lib.name.starts_with("net.minecraftforge:forge:1.12.2-14.23.5.2860"));
+        assert!(lib
+            .name
+            .starts_with("net.minecraftforge:forge:1.12.2-14.23.5.2860"));
         let artifact = lib.downloads.as_ref().unwrap().artifact.as_ref().unwrap();
-        assert!(artifact.path.as_deref().unwrap().ends_with("-universal.jar"));
+        assert!(artifact
+            .path
+            .as_deref()
+            .unwrap()
+            .ends_with("-universal.jar"));
         assert_eq!(artifact.sha1, "");
         // 再次调用不重复添加
-        ensure_universal_jar(&mut v, "1.12.2", "14.23.5.2860", &Mirror::from_config("official", None));
+        ensure_universal_jar(
+            &mut v,
+            "1.12.2",
+            "14.23.5.2860",
+            &Mirror::from_config("official", None),
+        );
         assert_eq!(v.libraries.len(), 1);
     }
 }

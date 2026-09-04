@@ -64,14 +64,26 @@ pub async fn resolve_forge_version(
     }
 
     let work = forge_work_dir(data_dir, mc_version, forge_version);
-    let jar = installer::download_installer(client, mirror, mc_version, forge_version, &work, retry_times).await?;
+    let jar = installer::download_installer(
+        client,
+        mirror,
+        mc_version,
+        forge_version,
+        &work,
+        retry_times,
+    )
+    .await?;
     let contents = installer::extract_installer(&jar, mc_version, forge_version)?;
     let forge_json = contents
         .version_json
         .as_ref()
         .or(contents.install_profile.as_ref())
-        .ok_or_else(|| RmclError::other("Forge installer 缺少 version.json / install_profile.json"))?;
-    let vanilla = crate::core::loader::fetch_vanilla(client, mirror, data_dir, mc_version, retry_times).await?;
+        .ok_or_else(|| {
+            RmclError::other("Forge installer 缺少 version.json / install_profile.json")
+        })?;
+    let vanilla =
+        crate::core::loader::fetch_vanilla(client, mirror, data_dir, mc_version, retry_times)
+            .await?;
     let mut merged = profile_merge::merge_forge(&vanilla, forge_json)?;
     // 合并后版本 id 取 forge-<mc>-<forge>,保证 client.jar、缓存文件名、launch classpath 一致
     merged.id = merged_id.clone();
@@ -128,7 +140,11 @@ pub fn processor_library_items(
         .filter_map(|lib| {
             let dl = lib.get("downloads")?.get("artifact")?;
             let url = dl.get("url")?.as_str()?.to_string();
-            let sha1 = dl.get("sha1").and_then(|s| s.as_str()).unwrap_or("").to_string();
+            let sha1 = dl
+                .get("sha1")
+                .and_then(|s| s.as_str())
+                .unwrap_or("")
+                .to_string();
             let size = dl.get("size").and_then(|s| s.as_i64()).unwrap_or(0);
             let path = dl.get("path").and_then(|s| s.as_str()).unwrap_or("");
             let dest = if path.is_empty() {
@@ -317,13 +333,21 @@ mod tests {
         // 1. 下载 installer 并解压(内存 json + 全量文件到工作目录)
         let work = forge_work_dir(&data_dir, mc, fv);
         let mirror = Mirror::from_config("official", None);
-        let jar = installer::download_installer(&client, &mirror, mc, fv, &work, 3).await.unwrap();
+        let jar = installer::download_installer(&client, &mirror, mc, fv, &work, 3)
+            .await
+            .unwrap();
         let contents = installer::extract_installer(&jar, mc, fv).unwrap();
         installer::extract_installer_files(&jar, &work).unwrap();
 
         // 2. 合并 version.json(幂等,复用已下载 installer)
-        let version = resolve_forge_version(&client, &mirror, &data_dir, mc, fv, 3).await.unwrap();
-        assert_eq!(version.id, forge_merged_id(mc, fv), "合并版本 id 应为 forge-<mc>-<forge>");
+        let version = resolve_forge_version(&client, &mirror, &data_dir, mc, fv, 3)
+            .await
+            .unwrap();
+        assert_eq!(
+            version.id,
+            forge_merged_id(mc, fv),
+            "合并版本 id 应为 forge-<mc>-<forge>"
+        );
 
         // 3. 下载依赖(client.jar + libraries + natives + 处理器工具链库)
         let ctx = crate::core::version::rules::RuleContext::current(
@@ -331,19 +355,32 @@ mod tests {
         );
         let vdir = data_dir.join("versions").join(&version.id);
         let libs = data_dir.join("libraries");
-        let mut items = vec![crate::core::downloader::library::client_download_item(&version, &vdir)];
-        items.extend(crate::core::downloader::library::library_items(&version, &ctx, &libs));
-        items.extend(crate::core::downloader::library::native_items(&version, &ctx, &libs));
+        let mut items = vec![crate::core::downloader::library::client_download_item(
+            &version, &vdir,
+        )];
+        items.extend(crate::core::downloader::library::library_items(
+            &version, &ctx, &libs,
+        ));
+        items.extend(crate::core::downloader::library::native_items(
+            &version, &ctx, &libs,
+        ));
         items.extend(processor_library_items(&contents, &data_dir, &mirror));
-        crate::core::downloader::download_many(&client, &mirror, items, 4, 2, None, |_| {}).await.unwrap();
+        crate::core::downloader::download_many(&client, &mirror, items, 4, 2, None, |_| {})
+            .await
+            .unwrap();
 
         // 4. 运行全部 java 处理器
         let java = std::env::var("JAVA").unwrap_or_else(|_| "java".into());
         run_installer_processors(&contents, &data_dir, mc, fv, &java).unwrap();
 
         // 5. 校验关键产物:patched client jar(处理器最终产出)
-        let patched = libs.join("net/minecraftforge/forge/1.20.1-47.2.0/forge-1.20.1-47.2.0-client.jar");
-        assert!(patched.exists(), "patched client jar 应已生成: {}", patched.display());
+        let patched =
+            libs.join("net/minecraftforge/forge/1.20.1-47.2.0/forge-1.20.1-47.2.0-client.jar");
+        assert!(
+            patched.exists(),
+            "patched client jar 应已生成: {}",
+            patched.display()
+        );
     }
 
     /// 打印处理器变量与命令(仅用于真实环境验证)。
@@ -351,7 +388,10 @@ mod tests {
         let work = forge_work_dir(data_dir, mc, fv);
         let libs = data_dir.join("libraries");
         let merged_id = forge_merged_id(mc, fv);
-        let mcjar = data_dir.join("versions").join(&merged_id).join(format!("{merged_id}.jar"));
+        let mcjar = data_dir
+            .join("versions")
+            .join(&merged_id)
+            .join(format!("{merged_id}.jar"));
 
         let vars = super::processor::build_processor_vars(contents, &work, &libs, &mcjar);
         let mut keys: Vec<_> = vars.keys().cloned().collect();
@@ -360,7 +400,9 @@ mod tests {
         for k in keys {
             println!("  {k} = {}", vars.get(&k).unwrap());
         }
-        let preview = super::processor::build_processors_preview(contents, &work, &libs, &mcjar, "java").unwrap();
+        let preview =
+            super::processor::build_processors_preview(contents, &work, &libs, &mcjar, "java")
+                .unwrap();
         println!("=== 处理器命令 ===");
         for (i, cmd) in &preview {
             println!("--- processor[{i}] ---");

@@ -260,7 +260,9 @@ mod tests {
                 action: RuleAction::Allow,
                 os: None,
                 features: Some(FeaturesRule {
-                    fields: [(name.to_string(), serde_json::json!(true))].into_iter().collect(),
+                    fields: [(name.to_string(), serde_json::json!(true))]
+                        .into_iter()
+                        .collect(),
                 }),
             }]
         };

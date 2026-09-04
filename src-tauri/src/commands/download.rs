@@ -7,14 +7,14 @@ use std::sync::Arc;
 
 use tauri::{AppHandle, Emitter, State};
 
+use crate::commands::launch::GameLogEvent;
 use crate::core::downloader::asset::{asset_index_item, asset_items, load_asset_index};
-use crate::core::downloader::library::{client_download_item, library_items, native_items};
 use crate::core::downloader::download_many;
+use crate::core::downloader::library::{client_download_item, library_items, native_items};
 use crate::core::loader;
 use crate::core::mirror::Mirror;
 use crate::core::version::rules::{FeaturesCtx, RuleContext};
 use crate::core::version::version_json::VersionJson;
-use crate::commands::launch::GameLogEvent;
 use crate::db::repository::Repository;
 use crate::error::RmclError;
 use crate::AppState;
@@ -176,7 +176,10 @@ pub fn prepare_instance(
 
 /// 取消创建实例时的资源下载:置位取消令牌并清理残留的 .part 临时文件
 #[tauri::command]
-pub fn cancel_instance_download(state: State<'_, AppState>, instance_id: String) -> Result<(), String> {
+pub fn cancel_instance_download(
+    state: State<'_, AppState>,
+    instance_id: String,
+) -> Result<(), String> {
     if let Some(flag) = state
         .cancel_tokens
         .lock()
@@ -235,7 +238,17 @@ pub(crate) async fn run_download(
         retry_times,
     )
     .await?;
-    run_download_for_version(&client, data_dir, &version, retry_times, max_concurrent, app, mirror, cancel).await
+    run_download_for_version(
+        &client,
+        data_dir,
+        &version,
+        retry_times,
+        max_concurrent,
+        app,
+        mirror,
+        cancel,
+    )
+    .await
 }
 
 /// 按已解析的 version 下载 client.jar + libraries + natives + assets(幂等)

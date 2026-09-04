@@ -28,8 +28,13 @@ pub fn import_skin(
     model: String,
 ) -> Result<SkinEntry, String> {
     let model = if model == "slim" { "slim" } else { "classic" };
-    skin::import_skin(&state.data_dir, std::path::Path::new(&src_path), &name, model)
-        .map_err(|e| e.to_string())
+    skin::import_skin(
+        &state.data_dir,
+        std::path::Path::new(&src_path),
+        &name,
+        model,
+    )
+    .map_err(|e| e.to_string())
 }
 
 /// 删除本地皮肤
@@ -114,8 +119,13 @@ fn write_offline_skins(data_dir: &Path, map: &HashMap<String, String>) -> Result
 
 /// 读取离线账号当前关联的皮肤 id
 #[tauri::command]
-pub fn get_offline_skin(state: State<AppState>, account_id: String) -> Result<Option<String>, String> {
-    Ok(read_offline_skins(&state.data_dir).get(&account_id).cloned())
+pub fn get_offline_skin(
+    state: State<AppState>,
+    account_id: String,
+) -> Result<Option<String>, String> {
+    Ok(read_offline_skins(&state.data_dir)
+        .get(&account_id)
+        .cloned())
 }
 
 /// 设置/清除离线账号的皮肤关联(skin_id 传空则清除)

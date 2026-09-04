@@ -62,8 +62,8 @@ async fn ping_inner(address: &str, port: u16) -> Result<ServerStatus, RmclError>
 
 /// 解析 status JSON;任何字段缺失都优雅降级(不 panic)
 fn parse_status(json: &str) -> Result<ServerStatus, RmclError> {
-    let v: serde_json::Value =
-        serde_json::from_str(json).map_err(|e| RmclError::other(format!("status 解析失败: {e}")))?;
+    let v: serde_json::Value = serde_json::from_str(json)
+        .map_err(|e| RmclError::other(format!("status 解析失败: {e}")))?;
 
     let motd = v
         .get("description")
@@ -80,7 +80,10 @@ fn parse_status(json: &str) -> Result<ServerStatus, RmclError> {
         })
         .unwrap_or((0, 0));
 
-    let favicon = v.get("favicon").and_then(|f| f.as_str()).map(|s| s.to_string());
+    let favicon = v
+        .get("favicon")
+        .and_then(|f| f.as_str())
+        .map(|s| s.to_string());
 
     Ok(ServerStatus {
         id: String::new(),

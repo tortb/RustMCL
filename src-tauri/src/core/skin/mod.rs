@@ -35,8 +35,7 @@ pub fn list_skins(data_dir: &Path) -> Result<Vec<SkinEntry>, RmclError> {
         return Ok(Vec::new());
     }
     let mut entries: Vec<(u64, SkinEntry)> = Vec::new();
-    let read = fs::read_dir(&dir)
-        .map_err(|e| RmclError::other(format!("读取皮肤库失败: {e}")))?;
+    let read = fs::read_dir(&dir).map_err(|e| RmclError::other(format!("读取皮肤库失败: {e}")))?;
     for item in read.flatten() {
         let p = item.path();
         if !p.is_dir() {
@@ -92,17 +91,20 @@ pub fn validate_skin(bytes: &[u8]) -> Result<(u32, u32), RmclError> {
 }
 
 /// 导入本地皮肤:复制 PNG 到皮肤库并写入 meta.json;name 为空时以文件名作为名字
-pub fn import_skin(data_dir: &Path, src: &Path, name: &str, model: &str) -> Result<SkinEntry, RmclError> {
+pub fn import_skin(
+    data_dir: &Path,
+    src: &Path,
+    name: &str,
+    model: &str,
+) -> Result<SkinEntry, RmclError> {
     let bytes = fs::read(src).map_err(|e| RmclError::other(format!("读取皮肤文件失败: {e}")))?;
     let (width, height) = validate_skin(&bytes)?;
     let dir = skins_dir(data_dir);
-    fs::create_dir_all(&dir)
-        .map_err(|e| RmclError::other(format!("创建皮肤库失败: {e}")))?;
+    fs::create_dir_all(&dir).map_err(|e| RmclError::other(format!("创建皮肤库失败: {e}")))?;
 
     let id = uuid::Uuid::new_v4().to_string();
     let target = skin_dir(data_dir, &id);
-    fs::create_dir_all(&target)
-        .map_err(|e| RmclError::other(format!("创建皮肤目录失败: {e}")))?;
+    fs::create_dir_all(&target).map_err(|e| RmclError::other(format!("创建皮肤目录失败: {e}")))?;
 
     let file_name = src
         .file_stem()
@@ -111,7 +113,11 @@ pub fn import_skin(data_dir: &Path, src: &Path, name: &str, model: &str) -> Resu
         .to_string();
     let entry = SkinEntry {
         id: id.clone(),
-        name: if name.trim().is_empty() { file_name } else { name.trim().to_string() },
+        name: if name.trim().is_empty() {
+            file_name
+        } else {
+            name.trim().to_string()
+        },
         model: model.to_string(),
         width,
         height,
@@ -133,8 +139,7 @@ pub fn remove_skin(data_dir: &Path, id: &str) -> Result<(), RmclError> {
     if !dir.exists() {
         return Err(RmclError::other("皮肤不存在"));
     }
-    fs::remove_dir_all(&dir)
-        .map_err(|e| RmclError::other(format!("删除皮肤失败: {e}")))?;
+    fs::remove_dir_all(&dir).map_err(|e| RmclError::other(format!("删除皮肤失败: {e}")))?;
     Ok(())
 }
 
