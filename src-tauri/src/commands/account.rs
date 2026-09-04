@@ -11,8 +11,8 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter, State};
 
 use crate::core::account::microsoft_auth::{
-    delete_refresh_token, exchange_tokens, poll_device_token, request_device_code,
-    save_refresh_token, PollResult,
+    delete_mc_token, delete_refresh_token, exchange_tokens, poll_device_token,
+    request_device_code, save_refresh_token, PollResult,
 };
 use crate::db::repository::Repository;
 use crate::db::schema::Account;
@@ -111,10 +111,11 @@ pub fn get_active_account(state: State<'_, AppState>) -> Result<Option<Account>,
     Repository::get_active_account(&conn).map_err(|e| e.to_string())
 }
 
-/// 退出登录:清除 keyring 中的 refresh token,并将账号置为非激活
+/// 退出登录:清除 keyring 中的 refresh token 与缓存 MC token,并将账号置为非激活
 #[tauri::command]
 pub fn logout_account(state: State<'_, AppState>, id: String) -> Result<(), String> {
     let _ = delete_refresh_token();
+    let _ = delete_mc_token();
     let conn = state
         .db
         .lock()

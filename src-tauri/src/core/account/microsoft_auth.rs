@@ -10,6 +10,8 @@
 //!
 //! refresh token 通过 keyring(系统钥匙串)保存,DB 只存账号元数据(T3.2)。
 
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use reqwest::Client;
 use serde::Deserialize;
 use serde::Serialize;
@@ -31,6 +33,8 @@ const MC_PROFILE_URL: &str = "https://api.minecraftservices.com/minecraft/profil
 /// keyring 条目:服务名 "rustmcl",条目名固定,保存微软 refresh token
 const KEYRING_SERVICE: &str = "rustmcl";
 const KEYRING_ENTRY: &str = "microsoft-refresh-token";
+/// Minecraft access token 缓存条目(约 24h 有效,避免每次启动都重走 OAuth 链路)
+const MC_TOKEN_ENTRY: &str = "microsoft-mc-token";
 
 /// Device Code 响应(展示给用户 + 轮询用)
 #[derive(Debug, Clone, Deserialize)]
@@ -234,18 +238,14 @@ fn xbox_error(body: &serde_json::Value, url: &str) -> RmclError {
     RmclError::other(msg)
 }
 
-/// 使用 MSA access/refresh token 完成 XBL → XSTS → Minecraft 全链路
-pub async fn exchange_tokens(
+/// 用 MSA access token 走 XBL → XSTS → Minecraft 登录,得到 Minecraft 专用 access token。
+///
+/// 注意:MC 的 /minecraft/profile 与 /minecraft/profile/skins 端点要求的是这里的
+/// Minecraft access token,而不是 MSA access token;直接把 MSA token 传过去会返回 401。
+async fn minecraft_access_token(
     client: &Client,
     msa_access_token: &str,
-    msa_refresh_token: Option<&str>,
-) -> Result<MicrosoftAccount, RmclError> {
-    // 日志 token 类型前缀,便于排查(MSA access token 可能是 opaque 或 JWT,均属正常)
-    eprintln!(
-        "[rmcl-ms] MSA access_token 前缀: {}(token 长度 {})",
-        msa_access_token.chars().take(8).collect::<String>(),
-        msa_access_token.len()
-    );
+) -> Result<(String, u64), RmclError> {
     // 1. XBL token(携带 MSA access token)
     let (xbl_token, _uhs) = xbox_auth(
         client,
@@ -296,7 +296,28 @@ pub async fn exchange_tokens(
         .as_str()
         .ok_or_else(|| RmclError::other("Minecraft 响应缺少 access_token"))?
         .to_string();
-    // 4. 拉取 Profile
+    // login_with_xbox 返回 expires_in(秒),用于缓存有效期;缺失时保守取 24 小时。
+    let expires_in = body["expires_in"].as_u64().unwrap_or(24 * 60 * 60);
+    Ok((access_token, expires_in))
+}
+
+/// 使用 MSA access/refresh token 完成 XBL → XSTS → Minecraft 全链路
+pub async fn exchange_tokens(
+    client: &Client,
+    msa_access_token: &str,
+    msa_refresh_token: Option<&str>,
+) -> Result<MicrosoftAccount, RmclError> {
+    // 日志 token 类型前缀,便于排查(MSA access token 可能是 opaque 或 JWT,均属正常)
+    eprintln!(
+        "[rmcl-ms] MSA access_token 前缀: {}(token 长度 {})",
+        msa_access_token.chars().take(8).collect::<String>(),
+        msa_access_token.len()
+    );
+    // 1. 用 MSA access token 走 XBL → XSTS → Minecraft 登录,得到 Minecraft 专用 access_token
+    let (access_token, expires_in) = minecraft_access_token(client, msa_access_token).await?;
+    // 顺手缓存:当前登录后的首次启动无需再走一遍 OAuth 链路
+    let _ = save_mc_token(&access_token, expires_in);
+    // 2. 拉取 Profile
     let profile = fetch_profile(client, &access_token).await?;
     Ok(MicrosoftAccount {
         refresh_token: msa_refresh_token.unwrap_or_default().to_string(),
@@ -385,6 +406,50 @@ pub fn load_refresh_token() -> Result<String, RmclError> {
         .map_err(|e| RmclError::other(format!("读取令牌失败: {e}")))
 }
 
+/// Minecraft access token 缓存内容
+#[derive(Serialize, Deserialize)]
+struct McTokenCache {
+    access_token: String,
+    /// 过期时间(UNIX 秒)
+    expires_at: u64,
+}
+
+/// 保存 MC access token 到 keyring;带 5 分钟提前量,避免把恰好到期的 token 交给游戏
+fn save_mc_token(token: &str, expires_in: u64) -> Result<(), RmclError> {
+    let entry = keyring::Entry::new(KEYRING_SERVICE, MC_TOKEN_ENTRY)
+        .map_err(|e| RmclError::other(format!("打开系统钥匙串失败: {e}")))?;
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let cache = McTokenCache {
+        access_token: token.to_string(),
+        expires_at: now + expires_in.saturating_sub(300),
+    };
+    let json = serde_json::to_string(&cache)
+        .map_err(|e| RmclError::other(format!("序列化令牌失败: {e}")))?;
+    entry
+        .set_password(&json)
+        .map_err(|e| RmclError::other(format!("保存令牌失败: {e}")))?;
+    Ok(())
+}
+
+/// 读取仍有效(未过期)的缓存 MC access_token;不存在或已过期时返回 None
+fn load_mc_token() -> Option<String> {
+    let entry = keyring::Entry::new(KEYRING_SERVICE, MC_TOKEN_ENTRY).ok()?;
+    let json = entry.get_password().ok()?;
+    let cache: McTokenCache = serde_json::from_str(&json).ok()?;
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    if now < cache.expires_at {
+        Some(cache.access_token)
+    } else {
+        None
+    }
+}
+
 pub fn delete_refresh_token() -> Result<(), RmclError> {
     let entry = keyring::Entry::new(KEYRING_SERVICE, KEYRING_ENTRY)
         .map_err(|e| RmclError::other(format!("打开系统钥匙串失败: {e}")))?;
@@ -395,10 +460,29 @@ pub fn delete_refresh_token() -> Result<(), RmclError> {
     }
 }
 
+/// 清除缓存的 MC access token(登出时调用,避免失效令牌残留)
+pub fn delete_mc_token() -> Result<(), RmclError> {
+    let entry = keyring::Entry::new(KEYRING_SERVICE, MC_TOKEN_ENTRY)
+        .map_err(|e| RmclError::other(format!("打开系统钥匙串失败: {e}")))?;
+    match entry.delete_credential() {
+        Ok(()) => Ok(()),
+        Err(keyring::Error::NoEntry) => Ok(()),
+        Err(e) => Err(RmclError::other(format!("删除令牌失败: {e}"))),
+    }
+}
+
 /// 静默续期并返回当前账号的 (name, uuid, access_token);未登录或无有效令牌时返回 None
+///
+/// 优先复用 keyring 里缓存的 Minecraft access token(约 24h 有效),避免每次启动都重走
+/// XBL → XSTS → Minecraft 登录的 OAuth 链路;仅当缓存缺失/过期,或 profile 拉取失败时才重新续期。
 pub async fn resolve_active_account(
     client: &Client,
 ) -> Result<Option<(String, String, String)>, RmclError> {
+    if let Some(mc_access) = load_mc_token() {
+        if let Ok(profile) = fetch_profile(client, &mc_access).await {
+            return Ok(Some((profile.name, format_uuid(&profile.id), mc_access)));
+        }
+    }
     let refresh = match load_refresh_token() {
         Ok(t) if !t.is_empty() => t,
         _ => return Ok(None),
@@ -407,8 +491,12 @@ pub async fn resolve_active_account(
     if new_refresh != refresh {
         let _ = save_refresh_token(&new_refresh);
     }
-    let profile = fetch_profile(client, &access).await?;
-    Ok(Some((profile.name, format_uuid(&profile.id), access)))
+    // refresh_access_token 返回的是 MSA access token;先换 Minecraft 专用 token,
+    // 再拉 profile,否则 MC profile 端点会返回 401(旧缺陷导致启动/上传皮肤失败)。
+    let (mc_access, expires_in) = minecraft_access_token(client, &access).await?;
+    let _ = save_mc_token(&mc_access, expires_in);
+    let profile = fetch_profile(client, &mc_access).await?;
+    Ok(Some((profile.name, format_uuid(&profile.id), mc_access)))
 }
 
 /// 将不带横杠的 32 位 uuid 格式化为标准 8-4-4-4-12(游戏参数要求)
