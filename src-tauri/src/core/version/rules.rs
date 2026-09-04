@@ -28,6 +28,8 @@ impl FeaturesCtx {
         self
     }
 
+    // 仅供测试用例启用 is_demo_user 规则;正式运行不启用演示账号,故在非测试构建标记 dead_code
+    #[allow(dead_code)]
     pub fn demo_user(mut self, yes: bool) -> Self {
         set_feature(&mut self, "is_demo_user", yes);
         self

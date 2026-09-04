@@ -38,7 +38,6 @@ pub struct DownloadProgress {
 /// 一次下载的整体统计(区分"命中缓存跳过"与"实际下载",便于日志/UI 呈现)
 #[derive(Debug, Clone, Copy, Default)]
 pub struct DownloadStats {
-    pub total: usize,
     pub downloaded: usize,
     pub cached: usize,
 }
@@ -183,7 +182,6 @@ where
             .map_err(|e| RmclError::other(format!("下载任务异常: {e}")))??;
     }
     Ok(DownloadStats {
-        total,
         downloaded: downloaded.load(Ordering::SeqCst),
         cached: cached.load(Ordering::SeqCst),
     })
