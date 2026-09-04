@@ -259,13 +259,27 @@ net.minecraftforge.fml.ModLoadingException: ...
 
     #[test]
     fn find_latest_picks_newest() {
+        use std::time::{Duration, SystemTime};
+
         let dir =
             std::env::temp_dir().join(format!("rmcl_crash_{}", uuid::Uuid::new_v4().simple()));
         let crash = dir.join("crash-reports");
         std::fs::create_dir_all(&crash).unwrap();
-        std::fs::write(crash.join("crash-2024-03-03_03.03.03-server.txt"), "server").unwrap();
-        std::fs::write(crash.join("crash-2024-01-01_01.01.01-client.txt"), "old").unwrap();
-        std::fs::write(crash.join("crash-2024-02-02_02.02.02-client.txt"), "new").unwrap();
+
+        // 显式设置不同 mtime,避免依赖文件系统写入时序:不同文件系统时间戳粒度不同,
+        // 快速连续写入可能得到相同 mtime,使该测试不可靠。
+        let base = SystemTime::UNIX_EPOCH;
+        let mk = |name: &str, secs: u64| {
+            let p = crash.join(name);
+            std::fs::write(&p, "x").unwrap();
+            let f = std::fs::File::options().write(true).open(&p).unwrap();
+            f.set_times(std::fs::FileTimes::new().set_modified(base + Duration::from_secs(secs)))
+                .unwrap();
+        };
+        mk("crash-2024-03-03_03.03.03-server.txt", 100);
+        mk("crash-2024-01-01_01.01.01-client.txt", 200);
+        mk("crash-2024-02-02_02.02.02-client.txt", 300);
+
         let found = find_latest_crash_report(&dir);
         assert_eq!(
             found
