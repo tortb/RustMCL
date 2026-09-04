@@ -94,6 +94,16 @@ jobs:
         with:
           arch: arm64
 
+      # Windows arm64 交叉链接:Git for Windows 的 /usr/bin/link.exe(GNU coreutils)会
+      # 抢先于 MSVC link.exe 被调用,导致 "missing operand" 链接失败(ilammy/msvc-dev-cmd #25)。
+      # 删掉干扰文件,让 MSVC 的 link.exe 被正确解析。
+      - name: Remove Git usr/bin link.exe interfering with MSVC linker
+        if: matrix.os == 'windows' && matrix.arch == 'arm64'
+        shell: bash
+        run: |
+          rm -f /usr/bin/link.exe
+          command -v link.exe || echo "warning: MSVC link.exe not found on PATH after cleanup"
+
       - name: Install Rust stable + target
         uses: dtolnay/rust-toolchain@stable
         with:
