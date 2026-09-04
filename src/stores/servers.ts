@@ -88,7 +88,7 @@ export const useServerStore = create<ServerStore>((set, get) => ({
         ),
       }));
       return st;
-    } catch (e) {
+    } catch {
       set((s) => ({
         servers: s.servers.map((sv) =>
           sv.id === id ? { ...sv, last_ping_ms: null } : sv,

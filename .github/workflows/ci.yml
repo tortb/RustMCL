@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # 前端:依赖安装 → lint → typecheck → build
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+  # Rust:fmt → check → test → clippy(检查阶段不创建 Release)
+  back-end:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux system dependencies (Tauri)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libssl-dev \
+            libxdo-dev \
+            patchelf \
+            xdg-utils
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Rust build
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      # cargo 相关命令在 src-tauri 目录下运行
+      - name: cargo fmt --check
+        working-directory: src-tauri
+        run: cargo fmt --check
+
+      - name: cargo check
+        working-directory: src-tauri
+        run: cargo check
+
+      - name: cargo test
+        working-directory: src-tauri
+        run: cargo test
+
+      - name: cargo clippy
+        working-directory: src-tauri
+        run: cargo clippy

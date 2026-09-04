@@ -52,7 +52,7 @@ export const useDownloadsStore = create<DownloadsStore>((set, get) => ({
       if (!get().selected && versions.length > 0) {
         set({ selected: versions[0].id });
       }
-    } catch (e) {
+    } catch {
       set({ versionsLoading: false });
     }
   },

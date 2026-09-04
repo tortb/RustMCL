@@ -1,0 +1,198 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    # 一个平台构建失败不取消其它平台
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            target: aarch64-apple-darwin
+            os: macos
+            arch: arm64
+            args: "--target aarch64-apple-darwin --bundles dmg"
+          - platform: macos-latest
+            target: x86_64-apple-darwin
+            os: macos
+            arch: x64
+            args: "--target x86_64-apple-darwin --bundles dmg"
+          - platform: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            os: linux
+            arch: x64
+            args: "--target x86_64-unknown-linux-gnu --bundles appimage,deb,rpm"
+          # aarch64 需在原生 ARM runner 上构建:linuxdeploy 无法交叉编译 ARM AppImage
+          - platform: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            os: linux
+            arch: arm64
+            args: "--target aarch64-unknown-linux-gnu --bundles appimage"
+          - platform: windows-latest
+            target: x86_64-pc-windows-msvc
+            os: windows
+            arch: x64
+            args: "--target x86_64-pc-windows-msvc --bundles nsis,msi"
+          - platform: windows-latest
+            target: aarch64-pc-windows-msvc
+            os: windows
+            arch: arm64
+            args: "--target aarch64-pc-windows-msvc --bundles nsis"
+
+    runs-on: ${{ matrix.platform }}
+    permissions:
+      contents: read
+      # 需要在 artifacts 存储中写入产物
+      actions: write
+
+    env:
+      # Microsoft OAuth Client ID:来自 GitHub Variables,不是 Secret
+      RUSTMCL_CLIENT_ID: ${{ vars.RUSTMCL_CLIENT_ID }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Install Linux system dependencies (Tauri)
+        if: startsWith(matrix.platform, 'ubuntu')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libssl-dev \
+            libxdo-dev \
+            patchelf \
+            libfuse2 \
+            xdg-utils
+
+      # Windows arm64:需要 ARM64 MSVC 环境
+      - name: Set up ARM64 MSVC environment
+        if: matrix.os == 'windows' && matrix.arch == 'arm64'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: arm64
+
+      - name: Install Rust stable + target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache Rust build
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      # 只构建、不自动建/传 Release(未传 tagName/releaseId 时 tauri-action 仅构建)
+      - name: Build bundles
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: ${{ matrix.args }}
+
+      # 把产物重命名为统一格式:RustMCL_<version>_<os>_<arch>.ext
+      - name: Rename artifacts
+        shell: bash
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          SRC="src-tauri/target/${{ matrix.target }}/release/bundle"
+          OUT="release-artifacts"
+          mkdir -p "$OUT"
+          VER="${VERSION#v}"
+          NAME="RustMCL_${VER}_${{ matrix.os }}_${{ matrix.arch }}"
+
+          copy() {
+            local pat="$1" dst="$2"
+            local f
+            f=$(find "$SRC" -iname "$pat" -type f | head -n1)
+            if [ -z "$f" ]; then
+              echo "MISSING bundle: $pat (searched $SRC)"
+              find "$SRC" -type f 2>/dev/null || true
+              exit 1
+            fi
+            cp "$f" "$OUT/$dst"
+            echo "  $(basename "$f") -> $OUT/$dst"
+          }
+
+          case "${{ matrix.os }}" in
+            windows)
+              copy '*-setup.exe' "${NAME}-setup.exe"
+              # ARM64 仅构建 NSIS(Tauri 官方只在 ARM64 保证 NSIS 支持)
+              if [ "${{ matrix.arch }}" = "x64" ]; then
+                copy '*.msi' "${NAME}.msi"
+              fi
+              ;;
+            macos)
+              copy '*.dmg' "${NAME}.dmg"
+              ;;
+            linux)
+              copy '*.AppImage' "${NAME}.AppImage"
+              if [ "${{ matrix.arch }}" = "x64" ]; then
+                copy '*.deb' "${NAME}.deb"
+                copy '*.rpm' "${NAME}.rpm"
+              fi
+              ;;
+          esac
+
+          echo "=== staged artifacts ==="
+          ls -la "$OUT"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.os }}-${{ matrix.arch }}
+          path: release-artifacts/*
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      # 最小权限:仅需向 Release 上传资产
+      contents: write
+      # 下载 workflow artifacts 需要
+      actions: read
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: release-artifacts
+          merge-multiple: true
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: RustMCL ${{ github.ref_name }}
+          body: |
+            RustMCL ${{ github.ref_name }} 已自动发布,包含各平台安装包。
+
+            请选择对应平台的安装包进行安装。
+          files: release-artifacts/*
+          fail_on_unmatched_files: true
