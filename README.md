@@ -5,7 +5,7 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 ![Languages](https://img.shields.io/badge/Rust-Tauri%20%2B%20React-blue)
 
-> **English:** Looking for an English overview? Jump to the [project intro section](#english-overview).
+> **English:** Looking for the English version? Read the [English README](README.en.md).
 
 ---
 
@@ -17,7 +17,30 @@
 
 ## 项目截图 / 预览
 
-TODO: 补充实际截图(请在本仓库 `docs/screenshots/` 或 README 同级图片目录添加界面上图,并在此处引用)。
+依次为主页、实例管理、Mod 搜索、服务器、设置与 Java 检测等界面(支持浅/深色主题与中/英文切换):
+
+<table>
+  <tr>
+    <td><img src="public/mcl1.png" alt="主页(深色)"></td>
+    <td><img src="public/mcl2.png" alt="实例管理"></td>
+  </tr>
+  <tr>
+    <td><img src="public/mcl3.png" alt="编辑实例"></td>
+    <td><img src="public/mcl4.png" alt="Mod 搜索"></td>
+  </tr>
+  <tr>
+    <td><img src="public/mcl5.png" alt="服务器管理"></td>
+    <td><img src="public/mcl6.png" alt="设置页"></td>
+  </tr>
+  <tr>
+    <td><img src="public/mcl7.png" alt="Java 检测"></td>
+    <td><img src="public/mcl8.png" alt="主页(浅色)"></td>
+  </tr>
+  <tr>
+    <td><img src="public/mcl9.png" alt="主页(英文界面)"></td>
+    <td></td>
+  </tr>
+</table>
 
 ---
 
@@ -132,21 +155,9 @@ RustMCL 的微软账号认证与资源流程参考了社区内诸多开源启动
 
 ---
 
-## English Overview
+## English
 
-<a id="english-overview"></a>
-
-**RustMCL** is a modern, lightweight, cross-platform Minecraft: Java Edition launcher built with **Rust + Tauri** (frontend: **React + Tailwind CSS**).
-
-Key features:
-
-- **Game & loaders**: vanilla, Fabric / Quilt / Forge; instance management (create / edit / delete / launch).
-- **Accounts**: Microsoft (Device Code Flow, OAuth 2.0) and offline accounts.
-- **Mods**: Modrinth (and CurseForge, API key required) search & install.
-- **Servers**: list, favorites, ping, join slot, servers.dat import.
-- **System**: Java detection & JVM tuning, skin management, crash log analysis, saves/screenshots, mirrors, theme & language.
-
-See the Chinese sections above for the full detail. Licensed under **GPL-3.0**.
+For the full English README, see [README.en.md](README.en.md).
 
 ---
 
