@@ -87,7 +87,7 @@
 
 ## 安装 / 下载
 
-目前**尚未发布正式 Release**,请直接**从源码构建**。
+**v0.1.1 已发布**。可从 [GitHub Releases](https://github.com/tortb/RustMCL/releases) 下载对应平台的安装包;也可按照下文从源码构建。
 
 ---
 

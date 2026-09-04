@@ -87,7 +87,7 @@ A tour of the Home, Instance management, Mod search, Servers, Settings, and Java
 
 ## Install / Download
 
-No official release yet — build from source.
+**v0.1.1 is now available.** Grab the installer for your platform from [GitHub Releases](https://github.com/tortb/RustMCL/releases); you can also build from source below.
 
 ---
 

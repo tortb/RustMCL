@@ -11,8 +11,8 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter, State};
 
 use crate::core::account::microsoft_auth::{
-    delete_mc_token, delete_refresh_token, exchange_tokens, poll_device_token,
-    request_device_code, save_refresh_token, PollResult,
+    delete_mc_token, delete_refresh_token, exchange_tokens, poll_device_token, request_device_code,
+    save_refresh_token, PollResult,
 };
 use crate::db::repository::Repository;
 use crate::db::schema::Account;

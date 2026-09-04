@@ -1,6 +1,6 @@
 [package]
 name = "rustmcl"
-version = "0.1.0"
+version = "0.1.1"
 description = "RustMCL - 现代化 Minecraft 启动器"
 authors = ["tortb"]
 edition = "2021"
